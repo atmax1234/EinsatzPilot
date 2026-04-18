@@ -1,0 +1,30 @@
+{
+  "name": "einsatzpilot",
+  "private": true,
+  "version": "0.1.0",
+  "description": "EinsatzPilot monorepo root",
+  "packageManager": "pnpm@10.6.0",
+  "scripts": {
+    "db:up": "./scripts/dev-db.sh up",
+    "db:down": "./scripts/dev-db.sh down",
+    "db:status": "./scripts/dev-db.sh status",
+    "db:logs": "./scripts/dev-db.sh logs",
+    "smoke:api": "./scripts/smoke-api.sh",
+    "dev:web": "pnpm --filter @einsatzpilot/web dev",
+    "dev:mobile": "pnpm --filter @einsatzpilot/mobile start",
+    "dev:api": "pnpm --filter @einsatzpilot/api start:dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "prisma:generate": "pnpm --filter @einsatzpilot/api prisma:generate",
+    "prisma:migrate:deploy": "pnpm --filter @einsatzpilot/api exec prisma migrate deploy --schema prisma/schema.prisma",
+    "prisma:migrate:status": "pnpm --filter @einsatzpilot/api exec prisma migrate status --schema prisma/schema.prisma",
+    "prisma:migrate:dev": "pnpm --filter @einsatzpilot/api prisma:migrate:dev"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}

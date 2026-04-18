@@ -1,0 +1,14 @@
+{
+  "name": "@einsatzpilot/types",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "echo \"Build not configured yet\"",
+    "lint": "echo \"Lint not configured yet\"",
+    "test": "echo \"No tests configured yet\"",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  }
+}

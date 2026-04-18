@@ -1,0 +1,21 @@
+{
+  "name": "@einsatzpilot/web",
+  "private": true,
+  "version": "0.1.0",
+  "description": "EinsatzPilot Next.js web app",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "echo \"Lint not configured yet\"",
+    "test": "echo \"No tests configured yet\"",
+    "typecheck": "pnpm exec tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "next": "^16.1.6",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
+  }
+}

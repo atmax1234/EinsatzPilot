@@ -1,0 +1,32 @@
+{
+  "name": "@einsatzpilot/api",
+  "private": true,
+  "version": "0.1.0",
+  "description": "EinsatzPilot NestJS API",
+  "scripts": {
+    "start:dev": "tsx watch src/main.ts",
+    "build": "pnpm exec tsc --project tsconfig.build.json",
+    "start": "node dist/apps/api/src/main.js",
+    "lint": "echo \"Lint not configured yet\"",
+    "test": "echo \"No tests configured yet\"",
+    "typecheck": "pnpm exec tsc --project tsconfig.json --noEmit",
+    "prisma:generate": "prisma generate --schema prisma/schema.prisma",
+    "prisma:migrate:dev": "prisma migrate dev --schema prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.16",
+    "@nestjs/core": "^11.1.16",
+    "@nestjs/platform-express": "^11.1.16",
+    "@prisma/adapter-pg": "^7.5.0",
+    "@prisma/client": "^7.5.0",
+    "pg": "^8.20.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/pg": "^8.20.0",
+    "dotenv": "^17.3.1",
+    "prisma": "^7.5.0"
+  }
+}

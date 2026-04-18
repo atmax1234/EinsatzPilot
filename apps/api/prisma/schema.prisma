@@ -1,0 +1,218 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MembershipRole {
+  OWNER
+  OFFICE
+  WORKER
+}
+
+enum TeamStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum JobStatus {
+  PLANNED
+  IN_PROGRESS
+  DONE
+  CANCELED
+}
+
+enum JobPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum JobActivityKind {
+  STATUS
+  NOTE
+  REPORT
+}
+
+enum ReportReviewStatus {
+  SUBMITTED
+}
+
+enum AttachmentKind {
+  PHOTO
+  FILE
+}
+
+model Company {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  memberships Membership[]
+  teams       Team[]
+  jobs        Job[]
+  reports     JobReport[]
+  attachments JobAttachment[]
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  displayName  String?
+  passwordHash String?
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  memberships  Membership[]
+  teamMembers  TeamMember[]
+  authoredReports JobReport[]      @relation("JobReportAuthor")
+  uploadedAttachments JobAttachment[] @relation("JobAttachmentUploader")
+}
+
+model Membership {
+  id         String         @id @default(cuid())
+  userId     String
+  companyId  String
+  role       MembershipRole
+  isActive   Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  company    Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+  @@index([userId])
+}
+
+model Team {
+  id                String       @id @default(cuid())
+  companyId         String
+  name              String
+  code              String?
+  specialty         String?
+  status            TeamStatus   @default(ACTIVE)
+  currentAssignment String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  company           Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  members           TeamMember[]
+  jobs              Job[]
+  reports           JobReport[]
+  attachments       JobAttachment[]
+
+  @@index([companyId])
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String
+  roleLabel String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+model Job {
+  id             String          @id @default(cuid())
+  companyId      String
+  teamId         String?
+  reference      String          @unique
+  title          String
+  description    String?
+  customerName   String
+  location       String
+  scheduledStart DateTime
+  scheduledEnd   DateTime?
+  status         JobStatus       @default(PLANNED)
+  priority       JobPriority     @default(NORMAL)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  team           Team?           @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  activity       JobActivity[]
+  reports        JobReport[]
+  attachments    JobAttachment[]
+
+  @@index([companyId])
+  @@index([teamId])
+  @@index([status])
+}
+
+model JobActivity {
+  id         String          @id @default(cuid())
+  jobId       String
+  kind        JobActivityKind
+  title       String
+  content     String?
+  authorName  String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  job         Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([createdAt])
+}
+
+model JobReport {
+  id           String             @id @default(cuid())
+  companyId    String
+  jobId        String
+  teamId       String?
+  authorUserId String?
+  summary      String
+  details      String?
+  reviewStatus ReportReviewStatus @default(SUBMITTED)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  company      Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job          Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  team         Team?              @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  author       User?              @relation("JobReportAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  attachments  JobAttachment[]
+
+  @@index([companyId])
+  @@index([jobId, createdAt])
+  @@index([teamId])
+  @@index([authorUserId])
+}
+
+model JobAttachment {
+  id             String         @id @default(cuid())
+  companyId      String
+  jobId          String
+  reportId       String?
+  teamId         String?
+  uploaderUserId String?
+  kind           AttachmentKind
+  storagePath    String
+  fileName       String
+  mimeType       String
+  sizeBytes      Int
+  caption        String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job            Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  report         JobReport?     @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  team           Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  uploader       User?          @relation("JobAttachmentUploader", fields: [uploaderUserId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([jobId, createdAt])
+  @@index([reportId])
+  @@index([teamId])
+  @@index([uploaderUserId])
+  @@index([kind, createdAt])
+}

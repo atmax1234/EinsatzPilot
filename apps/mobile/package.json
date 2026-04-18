@@ -1,0 +1,14 @@
+{
+  "name": "@einsatzpilot/mobile",
+  "private": true,
+  "version": "0.1.0",
+  "description": "EinsatzPilot Expo mobile app",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "lint": "echo \"Lint not configured yet\"",
+    "test": "echo \"No tests configured yet\"",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  }
+}
