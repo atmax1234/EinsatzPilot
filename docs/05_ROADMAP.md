@@ -54,13 +54,15 @@ Phases are dependency order, not calendar promises. EinsatzPilot is job-centered
 
 ## Phase 7 — Customer/Object Report Generator
 
-**Status:** Next recommended implementation phase after the Phase 6 migration, typecheck, builds, smoke flow, and diff checks are clean.
+**Status:** Next recommended planning phase. Phase 5 and Phase 6 prerequisites are implemented and verified, but Phase 7 implementation must not start until the snapshot/data design is reviewed and the next session explicitly requests implementation.
 
 **Goals:** Assemble clean customer-facing damage, maintenance, service, proof-of-work, and object-history report data from jobs, reviewed findings, photos, work performed, cost summaries, and follow-up notes. Define reproducible snapshots and explicit inclusion rules before adding presentation/export channels.
 
 **Dependencies:** Reviewed execution findings, durable attachments, object/customer context, and governed cost summaries where included.
 
-**Must not build yet:** Automatic sending, invoice issuance, payment, or official output derived silently from unreviewed mutable state.
+**Planning deliverable first:** Define report ownership, eligible source data, explicit selection, snapshot boundaries, lifecycle/review/version rules, permissions, and a clean reviewable UI contract.
+
+**Must not build yet:** Fancy PDF templates, automatic sending, invoice issuance, payment, AI summaries, recurring contracts, command-board interactions, QR codes, mobile flows, or official output derived silently from unreviewed mutable state.
 
 ## Phase 8 — Recurring Service Contracts
 

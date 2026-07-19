@@ -116,7 +116,7 @@ The smoke flow creates development data. Package `lint` and `test` scripts curre
 
 ## Development direction
 
-Directory Gate 1, backwards-compatible Job relation Phase 2, the supporting `ItemCategory`/`Item` Phase 3 foundation, generic Assignment Phase 4, Job Execution Reports / Worker Findings Phase 5, and Job Cost Ledger Phase 6 are implemented, migrated, and covered by the live smoke flow. The next recommended slice is `Phase 7 — Customer/Object Report Generator`. Item movement remains optional later infrastructure. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
+Directory Gate 1, backwards-compatible Job relation Phase 2, the supporting `ItemCategory`/`Item` Phase 3 foundation, generic Assignment Phase 4, Job Execution Reports / Worker Findings Phase 5, and Job Cost Ledger Phase 6 are implemented, migrated, and covered by the live smoke flow. The next recommended session is `Phase 7 Planning — Customer/Object Report Generator`; implementation should follow only after snapshot, lifecycle, source-selection, and review behavior are deliberately designed. Item movement remains optional later infrastructure. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
 
 ## License
 

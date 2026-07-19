@@ -30,4 +30,8 @@ A meaningful change includes a new or changed model, migration, relationship, pe
 
 ## Current instruction
 
-The directory, backwards-compatible Job relation, item/category, generic Assignment, Job Execution Reports / Worker Findings, and Job Cost Ledger foundations are implemented, migrated, and covered by the expanded PostgreSQL smoke flow. Follow `07_NEXT_STEPS.md` for the next product slice: a tenant-safe Customer/Object Report Generator grounded in reviewed work and governed costs. Items support job documentation and costs; they are not the center of an inventory or logistics product. Do not skip ahead to invoice issuance, automatic customer sending, command-board polish, AI automation, or mobile work.
+The directory, backwards-compatible Job relation, item/category, generic Assignment, Job Execution Reports / Worker Findings, and Job Cost Ledger foundations are implemented, migrated, and covered by the expanded PostgreSQL smoke flow.
+
+The next session must begin with `Phase 7 Planning — Customer/Object Report Generator`, following `07_NEXT_STEPS.md`. Treat this as a serious product surface: design tenant ownership, source selection, snapshots, lifecycle, reviewability, evidence references, cost-summary treatment, and correction/version behavior before requesting implementation. Do not implement Phase 7 unless the next session explicitly asks for implementation after that planning work.
+
+Do not skip directly to styled PDFs, invoice issuance, email sending, AI summaries, recurring contracts, command-board polish, drag-and-drop, QR codes, or mobile work. Items support job documentation and costs; they are not the center of an inventory or logistics product.

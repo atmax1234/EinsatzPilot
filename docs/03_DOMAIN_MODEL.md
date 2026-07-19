@@ -38,7 +38,20 @@
 
 ### Customer/Object Report Output
 
-Reviewed customer-facing documents derived from jobs, findings, photos, work performed, costs, and object context. Damage, maintenance, proof-of-work, and object-history reports need versioned inputs and reproducible output rather than mutable browser-only documents.
+Planned tenant-owned, job-grounded report snapshots that assemble customer/address/object/object-area context, reviewed findings, work performed, outstanding work and follow-up notes, photo/file evidence references, and governed job cost summaries into reviewable customer-facing data.
+
+Phase 7 must begin with domain planning, not rendering. Before implementation, decide and document:
+
+- whether source values are copied into a stable snapshot or resolved live;
+- which report states and report types may be included, and how explicit selection works;
+- how attachment identities, captions, ordering, and later storage changes remain reproducible;
+- whether cost lines, grouped totals, tax metadata, and currency are copied or referenced;
+- draft, review, finalized, superseded, and correction/version semantics;
+- who may generate, review, finalize, read, or revise a report snapshot;
+- how legacy `Job.customerName` and `Job.location` coexist with structured directory context;
+- what belongs to report data versus later PDF templates, email delivery, invoice support, or object-history projections.
+
+The first implementation should create a strong snapshot/data foundation and a clean reviewable UI. It must not begin with PDF layout, invoice issuance, or automatic delivery.
 
 ### Recurring Service Contract
 

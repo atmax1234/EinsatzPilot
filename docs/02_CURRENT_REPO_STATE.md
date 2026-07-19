@@ -4,6 +4,13 @@
 
 This reflects the repository inspected on 2026-07-19. Checked-in code is the source of truth if it later differs.
 
+## Session handoff
+
+- Phase 5 — Job Execution Reports / Worker Findings is implemented and smoke-proven.
+- Phase 6 — Job Cost Ledger is implemented, migrated, and smoke-proven.
+- The next session should perform `Phase 7 Planning — Customer/Object Report Generator`; it should not assume the report snapshot model or lifecycle has already been decided.
+- Phase 7 implementation has not started. There is no customer/object report snapshot model, API, or UI yet.
+
 EinsatzPilot is a pnpm TypeScript monorepo:
 
 - `apps/api`: NestJS API with Prisma and PostgreSQL.
@@ -75,6 +82,7 @@ There are no command board, drag-and-drop, movement, custody, bundle, QR, billin
 - Assignment updates overwrite current status/timing/notes and have no separate assignment event history yet. Only creator and record timestamps are retained.
 - Report editing/resubmission after `NEEDS_REVISION`, nonterminal review correction, production storage/retention, and generated customer documents are not implemented.
 - Cost lines have no delete/correction event history or approval lifecycle. Tax rate is stored as cost metadata but is not used to calculate tax-inclusive/exclusive totals. Each job currently uses one currency, and receipt files are not linked directly to cost lines.
+- Customer/object report snapshot ownership, source-selection rules, lifecycle, version/correction semantics, and cost/evidence snapshot boundaries are not designed yet. This is the first Phase 7 planning task.
 - Local boot is not yet documented as confusion-free in the foundation checklist.
 
 Do not convert roadmap intentions into “existing features” when updating this document.

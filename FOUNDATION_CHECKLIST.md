@@ -273,6 +273,23 @@ You can do ALL of this without hacks:
 
 ---
 
+## 21. Phase 7 Customer/Object Report Planning Gate
+
+* [x] Phase 5 reviewed findings, work, follow-up, and evidence prerequisites are implemented and smoke-proven
+* [x] Phase 6 job costs and backend-derived summary prerequisites are implemented and smoke-proven
+* [ ] report snapshot aggregate and tenant/job ownership are designed
+* [ ] eligible report states and explicit source-selection rules are designed
+* [ ] customer/address/object/object-area snapshot boundaries are designed
+* [ ] evidence reference, caption, ordering, and storage assumptions are designed
+* [ ] cost-line/summary, tax metadata, and currency snapshot boundaries are designed
+* [ ] draft/review/finalize/supersede/correction lifecycle is designed
+* [ ] OWNER/OFFICE/WORKER generation, review, and read permissions are designed
+* [ ] minimum clean reviewable UI is specified before PDF/export styling
+* [ ] a separate Phase 7 implementation prompt is explicitly approved
+* [x] PDFs, invoices, email sending, AI summaries, recurrence, command board, drag/drop, QR, and mobile remain deferred during planning
+
+---
+
 ## Scoring
 
 * Done = solid and repeatable
