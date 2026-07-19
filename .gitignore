@@ -10,6 +10,6 @@ coverage/
 *.tsbuildinfo
 .expo/
 apps/api/storage/
+apps/api/apps/api/storage/
 data/
-docs/
 apps/api/.env

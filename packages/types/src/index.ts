@@ -116,6 +116,38 @@ export type CompanyMemberListResponse = {
   members: CompanyMemberItem[];
 };
 
+export type JobCustomerRelation = {
+  id: string;
+  name: string;
+};
+
+export type JobAddressRelation = {
+  id: string;
+  label: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string;
+};
+
+export type JobObjectRelation = {
+  id: string;
+  name: string;
+};
+
+export type JobObjectAreaRelation = {
+  id: string;
+  objectId: string;
+  name: string;
+};
+
+export type JobRelationOptionsResponse = {
+  customers: JobCustomerRelation[];
+  addresses: JobAddressRelation[];
+  objects: JobObjectRelation[];
+  objectAreas: JobObjectAreaRelation[];
+};
+
 export type JobListItem = {
   id: string;
   reference: string;
@@ -126,6 +158,14 @@ export type JobListItem = {
   scheduledEnd?: string;
   status: JobStatus;
   priority: JobPriority;
+  customerId?: string;
+  addressId?: string;
+  objectId?: string;
+  objectAreaId?: string;
+  customer?: JobCustomerRelation;
+  address?: JobAddressRelation;
+  object?: JobObjectRelation;
+  objectArea?: JobObjectAreaRelation;
   assignedTeam?: {
     id: string;
     name: string;
@@ -224,6 +264,10 @@ export type JobCreateInput = {
   scheduledEnd?: string;
   priority: JobPriority;
   teamId?: string;
+  customerId?: string;
+  addressId?: string;
+  objectId?: string;
+  objectAreaId?: string;
 };
 
 export type JobUpdateInput = {
@@ -235,6 +279,10 @@ export type JobUpdateInput = {
   scheduledEnd?: string | null;
   priority?: JobPriority;
   teamId?: string | null;
+  customerId?: string | null;
+  addressId?: string | null;
+  objectId?: string | null;
+  objectAreaId?: string | null;
 };
 
 export type JobStatusTransitionInput = {

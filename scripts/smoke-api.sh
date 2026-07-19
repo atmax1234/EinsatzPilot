@@ -128,11 +128,24 @@ customers="$(json_get "${API_BASE}/customers" "$token")"
 addresses="$(json_get "${API_BASE}/addresses" "$token")"
 objects="$(json_get "${API_BASE}/objects" "$token")"
 object_detail="$(json_get "${API_BASE}/objects/${object_id}" "$token")"
+relation_options="$(json_get "${API_BASE}/jobs/relation-options" "$token")"
+
+link_job="$(json_patch "${API_BASE}/jobs/${job_id}" "{\"customerId\":\"${customer_id}\",\"addressId\":\"${address_id}\",\"objectId\":\"${object_id}\",\"objectAreaId\":\"${area_id}\"}" "$token")"
+job_detail="$(json_get "${API_BASE}/jobs/${job_id}" "$token")"
+
+linked_job="$(json_post "${API_BASE}/jobs" "{\"title\":\"Linked Job ${SMOKE_SUFFIX}\",\"description\":\"Job relation create proof\",\"customerName\":\"Legacy Linked Customer\",\"location\":\"Legacy Linked Location\",\"scheduledStart\":\"2026-04-19T08:00:00.000Z\",\"priority\":\"NORMAL\",\"customerId\":\"${customer_id}\",\"addressId\":\"${address_id}\",\"objectId\":\"${object_id}\",\"objectAreaId\":\"${area_id}\"}" "$token")"
+
+second_object="$(json_post "${API_BASE}/objects" "{\"name\":\"Second Smoke Object ${SMOKE_SUFFIX}\",\"type\":\"OTHER\",\"status\":\"ACTIVE\"}" "$token")"
+second_object_id="$(printf '%s' "$second_object" | jq -r '.id')"
+missing_object_status="$(curl -sS -o "${TMP_DIR}/missing-object.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Missing Object\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T08:00:00.000Z\",\"priority\":\"NORMAL\",\"objectAreaId\":\"${area_id}\"}")"
+mismatched_area_status="$(curl -sS -o "${TMP_DIR}/mismatched-area.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Area Object\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T09:00:00.000Z\",\"priority\":\"NORMAL\",\"objectId\":\"${second_object_id}\",\"objectAreaId\":\"${area_id}\"}")"
 
 worker_login="$(json_post "${API_BASE}/auth/development-login" '{"email":"worker@luetjens.example.de","displayName":"Worker Proof","companySlug":"luetjens","companyName":"Luetjens Service","membershipRole":"WORKER"}')"
 worker_token="$(printf '%s' "$worker_login" | jq -r '.token')"
 worker_objects="$(json_get "${API_BASE}/objects" "$worker_token")"
+worker_relation_options="$(json_get "${API_BASE}/jobs/relation-options" "$worker_token")"
 worker_write_status="$(curl -sS -o "${TMP_DIR}/worker-write.json" -w '%{http_code}' -X POST "${API_BASE}/customers" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"name":"Forbidden Worker Customer","type":"OTHER"}')"
+worker_job_write_status="$(curl -sS -o "${TMP_DIR}/worker-job-write.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d "{\"title\":\"Forbidden Worker Job\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T11:00:00.000Z\",\"priority\":\"NORMAL\",\"customerId\":\"${customer_id}\"}")"
 
 other_login="$(json_post "${API_BASE}/auth/development-login" '{"email":"owner@otherco.example.de","displayName":"Other Owner","companySlug":"otherco","companyName":"Other Co","membershipRole":"OWNER"}')"
 other_token="$(printf '%s' "$other_login" | jq -r '.token')"
@@ -141,7 +154,17 @@ cross_body="$(cat "${TMP_DIR}/cross-company.json")"
 cross_object_status="$(curl -sS -o "${TMP_DIR}/cross-object.json" -w '%{http_code}' "${API_BASE}/objects/${object_id}" -H "Authorization: Bearer ${other_token}")"
 other_address="$(json_post "${API_BASE}/addresses" '{"label":"Other Address","street":"Other Street 1","postalCode":"10115","city":"Berlin","country":"DE"}' "$other_token")"
 other_address_id="$(printf '%s' "$other_address" | jq -r '.id')"
+other_customer="$(json_post "${API_BASE}/customers" '{"name":"Other Customer","type":"OTHER"}' "$other_token")"
+other_customer_id="$(printf '%s' "$other_customer" | jq -r '.id')"
+other_object="$(json_post "${API_BASE}/objects" "{\"customerId\":\"${other_customer_id}\",\"addressId\":\"${other_address_id}\",\"name\":\"Other Object\",\"type\":\"OTHER\"}" "$other_token")"
+other_object_id="$(printf '%s' "$other_object" | jq -r '.id')"
+other_area="$(json_post "${API_BASE}/objects/${other_object_id}/areas" '{"name":"Other Area","type":"OTHER"}' "$other_token")"
+other_area_id="$(printf '%s' "$other_area" | jq -r '.id')"
 cross_relation_status="$(curl -sS -o "${TMP_DIR}/cross-relation.json" -w '%{http_code}' -X POST "${API_BASE}/objects" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"addressId\":\"${other_address_id}\",\"name\":\"Invalid Cross Tenant Object\",\"type\":\"OTHER\"}")"
+cross_job_relation_status="$(curl -sS -o "${TMP_DIR}/cross-job-relation.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Cross Tenant Job\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T10:00:00.000Z\",\"priority\":\"NORMAL\",\"addressId\":\"${other_address_id}\"}")"
+cross_job_customer_status="$(curl -sS -o "${TMP_DIR}/cross-job-customer.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Cross Tenant Customer\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T12:00:00.000Z\",\"priority\":\"NORMAL\",\"customerId\":\"${other_customer_id}\"}")"
+cross_job_object_status="$(curl -sS -o "${TMP_DIR}/cross-job-object.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Cross Tenant Object Job\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T13:00:00.000Z\",\"priority\":\"NORMAL\",\"objectId\":\"${other_object_id}\"}")"
+cross_job_area_status="$(curl -sS -o "${TMP_DIR}/cross-job-area.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Cross Tenant Area Job\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T14:00:00.000Z\",\"priority\":\"NORMAL\",\"objectId\":\"${object_id}\",\"objectAreaId\":\"${other_area_id}\"}")"
 
 jq -n \
   --argjson health "$health" \
@@ -149,6 +172,7 @@ jq -n \
   --argjson dashboard "$dashboard" \
   --argjson teams "$teams" \
   --argjson addMember "$add_member" \
+  --argjson createJob "$create_job" \
   --argjson assignTeam "$assign_team" \
   --argjson changeStatus "$change_status" \
   --argjson editJob "$edit_job" \
@@ -165,16 +189,31 @@ jq -n \
   --argjson addresses "$addresses" \
   --argjson objects "$objects" \
   --argjson objectDetail "$object_detail" \
+  --argjson relationOptions "$relation_options" \
+  --argjson linkJob "$link_job" \
+  --argjson linkedJob "$linked_job" \
   --argjson workerObjects "$worker_objects" \
+  --argjson workerRelationOptions "$worker_relation_options" \
   --arg crossStatus "$cross_status" \
   --arg crossBody "$cross_body" \
   --arg crossObjectStatus "$cross_object_status" \
   --arg crossRelationStatus "$cross_relation_status" \
+  --arg crossJobRelationStatus "$cross_job_relation_status" \
+  --arg crossJobCustomerStatus "$cross_job_customer_status" \
+  --arg crossJobObjectStatus "$cross_job_object_status" \
+  --arg crossJobAreaStatus "$cross_job_area_status" \
+  --arg missingObjectStatus "$missing_object_status" \
+  --arg mismatchedAreaStatus "$mismatched_area_status" \
   --arg workerWriteStatus "$worker_write_status" \
+  --arg workerJobWriteStatus "$worker_job_write_status" \
   --arg attachmentFileStatus "$attachment_file_status" \
   --arg firstJobId "$first_job_id" \
   --arg teamName "$TEAM_NAME" \
   --arg updatedJobTitle "$UPDATED_JOB_TITLE" \
+  --arg customerId "$customer_id" \
+  --arg addressId "$address_id" \
+  --arg objectId "$object_id" \
+  --arg areaId "$area_id" \
   '{
     healthOk: $health.ok,
     sessionAuthenticated: $session.authenticated,
@@ -200,12 +239,50 @@ jq -n \
     addressCount: ($addresses.addresses | length),
     objectCount: ($objects.objects | length),
     objectAreaCount: ($objectDetail.object.areas | length),
+    legacyJobHasNoDirectoryLinks: (
+      ($createJob.job.customerId == null) and
+      ($createJob.job.addressId == null) and
+      ($createJob.job.objectId == null) and
+      ($createJob.job.objectAreaId == null)
+    ),
+    relationOptionsContainCreatedRecords: (
+      ([$relationOptions.customers[].id] | index($customerId) != null) and
+      ([$relationOptions.addresses[].id] | index($addressId) != null) and
+      ([$relationOptions.objects[].id] | index($objectId) != null) and
+      ([$relationOptions.objectAreas[].id] | index($areaId) != null)
+    ),
+    updatedJobRelationIdsMatch: (
+      ($linkJob.job.customerId == $customerId) and
+      ($linkJob.job.addressId == $addressId) and
+      ($linkJob.job.objectId == $objectId) and
+      ($linkJob.job.objectAreaId == $areaId)
+    ),
+    createdJobRelationIdsMatch: (
+      ($linkedJob.job.customerId == $customerId) and
+      ($linkedJob.job.addressId == $addressId) and
+      ($linkedJob.job.objectId == $objectId) and
+      ($linkedJob.job.objectAreaId == $areaId)
+    ),
+    relationActivityLogged: (
+      ([$jobDetail.job.activity[].title] | index("Kundenverknuepfung geaendert") != null) and
+      ([$jobDetail.job.activity[].title] | index("Adressverknuepfung geaendert") != null) and
+      ([$jobDetail.job.activity[].title] | index("Objektverknuepfung geaendert") != null) and
+      ([$jobDetail.job.activity[].title] | index("Objektbereichsverknuepfung geaendert") != null)
+    ),
+    missingObjectStatus: $missingObjectStatus,
+    mismatchedAreaStatus: $mismatchedAreaStatus,
     workerObjectCount: ($workerObjects.objects | length),
+    workerRelationOptionCount: ($workerRelationOptions.objects | length),
     workerWriteStatus: $workerWriteStatus,
+    workerJobWriteStatus: $workerJobWriteStatus,
     crossCompanyStatus: $crossStatus,
     crossCompanyBody: $crossBody,
     crossObjectStatus: $crossObjectStatus,
-    crossRelationStatus: $crossRelationStatus
+    crossRelationStatus: $crossRelationStatus,
+    crossJobRelationStatus: $crossJobRelationStatus,
+    crossJobCustomerStatus: $crossJobCustomerStatus,
+    crossJobObjectStatus: $crossJobObjectStatus,
+    crossJobAreaStatus: $crossJobAreaStatus
   }' > "${TMP_DIR}/summary.json"
 
 jq -e \
@@ -234,11 +311,24 @@ jq -e \
     .addressCount >= 1 and
     .objectCount >= 1 and
     .objectAreaCount == 1 and
+    .legacyJobHasNoDirectoryLinks == true and
+    .relationOptionsContainCreatedRecords == true and
+    .updatedJobRelationIdsMatch == true and
+    .createdJobRelationIdsMatch == true and
+    .relationActivityLogged == true and
+    .missingObjectStatus == "400" and
+    .mismatchedAreaStatus == "400" and
     .workerObjectCount >= 1 and
+    .workerRelationOptionCount >= 1 and
     .workerWriteStatus == "403" and
+    .workerJobWriteStatus == "403" and
     .crossCompanyStatus == "404" and
     .crossObjectStatus == "404" and
-    .crossRelationStatus == "404"
+    .crossRelationStatus == "404" and
+    .crossJobRelationStatus == "404" and
+    .crossJobCustomerStatus == "404" and
+    .crossJobObjectStatus == "404" and
+    .crossJobAreaStatus == "404"
   ' "${TMP_DIR}/summary.json" >/dev/null
 
 cat "${TMP_DIR}/summary.json"

@@ -5,6 +5,8 @@ import type {
   CompanyMemberListResponse,
   DashboardResponse,
   JobListResponse,
+  JobRelationOptionsResponse,
+  RequestAuthContext,
   TeamListResponse,
 } from '@einsatzpilot/types';
 
@@ -16,6 +18,15 @@ import {
   mapTeamListItem,
 } from './operations-mapper';
 import { OperationsLookupService } from './operations-lookup.service';
+import { assertCanReadMasterData } from './operations-permissions';
+
+const jobListInclude = {
+  team: true,
+  customer: true,
+  address: true,
+  object: true,
+  objectArea: true,
+} as const;
 
 @Injectable()
 export class OperationsService {
@@ -30,9 +41,7 @@ export class OperationsService {
     const [jobs, teams] = await Promise.all([
       this.prisma.job.findMany({
         where: { companyId },
-        include: {
-          team: true,
-        },
+        include: jobListInclude,
         orderBy: [{ status: 'asc' }, { scheduledStart: 'asc' }],
         take: 4,
       }),
@@ -79,9 +88,7 @@ export class OperationsService {
   async getJobs(companyId: string): Promise<JobListResponse> {
     const jobs = await this.prisma.job.findMany({
       where: { companyId },
-      include: {
-        team: true,
-      },
+      include: jobListInclude,
       orderBy: [{ scheduledStart: 'asc' }, { createdAt: 'desc' }],
     });
 
@@ -94,6 +101,14 @@ export class OperationsService {
     const job = await this.operationsLookupService.getJobForCompanyOrThrow(companyId, jobId);
 
     return mapJobDetailResponse(job);
+  }
+
+  async getJobRelationOptions(
+    companyId: string,
+    authContext: RequestAuthContext,
+  ): Promise<JobRelationOptionsResponse> {
+    assertCanReadMasterData(authContext);
+    return this.operationsLookupService.getJobRelationOptions(companyId);
   }
 
   async getTeams(companyId: string): Promise<TeamListResponse> {

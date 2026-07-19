@@ -124,6 +124,10 @@ export async function createJobAction(formData: FormData) {
       scheduledEnd: getOptionalIsoDate(formData, 'scheduledEnd'),
       priority: getJobPriority(formData),
       teamId: getOptionalString(formData, 'teamId'),
+      customerId: getOptionalString(formData, 'customerId'),
+      addressId: getOptionalString(formData, 'addressId'),
+      objectId: getOptionalString(formData, 'objectId'),
+      objectAreaId: getOptionalString(formData, 'objectAreaId'),
     });
 
     if (!result.ok || !result.data) {
@@ -153,6 +157,10 @@ export async function updateJobAction(jobId: string, formData: FormData) {
       scheduledEnd: getOptionalNullableIsoDate(formData, 'scheduledEnd'),
       priority: getJobPriority(formData),
       teamId: getOptionalNullableString(formData, 'teamId'),
+      customerId: getOptionalNullableString(formData, 'customerId'),
+      addressId: getOptionalNullableString(formData, 'addressId'),
+      objectId: getOptionalNullableString(formData, 'objectId'),
+      objectAreaId: getOptionalNullableString(formData, 'objectAreaId'),
     });
 
     if (!result.ok) {

@@ -6,6 +6,7 @@ import type {
   JobDetailResponse,
   JobListResponse,
   JobPriority,
+  JobRelationOptionsResponse,
   JobReportCreateInput,
   JobReportListResponse,
   JobStatus,
@@ -94,6 +95,13 @@ export async function getJobsData() {
 export async function getJobDetailData(jobId: string) {
   const token = await getAuthTokenOrThrow();
   return fetchApiJson<JobDetailResponse>(`/api/jobs/${jobId}`, {
+    authToken: token,
+  });
+}
+
+export async function getJobRelationOptionsData() {
+  const token = await getAuthTokenOrThrow();
+  return fetchApiJson<JobRelationOptionsResponse>('/api/jobs/relation-options', {
     authToken: token,
   });
 }

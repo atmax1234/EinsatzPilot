@@ -20,6 +20,7 @@ import type {
 import { PrismaService } from '../prisma/prisma.service';
 import {
   buildJobCreatedActivity,
+  buildJobRelationChangedActivities,
   buildJobStatusChangedActivity,
   buildJobUpdatedActivities,
 } from './job-activity-rules';
@@ -68,6 +69,49 @@ export class OperationsWriteService {
     return this.operationsLookupService.getTeamForCompanyOrThrow(companyId, teamId);
   }
 
+  async resolveJobRelations(
+    companyId: string,
+    relationIds: {
+      customerId?: string | null;
+      addressId?: string | null;
+      objectId?: string | null;
+      objectAreaId?: string | null;
+    },
+  ) {
+    if (relationIds.objectAreaId && !relationIds.objectId) {
+      throw new BadRequestException('objectAreaId erfordert ein ausgewaehltes objectId.');
+    }
+
+    const [customer, address, object, objectArea] = await Promise.all([
+      relationIds.customerId
+        ? this.operationsLookupService.getCustomerForCompanyOrThrow(
+            companyId,
+            relationIds.customerId,
+          )
+        : null,
+      relationIds.addressId
+        ? this.operationsLookupService.getAddressForCompanyOrThrow(companyId, relationIds.addressId)
+        : null,
+      relationIds.objectId
+        ? this.operationsLookupService.getObjectForCompanyOrThrow(companyId, relationIds.objectId)
+        : null,
+      relationIds.objectAreaId
+        ? this.operationsLookupService.getObjectAreaForCompanyOrThrow(
+            companyId,
+            relationIds.objectAreaId,
+          )
+        : null,
+    ]);
+
+    if (objectArea && object && objectArea.objectId !== object.id) {
+      throw new BadRequestException(
+        'Der Objektbereich gehoert nicht zum ausgewaehlten Objekt.',
+      );
+    }
+
+    return { customer, address, object, objectArea };
+  }
+
   async createJobActivities(jobId: string, activities: JobActivityDraft[]) {
     if (activities.length === 0) {
       return;
@@ -94,12 +138,17 @@ export class OperationsWriteService {
 
     const payload = normalizeJobCreateInput(input.payload);
     await this.assertOptionalTeamBelongsToCompany(input.companyId, payload.teamId);
+    const relations = await this.resolveJobRelations(input.companyId, payload);
 
     const reference = createJobReference();
     const job = await this.prisma.job.create({
       data: {
         companyId: input.companyId,
         teamId: payload.teamId,
+        customerId: relations.customer?.id,
+        addressId: relations.address?.id,
+        objectId: relations.object?.id,
+        objectAreaId: relations.objectArea?.id,
         reference,
         title: payload.title,
         description: payload.description,
@@ -117,6 +166,38 @@ export class OperationsWriteService {
         actor: input.actor,
         reference,
         title: payload.title,
+      }),
+      ...buildJobRelationChangedActivities({
+        actor: input.actor,
+        changes: [
+          {
+            relationLabel: 'Kundenverknuepfung',
+            next: relations.customer
+              ? { id: relations.customer.id, label: relations.customer.name }
+              : undefined,
+          },
+          {
+            relationLabel: 'Adressverknuepfung',
+            next: relations.address
+              ? {
+                  id: relations.address.id,
+                  label: `${relations.address.label}, ${relations.address.street}, ${relations.address.postalCode} ${relations.address.city}`,
+                }
+              : undefined,
+          },
+          {
+            relationLabel: 'Objektverknuepfung',
+            next: relations.object
+              ? { id: relations.object.id, label: relations.object.name }
+              : undefined,
+          },
+          {
+            relationLabel: 'Objektbereichsverknuepfung',
+            next: relations.objectArea
+              ? { id: relations.objectArea.id, label: relations.objectArea.name }
+              : undefined,
+          },
+        ],
       }),
     ]);
 
@@ -143,12 +224,26 @@ export class OperationsWriteService {
       input.jobId,
     );
 
+    if (payload.objectAreaId && payload.objectId === undefined) {
+      throw new BadRequestException(
+        'objectAreaId kann nur zusammen mit objectId aktualisiert werden.',
+      );
+    }
+
     const nextTeam =
       payload.teamId === undefined
         ? existingJob.team
         : payload.teamId === null
           ? null
           : await this.assertOptionalTeamBelongsToCompany(input.companyId, payload.teamId);
+    const nextRelations = await this.resolveJobRelations(input.companyId, {
+      customerId:
+        payload.customerId === undefined ? existingJob.customerId : payload.customerId,
+      addressId: payload.addressId === undefined ? existingJob.addressId : payload.addressId,
+      objectId: payload.objectId === undefined ? existingJob.objectId : payload.objectId,
+      objectAreaId:
+        payload.objectAreaId === undefined ? existingJob.objectAreaId : payload.objectAreaId,
+    });
 
     await this.prisma.job.update({
       where: {
@@ -168,6 +263,16 @@ export class OperationsWriteService {
             : payload.teamId === null
               ? null
               : nextTeam?.id,
+        customerId:
+          payload.customerId === undefined ? undefined : (nextRelations.customer?.id ?? null),
+        addressId:
+          payload.addressId === undefined ? undefined : (nextRelations.address?.id ?? null),
+        objectId:
+          payload.objectId === undefined ? undefined : (nextRelations.object?.id ?? null),
+        objectAreaId:
+          payload.objectAreaId === undefined
+            ? undefined
+            : (nextRelations.objectArea?.id ?? null),
       },
     });
 
@@ -190,6 +295,56 @@ export class OperationsWriteService {
       previousTitle: existingJob.title,
       nextTitle: payload.title ?? existingJob.title,
     });
+
+    activities.push(
+      ...buildJobRelationChangedActivities({
+        actor: input.actor,
+        changes: [
+          {
+            relationLabel: 'Kundenverknuepfung',
+            previous: existingJob.customer
+              ? { id: existingJob.customer.id, label: existingJob.customer.name }
+              : undefined,
+            next: nextRelations.customer
+              ? { id: nextRelations.customer.id, label: nextRelations.customer.name }
+              : undefined,
+          },
+          {
+            relationLabel: 'Adressverknuepfung',
+            previous: existingJob.address
+              ? {
+                  id: existingJob.address.id,
+                  label: `${existingJob.address.label}, ${existingJob.address.street}, ${existingJob.address.postalCode} ${existingJob.address.city}`,
+                }
+              : undefined,
+            next: nextRelations.address
+              ? {
+                  id: nextRelations.address.id,
+                  label: `${nextRelations.address.label}, ${nextRelations.address.street}, ${nextRelations.address.postalCode} ${nextRelations.address.city}`,
+                }
+              : undefined,
+          },
+          {
+            relationLabel: 'Objektverknuepfung',
+            previous: existingJob.object
+              ? { id: existingJob.object.id, label: existingJob.object.name }
+              : undefined,
+            next: nextRelations.object
+              ? { id: nextRelations.object.id, label: nextRelations.object.name }
+              : undefined,
+          },
+          {
+            relationLabel: 'Objektbereichsverknuepfung',
+            previous: existingJob.objectArea
+              ? { id: existingJob.objectArea.id, label: existingJob.objectArea.name }
+              : undefined,
+            next: nextRelations.objectArea
+              ? { id: nextRelations.objectArea.id, label: nextRelations.objectArea.name }
+              : undefined,
+          },
+        ],
+      }),
+    );
 
     await this.createJobActivities(existingJob.id, activities);
 

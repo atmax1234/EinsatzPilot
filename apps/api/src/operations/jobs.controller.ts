@@ -6,6 +6,7 @@ import type {
   JobCreateInput,
   JobDetailResponse,
   JobListResponse,
+  JobRelationOptionsResponse,
   JobStatusTransitionInput,
   JobUpdateInput,
   RequestAuthContext,
@@ -32,6 +33,14 @@ export class JobsController {
   @Get()
   getJobs(@CurrentCompany() company: ActiveCompanyContext): Promise<JobListResponse> {
     return this.operationsService.getJobs(company.id);
+  }
+
+  @Get('relation-options')
+  getJobRelationOptions(
+    @CurrentCompany() company: ActiveCompanyContext,
+    @CurrentAuthContext() authContext: RequestAuthContext,
+  ): Promise<JobRelationOptionsResponse> {
+    return this.operationsService.getJobRelationOptions(company.id, authContext);
   }
 
   @Get(':jobId')

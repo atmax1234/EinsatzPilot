@@ -24,6 +24,21 @@ export function mapJobListItem(job: {
   scheduledEnd: Date | null;
   status: JobListItem['status'];
   priority: JobListItem['priority'];
+  customerId: string | null;
+  addressId: string | null;
+  objectId: string | null;
+  objectAreaId: string | null;
+  customer: null | { id: string; name: string };
+  address: null | {
+    id: string;
+    label: string;
+    street: string;
+    postalCode: string;
+    city: string;
+    country: string;
+  };
+  object: null | { id: string; name: string };
+  objectArea: null | { id: string; objectId: string; name: string };
   team: null | {
     id: string;
     name: string;
@@ -39,6 +54,39 @@ export function mapJobListItem(job: {
     scheduledEnd: job.scheduledEnd?.toISOString(),
     status: mapDbJobStatus(job.status),
     priority: job.priority,
+    customerId: job.customerId ?? undefined,
+    addressId: job.addressId ?? undefined,
+    objectId: job.objectId ?? undefined,
+    objectAreaId: job.objectAreaId ?? undefined,
+    customer: job.customer
+      ? {
+          id: job.customer.id,
+          name: job.customer.name,
+        }
+      : undefined,
+    address: job.address
+      ? {
+          id: job.address.id,
+          label: job.address.label,
+          street: job.address.street,
+          postalCode: job.address.postalCode,
+          city: job.address.city,
+          country: job.address.country,
+        }
+      : undefined,
+    object: job.object
+      ? {
+          id: job.object.id,
+          name: job.object.name,
+        }
+      : undefined,
+    objectArea: job.objectArea
+      ? {
+          id: job.objectArea.id,
+          objectId: job.objectArea.objectId,
+          name: job.objectArea.name,
+        }
+      : undefined,
     assignedTeam: job.team
       ? {
           id: job.team.id,
@@ -108,6 +156,21 @@ export function mapJobDetailResponse(job: {
   status: JobListItem['status'];
   priority: JobListItem['priority'];
   description: string | null;
+  customerId: string | null;
+  addressId: string | null;
+  objectId: string | null;
+  objectAreaId: string | null;
+  customer: null | { id: string; name: string };
+  address: null | {
+    id: string;
+    label: string;
+    street: string;
+    postalCode: string;
+    city: string;
+    country: string;
+  };
+  object: null | { id: string; name: string };
+  objectArea: null | { id: string; objectId: string; name: string };
   team: null | {
     id: string;
     name: string;

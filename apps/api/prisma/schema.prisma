@@ -165,6 +165,10 @@ model Job {
   id             String          @id @default(cuid())
   companyId      String
   teamId         String?
+  customerId     String?
+  addressId      String?
+  objectId       String?
+  objectAreaId   String?
   reference      String          @unique
   title          String
   description    String?
@@ -178,12 +182,20 @@ model Job {
   updatedAt      DateTime        @updatedAt
   company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   team           Team?           @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  customer       Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  address        Address?        @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  object         Object?         @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  objectArea     ObjectArea?     @relation(fields: [objectAreaId], references: [id], onDelete: SetNull)
   activity       JobActivity[]
   reports        JobReport[]
   attachments    JobAttachment[]
 
   @@index([companyId])
   @@index([teamId])
+  @@index([companyId, customerId])
+  @@index([companyId, addressId])
+  @@index([companyId, objectId])
+  @@index([companyId, objectAreaId])
   @@index([status])
 }
 
@@ -268,6 +280,7 @@ model Customer {
   company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   addresses Address[]
   objects   Object[]
+  jobs      Job[]
 
   @@index([companyId, name])
   @@index([companyId, isActive])
@@ -288,6 +301,7 @@ model Address {
   company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   objects    Object[]
+  jobs       Job[]
 
   @@index([companyId, label])
   @@index([companyId, customerId])
@@ -308,6 +322,7 @@ model Object {
   customer   Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
   address    Address?     @relation(fields: [addressId], references: [id], onDelete: SetNull)
   areas      ObjectArea[]
+  jobs       Job[]
 
   @@index([companyId, name])
   @@index([companyId, status])
@@ -326,6 +341,7 @@ model ObjectArea {
   updatedAt DateTime       @updatedAt
   company   Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   object    Object         @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  jobs      Job[]
 
   @@index([companyId, objectId, name])
   @@index([companyId, type])

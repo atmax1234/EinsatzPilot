@@ -13,6 +13,7 @@ import {
   formatDateTime,
   getJobDetailData,
   getJobPriorityLabel,
+  getJobRelationOptionsData,
   getJobStatusLabel,
   getTeamsData,
   toDateTimeLocalValue,
@@ -54,9 +55,10 @@ export default async function JobDetailPage({
   await requireServerSession();
 
   const { jobId } = await params;
-  const [jobResult, teamsResult, resolvedSearchParams] = await Promise.all([
+  const [jobResult, teamsResult, relationOptionsResult, resolvedSearchParams] = await Promise.all([
     getJobDetailData(jobId),
     getTeamsData(),
+    getJobRelationOptionsData(),
     searchParams,
   ]);
 
@@ -65,6 +67,10 @@ export default async function JobDetailPage({
   }
 
   const job = jobResult.data.job;
+  const relationOptions = relationOptionsResult.ok ? relationOptionsResult.data : undefined;
+  const objectNames = new Map(
+    relationOptions?.objects.map((object) => [object.id, object.name]) ?? [],
+  );
   const reports = job.reports ?? [];
   const attachments = job.attachments ?? [];
   const photoAttachments = attachments.filter((attachment) => attachment.kind === 'PHOTO');
@@ -120,6 +126,26 @@ export default async function JobDetailPage({
               <dt>Geplanter Abschluss</dt>
               <dd>{job.scheduledEnd ? formatDateTime(job.scheduledEnd) : 'Noch offen'}</dd>
             </div>
+            <div>
+              <dt>Verknuepfter Kunde</dt>
+              <dd>{job.customer?.name ?? 'Keine Stammdatenverknuepfung'}</dd>
+            </div>
+            <div>
+              <dt>Verknuepfte Adresse</dt>
+              <dd>
+                {job.address
+                  ? `${job.address.label}: ${job.address.street}, ${job.address.postalCode} ${job.address.city}`
+                  : 'Keine Stammdatenverknuepfung'}
+              </dd>
+            </div>
+            <div>
+              <dt>Verknuepftes Objekt</dt>
+              <dd>{job.object?.name ?? 'Keine Stammdatenverknuepfung'}</dd>
+            </div>
+            <div>
+              <dt>Verknuepfter Objektbereich</dt>
+              <dd>{job.objectArea?.name ?? 'Keine Stammdatenverknuepfung'}</dd>
+            </div>
           </dl>
         </article>
 
@@ -142,6 +168,70 @@ export default async function JobDetailPage({
                 <span>Ort</span>
                 <input defaultValue={job.location} name="location" required />
               </label>
+
+              <p className="muted-note full-span">
+                Stammdatenverknuepfungen sind optional. Die freien Felder Kunde und Ort bleiben
+                unabhaengig erhalten.
+              </p>
+
+              {relationOptions ? (
+                <>
+                  <label className="form-field">
+                    <span>Kundenverknuepfung</span>
+                    <select defaultValue={job.customerId ?? ''} name="customerId">
+                      <option value="">Ohne Kundenverknuepfung</option>
+                      {relationOptions.customers.map((customer) => (
+                        <option key={customer.id} value={customer.id}>
+                          {customer.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="form-field">
+                    <span>Adressverknuepfung</span>
+                    <select defaultValue={job.addressId ?? ''} name="addressId">
+                      <option value="">Ohne Adressverknuepfung</option>
+                      {relationOptions.addresses.map((address) => (
+                        <option key={address.id} value={address.id}>
+                          {address.label}: {address.street}, {address.postalCode} {address.city}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="form-field">
+                    <span>Objektverknuepfung</span>
+                    <select defaultValue={job.objectId ?? ''} name="objectId">
+                      <option value="">Ohne Objektverknuepfung</option>
+                      {relationOptions.objects.map((object) => (
+                        <option key={object.id} value={object.id}>
+                          {object.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="form-field">
+                    <span>Objektbereich</span>
+                    <select defaultValue={job.objectAreaId ?? ''} name="objectAreaId">
+                      <option value="">Ohne Objektbereich</option>
+                      {relationOptions.objectAreas.map((area) => (
+                        <option key={area.id} value={area.id}>
+                          {objectNames.get(area.objectId) ?? 'Objekt'} / {area.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              ) : (
+                <>
+                  <input name="customerId" type="hidden" value={job.customerId ?? ''} />
+                  <input name="addressId" type="hidden" value={job.addressId ?? ''} />
+                  <input name="objectId" type="hidden" value={job.objectId ?? ''} />
+                  <input name="objectAreaId" type="hidden" value={job.objectAreaId ?? ''} />
+                </>
+              )}
 
               <label className="form-field">
                 <span>Start</span>
@@ -196,6 +286,13 @@ export default async function JobDetailPage({
               <p className="muted-note">
                 Teams konnten nicht geladen werden. Die vorhandene Zuweisung bleibt sichtbar,
                 neue Auswahl ist gerade aber nicht verfuegbar.
+              </p>
+            ) : null}
+
+            {!relationOptionsResult.ok ? (
+              <p className="muted-note">
+                Stammdaten konnten gerade nicht geladen werden. Bestehende Verknuepfungen bleiben
+                beim Speichern erhalten.
               </p>
             ) : null}
 

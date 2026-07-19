@@ -86,6 +86,10 @@ export function normalizeJobCreateInput(input: JobCreateInput) {
     scheduledEnd: ensureOptionalIsoDate(input.scheduledEnd, 'scheduledEnd'),
     priority: ensurePriority(input.priority),
     teamId: ensureOptionalString(input.teamId),
+    customerId: ensureOptionalString(input.customerId),
+    addressId: ensureOptionalString(input.addressId),
+    objectId: ensureOptionalString(input.objectId),
+    objectAreaId: ensureOptionalString(input.objectAreaId),
   };
 }
 
@@ -108,6 +112,16 @@ export function normalizeJobUpdateInput(input: JobUpdateInput) {
         : ensureOptionalNullableIsoDate(input.scheduledEnd, 'scheduledEnd'),
     priority: input.priority === undefined ? undefined : ensurePriority(input.priority),
     teamId: input.teamId === undefined ? undefined : ensureOptionalNullableString(input.teamId),
+    customerId:
+      input.customerId === undefined ? undefined : ensureOptionalNullableString(input.customerId),
+    addressId:
+      input.addressId === undefined ? undefined : ensureOptionalNullableString(input.addressId),
+    objectId:
+      input.objectId === undefined ? undefined : ensureOptionalNullableString(input.objectId),
+    objectAreaId:
+      input.objectAreaId === undefined
+        ? undefined
+        : ensureOptionalNullableString(input.objectAreaId),
   };
 }
 

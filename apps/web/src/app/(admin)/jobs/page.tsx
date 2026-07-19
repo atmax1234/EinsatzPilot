@@ -6,6 +6,7 @@ import {
   formatDateTime,
   getJobPriorityLabel,
   getJobsData,
+  getJobRelationOptionsData,
   getJobStatusLabel,
   getTeamsData,
 } from '../../../lib/operations';
@@ -20,14 +21,19 @@ export default async function JobsPage({
 }: {
   searchParams?: Promise<{ notice?: string; error?: string }>;
 }) {
-  const [session, jobsResult, teamsResult, resolvedSearchParams] = await Promise.all([
+  const [session, jobsResult, teamsResult, relationOptionsResult, resolvedSearchParams] = await Promise.all([
     requireServerSession(),
     getJobsData(),
     getTeamsData(),
+    getJobRelationOptionsData(),
     searchParams,
   ]);
   const companyLabel = session.activeCompany?.name ?? session.activeCompany?.slug ?? 'Ihre Firma';
   const stats = getJobsStats();
+  const relationOptions = relationOptionsResult.ok ? relationOptionsResult.data : undefined;
+  const objectNames = new Map(
+    relationOptions?.objects.map((object) => [object.id, object.name]) ?? [],
+  );
   const flashMessage = resolvedSearchParams?.error
     ? {
         tone: 'error' as const,
@@ -90,6 +96,59 @@ export default async function JobsPage({
                 <input name="location" placeholder="Adresse oder Einsatzort" required />
               </label>
 
+              <p className="muted-note full-span">
+                Stammdatenverknuepfungen sind optional. Kunde und Ort als Text bleiben fuer
+                bestehende Auftraege und freie Erfassung erhalten.
+              </p>
+
+              <label className="form-field">
+                <span>Kundenverknuepfung</span>
+                <select defaultValue="" name="customerId">
+                  <option value="">Ohne Kundenverknuepfung</option>
+                  {relationOptions?.customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="form-field">
+                <span>Adressverknuepfung</span>
+                <select defaultValue="" name="addressId">
+                  <option value="">Ohne Adressverknuepfung</option>
+                  {relationOptions?.addresses.map((address) => (
+                    <option key={address.id} value={address.id}>
+                      {address.label}: {address.street}, {address.postalCode} {address.city}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="form-field">
+                <span>Objektverknuepfung</span>
+                <select defaultValue="" name="objectId">
+                  <option value="">Ohne Objektverknuepfung</option>
+                  {relationOptions?.objects.map((object) => (
+                    <option key={object.id} value={object.id}>
+                      {object.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="form-field">
+                <span>Objektbereich</span>
+                <select defaultValue="" name="objectAreaId">
+                  <option value="">Ohne Objektbereich</option>
+                  {relationOptions?.objectAreas.map((area) => (
+                    <option key={area.id} value={area.id}>
+                      {objectNames.get(area.objectId) ?? 'Objekt'} / {area.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               <label className="form-field">
                 <span>Start</span>
                 <input name="scheduledStart" type="datetime-local" required />
@@ -138,6 +197,13 @@ export default async function JobsPage({
               <p className="muted-note">
                 Teams konnten gerade nicht geladen werden. Der Auftrag kann trotzdem ohne
                 Zuweisung erstellt werden.
+              </p>
+            ) : null}
+
+            {!relationOptionsResult.ok ? (
+              <p className="muted-note">
+                Stammdaten konnten gerade nicht geladen werden. Der Auftrag kann weiterhin nur
+                mit den freien Kunden- und Ortsfeldern erstellt werden.
               </p>
             ) : null}
 

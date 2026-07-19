@@ -6,7 +6,7 @@ Be strict. “Kinda works” = not done.
 Assessment snapshot: checked items below were verified on 2026-04-18 against the live local setup where applicable.
 Verification now includes real PostgreSQL migrations, the API smoke flow, and web pages rendering live updated data from the database.
 
-Directory expansion snapshot: Customer, Address, Object, and ObjectArea code was added on 2026-07-19. Prisma validation, generation, typechecks, and build verification are tracked separately from the still-pending live migration/smoke run.
+Directory and Job relation snapshot: Customer, Address, Object, and ObjectArea foundation plus backwards-compatible Job relations were migrated and verified through the expanded live PostgreSQL smoke flow on 2026-07-19.
 
 ---
 
@@ -99,6 +99,7 @@ Directory expansion snapshot: Customer, Address, Object, and ObjectArea code was
 * [x] job creation logs activity
 * [x] status changes log activity
 * [x] assignment changes log activity
+* [x] customer/address/object/object-area relation changes log activity
 * [x] activity contains useful info
 * [x] history is readable in UI
 
@@ -176,9 +177,13 @@ You can do ALL of this without hacks:
 * [x] company-scoped relation lookups reject foreign tenant IDs in code
 * [x] customer/address/object/object-area admin pages use real API data
 * [x] Prisma validation/generation, directory typechecks, and production builds pass
-* [ ] new migration applied against live PostgreSQL
-* [ ] expanded directory smoke flow passes, including role and cross-tenant checks
-* [ ] jobs linked to structured customer/object/address data (Phase 2)
+* [x] directory migration applied against live PostgreSQL
+* [x] expanded directory smoke flow passes, including role and cross-tenant checks
+* [x] jobs link optionally to structured customer/address/object/object-area data
+* [x] legacy `Job.customerName` and `Job.location` creation remains supported
+* [x] object-area links require and match the selected object
+* [x] Job relation options and forms use company-scoped real API data
+* [x] Job relation create/update, activity, mismatch, and cross-tenant smoke checks pass
 
 ---
 

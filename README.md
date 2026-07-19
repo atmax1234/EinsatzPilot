@@ -11,11 +11,12 @@ The repository currently provides a narrower working foundation:
 - pnpm TypeScript monorepo with NestJS API, Prisma/PostgreSQL, and Next.js web app.
 - Company, user, membership, role, team, job, activity, report, attachment, customer, address, object, and object-area models.
 - Tenant-scoped operational reads/writes and role checks for implemented flows.
+- Optional, tenant-validated job links to customers, addresses, objects, and object areas while preserving legacy customer/location text.
 - Explicit job lifecycle transitions.
 - Admin web routes for development login, dashboard, jobs, teams, reports, attachments, customers/addresses, objects, and object areas using real API data.
 - PostgreSQL container helpers and an API smoke flow.
 
-This is not yet the full command center. Jobs are not yet linked to the new structured customer/object records. Items, movements, generic assignments, billing, automation, and enterprise workflows remain planned. Authentication is development-only, file storage is local, automated tests/linting are not configured, and mobile is only a scaffold.
+This is not yet the full command center. Items, movements, generic assignments, billing, automation, and enterprise workflows remain planned. Authentication is development-only, file storage is local, automated tests/linting are not configured, and mobile is only a scaffold.
 
 ## Documentation
 
@@ -100,7 +101,7 @@ The smoke flow creates development data. Package `lint` and `test` scripts curre
 
 ## Development direction
 
-First apply and smoke-test the new directory migration against PostgreSQL. The next product slice is then optional, backwards-compatible job links to customers, addresses, objects, and object areas. See [Recommended next steps](./docs/07_NEXT_STEPS.md). Do not skip its dependencies to build command-board polish, inventory UI, billing, QR, or AI first.
+Directory Gate 1 and backwards-compatible Job relation Phase 2 are implemented, migrated, and covered by the live smoke flow. The next recommended slice is the tenant-safe `ItemCategory` and `Item` domain foundation, without movement, assignment, QR, command-board, billing, AI, or mobile scope. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
 
 ## License
 

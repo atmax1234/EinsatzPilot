@@ -9,6 +9,17 @@ export type JobActivityDraft = {
   authorName?: string;
 };
 
+type JobRelationActivityValue = {
+  id: string;
+  label: string;
+};
+
+type JobRelationActivityChange = {
+  relationLabel: string;
+  previous?: JobRelationActivityValue;
+  next?: JobRelationActivityValue;
+};
+
 function getActorName(actor: AuthenticatedUser) {
   return actor.displayName ?? actor.email;
 }
@@ -95,4 +106,26 @@ export function buildJobUpdatedActivities(input: {
   }
 
   return activities;
+}
+
+export function buildJobRelationChangedActivities(input: {
+  actor: AuthenticatedUser;
+  changes: JobRelationActivityChange[];
+}): JobActivityDraft[] {
+  const authorName = getActorName(input.actor);
+
+  return input.changes.flatMap((change) => {
+    if (change.previous?.id === change.next?.id) {
+      return [];
+    }
+
+    return [
+      {
+        kind: 'NOTE' as const,
+        title: `${change.relationLabel} geaendert`,
+        content: `${change.relationLabel} von ${change.previous?.label ?? 'keiner Verknuepfung'} zu ${change.next?.label ?? 'keiner Verknuepfung'} geaendert.`,
+        authorName,
+      },
+    ];
+  });
 }
