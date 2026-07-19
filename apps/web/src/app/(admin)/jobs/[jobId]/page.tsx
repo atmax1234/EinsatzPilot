@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 
 import {
   createJobReportAction,
+  reviewJobReportAction,
   transitionJobStatusAction,
   updateJobAction,
   uploadJobAttachmentAction,
@@ -22,7 +23,9 @@ import {
   formatFileSize,
   getAttachmentKindLabel,
   getAttachmentProxyUrl,
+  getJobReportTypeLabel,
   getReportReviewStatusLabel,
+  isReportAwaitingReview,
 } from '../../../../lib/reports';
 import { requireServerSession } from '../../../../lib/server-auth';
 
@@ -31,6 +34,7 @@ const jobDetailNoticeLabels: Record<string, string> = {
   'job-updated': 'Die Auftragsdaten wurden aktualisiert.',
   'job-status-updated': 'Der Statuswechsel wurde uebernommen und im Aktivitaetslog dokumentiert.',
   'report-created': 'Der Bericht wurde direkt am Auftrag erfasst.',
+  'report-reviewed': 'Die Berichtspruefung wurde gespeichert und im Aktivitaetslog dokumentiert.',
   'attachment-uploaded': 'Der Nachweis wurde am Auftrag hinterlegt.',
 };
 
@@ -52,7 +56,7 @@ export default async function JobDetailPage({
   params: Promise<{ jobId: string }>;
   searchParams?: Promise<{ notice?: string; error?: string }>;
 }) {
-  await requireServerSession();
+  const session = await requireServerSession();
 
   const { jobId } = await params;
   const [jobResult, teamsResult, relationOptionsResult, resolvedSearchParams] = await Promise.all([
@@ -76,6 +80,8 @@ export default async function JobDetailPage({
   const photoAttachments = attachments.filter((attachment) => attachment.kind === 'PHOTO');
   const fileAttachments = attachments.filter((attachment) => attachment.kind === 'FILE');
   const allowedStatusTargets = getAllowedStatusTargets(job.status);
+  const canReviewReports =
+    session.membershipRole === 'OWNER' || session.membershipRole === 'OFFICE';
   const flashMessage = resolvedSearchParams?.error
     ? {
         tone: 'error' as const,
@@ -374,16 +380,18 @@ export default async function JobDetailPage({
       <section className="content-grid">
         <article className="panel">
           <p className="eyebrow">Bericht erfassen</p>
-          <h2>Office-Rueckmeldung direkt zum Auftrag</h2>
+          <h2>Rueckmeldung direkt zum Auftrag</h2>
           <form action={createJobReportAction.bind(null, job.id)} className="form-stack">
             <div className="form-grid">
-              <label className="form-field full-span">
-                <span>Zusammenfassung</span>
-                <input
-                  name="summary"
-                  placeholder="Zum Beispiel Vor-Ort-Abnahme vorbereitet"
-                  required
-                />
+              <label className="form-field">
+                <span>Berichtstyp</span>
+                <select defaultValue="GENERAL" name="type">
+                  <option value="GENERAL">Allgemeiner Bericht</option>
+                  <option value="WORKER_FINDING">Worker-Fund</option>
+                  <option value="WORK_COMPLETION">Arbeitsabschluss</option>
+                  <option value="INCIDENT_REPORT">Stoerungsbericht</option>
+                  <option value="FOLLOW_UP_REQUEST">Folgeauftrag anfragen</option>
+                </select>
               </label>
 
               <label className="form-field">
@@ -401,6 +409,42 @@ export default async function JobDetailPage({
               </label>
 
               <label className="form-field full-span">
+                <span>Zusammenfassung</span>
+                <input
+                  name="summary"
+                  placeholder="Zum Beispiel Vor-Ort-Abnahme vorbereitet"
+                  required
+                />
+              </label>
+
+              <label className="form-field full-span">
+                <span>Feststellung</span>
+                <textarea
+                  name="findingSummary"
+                  placeholder="Was wurde vor Ort festgestellt?"
+                  rows={3}
+                />
+              </label>
+
+              <label className="form-field">
+                <span>Ausgefuehrte Arbeiten</span>
+                <textarea
+                  name="workPerformed"
+                  placeholder="Was wurde erledigt?"
+                  rows={4}
+                />
+              </label>
+
+              <label className="form-field">
+                <span>Noch erforderlich</span>
+                <textarea
+                  name="workStillNeeded"
+                  placeholder="Was ist noch offen?"
+                  rows={4}
+                />
+              </label>
+
+              <label className="form-field full-span">
                 <span>Details</span>
                 <textarea
                   name="details"
@@ -408,7 +452,26 @@ export default async function JobDetailPage({
                   rows={5}
                 />
               </label>
+
+              <label className="form-field full-span checkbox-field">
+                <input name="followUpRequired" type="checkbox" />
+                <span>Folgeaktion erforderlich</span>
+              </label>
+
+              <label className="form-field full-span">
+                <span>Hinweise zur Folgeaktion</span>
+                <textarea
+                  name="followUpNotes"
+                  placeholder="Welche Pruefung, Reparatur oder Abstimmung soll folgen?"
+                  rows={3}
+                />
+              </label>
             </div>
+
+            <p className="muted-note">
+              Allgemeine Berichte bleiben mit Zusammenfassung und optionalen Details moeglich.
+              Worker-Funde und Stoerungsberichte benoetigen mindestens ein inhaltliches Feld.
+            </p>
 
             <div className="form-actions">
               <button className="secondary-button" type="submit">
@@ -505,6 +568,7 @@ export default async function JobDetailPage({
                       <div>
                         <strong>{report.summary}</strong>
                         <p className="compact-text">
+                          {getJobReportTypeLabel(report.type)} ·{' '}
                           {report.author?.name ?? 'Unbekannter Absender'} ·{' '}
                           {report.team?.name ?? 'Ohne Teamkontext'}
                         </p>
@@ -513,11 +577,78 @@ export default async function JobDetailPage({
                         {getReportReviewStatusLabel(report.reviewStatus)}
                       </span>
                     </div>
-                    <p>{report.details ?? 'Dieser Bericht enthaelt keinen Zusatztext.'}</p>
+                    {report.findingSummary ? (
+                      <div>
+                        <strong>Feststellung</strong>
+                        <p>{report.findingSummary}</p>
+                      </div>
+                    ) : null}
+                    {report.workPerformed ? (
+                      <div>
+                        <strong>Ausgefuehrte Arbeiten</strong>
+                        <p>{report.workPerformed}</p>
+                      </div>
+                    ) : null}
+                    {report.workStillNeeded ? (
+                      <div>
+                        <strong>Noch erforderlich</strong>
+                        <p>{report.workStillNeeded}</p>
+                      </div>
+                    ) : null}
+                    {report.details ? (
+                      <div>
+                        <strong>Weitere Details</strong>
+                        <p>{report.details}</p>
+                      </div>
+                    ) : null}
+                    <div>
+                      <strong>Folgeaktion</strong>
+                      <p>
+                        {report.followUpRequired
+                          ? report.followUpNotes ?? 'Erforderlich, noch ohne Zusatzhinweis.'
+                          : 'Nicht erforderlich.'}
+                      </p>
+                    </div>
+                    {report.reviewedBy || report.reviewNotes ? (
+                      <div>
+                        <strong>Pruefung</strong>
+                        <p>{report.reviewNotes ?? 'Ohne Pruefnotiz.'}</p>
+                        <p className="compact-text">
+                          {report.reviewedBy?.name ?? 'Office'}
+                          {report.reviewedAt ? ` · ${formatDateTime(report.reviewedAt)}` : ''}
+                        </p>
+                      </div>
+                    ) : null}
                     <div className="meta-inline">
                       <span>{formatDateTime(report.createdAt)}</span>
                       <span>{linkedAttachments.length} verknuepfte Datei(en)</span>
                     </div>
+                    {canReviewReports && isReportAwaitingReview(report) ? (
+                      <form
+                        action={reviewJobReportAction.bind(null, job.id, report.id)}
+                        className="form-stack nested-stack"
+                      >
+                        <div className="form-grid">
+                          <label className="form-field">
+                            <span>Pruefentscheidung</span>
+                            <select defaultValue="APPROVED" name="reviewStatus">
+                              <option value="APPROVED">Freigeben</option>
+                              <option value="NEEDS_REVISION">Ueberarbeitung anfordern</option>
+                              <option value="REJECTED">Ablehnen</option>
+                            </select>
+                          </label>
+                          <label className="form-field">
+                            <span>Pruefnotiz</span>
+                            <textarea name="reviewNotes" rows={3} />
+                          </label>
+                        </div>
+                        <div className="form-actions">
+                          <button className="secondary-button" type="submit">
+                            Pruefung speichern
+                          </button>
+                        </div>
+                      </form>
+                    ) : null}
                   </div>
                 );
               })}

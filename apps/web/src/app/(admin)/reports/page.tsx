@@ -6,6 +6,7 @@ import {
   formatFileSize,
   getAttachmentKindLabel,
   getAttachmentProxyUrl,
+  getJobReportTypeLabel,
   getLatestReviewFeed,
   getReportsFilterOptions,
   getReportReviewStatusLabel,
@@ -256,13 +257,32 @@ export default async function ReportsPage({
                               <p className="compact-text">
                                 {entry.jobReference} · {entry.jobTitle}
                               </p>
+                              <p className="compact-text">
+                                {getJobReportTypeLabel(entry.report.type)}
+                              </p>
                             </div>
                             <span className="inline-chip">
                               {getReportReviewStatusLabel(entry.report.reviewStatus)}
                             </span>
                           </div>
 
-                          <p>{entry.report.details ?? 'Kein Zusatztext fuer diesen Bericht hinterlegt.'}</p>
+                          <p>
+                            {entry.report.findingSummary ??
+                              entry.report.workPerformed ??
+                              entry.report.details ??
+                              'Kein Zusatztext fuer diesen Bericht hinterlegt.'}
+                          </p>
+
+                          {entry.report.workStillNeeded ? (
+                            <p>Noch erforderlich: {entry.report.workStillNeeded}</p>
+                          ) : null}
+
+                          {entry.report.followUpRequired ? (
+                            <p>
+                              Folgeaktion erforderlich
+                              {entry.report.followUpNotes ? `: ${entry.report.followUpNotes}` : '.'}
+                            </p>
+                          ) : null}
 
                           <div className="meta-inline">
                             <span>{entry.report.author?.name ?? 'Unbekannter Absender'}</span>

@@ -482,6 +482,18 @@ ol {
   resize: vertical;
 }
 
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-field input {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+}
+
 .form-actions {
   display: flex;
   flex-wrap: wrap;

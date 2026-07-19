@@ -1,6 +1,7 @@
 import type {
   JobAttachmentItem,
   JobReportItem,
+  JobReportType,
   PhotoLibraryResponse,
   ReportReviewStatus,
 } from '@einsatzpilot/types';
@@ -66,7 +67,25 @@ export type ReviewFeedEntry = {
 export function getReportReviewStatusLabel(status: ReportReviewStatus) {
   return {
     SUBMITTED: 'Eingereicht',
+    PENDING_REVIEW: 'Pruefung offen',
+    APPROVED: 'Freigegeben',
+    NEEDS_REVISION: 'Ueberarbeitung erforderlich',
+    REJECTED: 'Abgelehnt',
   }[status];
+}
+
+export function getJobReportTypeLabel(type: JobReportType) {
+  return {
+    GENERAL: 'Allgemeiner Bericht',
+    WORKER_FINDING: 'Worker-Fund',
+    WORK_COMPLETION: 'Arbeitsabschluss',
+    INCIDENT_REPORT: 'Stoerungsbericht',
+    FOLLOW_UP_REQUEST: 'Folgeauftrag angefragt',
+  }[type];
+}
+
+export function isReportAwaitingReview(report: JobReportItem) {
+  return report.reviewStatus === 'SUBMITTED' || report.reviewStatus === 'PENDING_REVIEW';
 }
 
 export function getAttachmentKindLabel(kind: JobAttachmentItem['kind']) {
@@ -263,6 +282,11 @@ export function filterReportsOverviewData(
     return matchesSearchQuery(query, [
       entry.report.summary,
       entry.report.details,
+      entry.report.findingSummary,
+      entry.report.workPerformed,
+      entry.report.workStillNeeded,
+      entry.report.followUpNotes,
+      entry.report.reviewNotes,
       entry.jobReference,
       entry.jobTitle,
       entry.customerName,

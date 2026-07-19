@@ -1,6 +1,12 @@
 'use server';
 
-import type { JobEditableStatus, JobPriority, TeamStatus } from '@einsatzpilot/types';
+import type {
+  JobEditableStatus,
+  JobPriority,
+  JobReportType,
+  ReportReviewDecisionStatus,
+  TeamStatus,
+} from '@einsatzpilot/types';
 
 import { redirect } from 'next/navigation';
 
@@ -10,6 +16,7 @@ import {
   createJobData,
   createTeamData,
   removeTeamMemberData,
+  reviewJobReportData,
   transitionJobStatusData,
   uploadJobAttachmentData,
   updateJobData,
@@ -113,6 +120,32 @@ function getTeamStatus(formData: FormData): TeamStatus {
   throw new Error('status ist ungueltig.');
 }
 
+function getJobReportType(formData: FormData): JobReportType {
+  const type = getRequiredString(formData, 'type');
+
+  if (
+    type === 'GENERAL' ||
+    type === 'WORKER_FINDING' ||
+    type === 'WORK_COMPLETION' ||
+    type === 'INCIDENT_REPORT' ||
+    type === 'FOLLOW_UP_REQUEST'
+  ) {
+    return type;
+  }
+
+  throw new Error('type ist ungueltig.');
+}
+
+function getReportReviewDecision(formData: FormData): ReportReviewDecisionStatus {
+  const status = getRequiredString(formData, 'reviewStatus');
+
+  if (status === 'APPROVED' || status === 'NEEDS_REVISION' || status === 'REJECTED') {
+    return status;
+  }
+
+  throw new Error('reviewStatus ist ungueltig.');
+}
+
 export async function createJobAction(formData: FormData) {
   try {
     const result = await createJobData({
@@ -207,6 +240,12 @@ export async function createJobReportAction(jobId: string, formData: FormData) {
       summary: getRequiredString(formData, 'summary'),
       details: getOptionalString(formData, 'details'),
       teamId: getOptionalString(formData, 'teamId'),
+      type: getJobReportType(formData),
+      findingSummary: getOptionalString(formData, 'findingSummary'),
+      workPerformed: getOptionalString(formData, 'workPerformed'),
+      workStillNeeded: getOptionalString(formData, 'workStillNeeded'),
+      followUpRequired: formData.get('followUpRequired') === 'on',
+      followUpNotes: getOptionalString(formData, 'followUpNotes'),
     });
 
     if (!result.ok) {
@@ -221,6 +260,33 @@ export async function createJobReportAction(jobId: string, formData: FormData) {
   } catch (error) {
     redirectWith(`/jobs/${jobId}`, {
       error: error instanceof Error ? error.message : 'Bericht konnte nicht angelegt werden.',
+    });
+  }
+}
+
+export async function reviewJobReportAction(
+  jobId: string,
+  reportId: string,
+  formData: FormData,
+) {
+  try {
+    const result = await reviewJobReportData(jobId, reportId, {
+      reviewStatus: getReportReviewDecision(formData),
+      reviewNotes: getOptionalString(formData, 'reviewNotes'),
+    });
+
+    if (!result.ok) {
+      redirectWith(`/jobs/${jobId}`, {
+        error: result.error ?? 'Bericht konnte nicht geprueft werden.',
+      });
+    }
+
+    redirectWith(`/jobs/${jobId}`, {
+      notice: 'report-reviewed',
+    });
+  } catch (error) {
+    redirectWith(`/jobs/${jobId}`, {
+      error: error instanceof Error ? error.message : 'Bericht konnte nicht geprueft werden.',
     });
   }
 }

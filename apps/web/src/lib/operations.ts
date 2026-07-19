@@ -8,7 +8,9 @@ import type {
   JobPriority,
   JobRelationOptionsResponse,
   JobReportCreateInput,
+  JobReportItem,
   JobReportListResponse,
+  JobReportReviewInput,
   JobStatus,
   JobStatusTransitionInput,
   JobUpdateInput,
@@ -170,6 +172,19 @@ export async function createJobReportData(jobId: string, input: JobReportCreateI
   return fetchApiJson<JobReportListResponse>(`/api/jobs/${jobId}/reports`, {
     authToken: token,
     method: 'POST',
+    json: input,
+  });
+}
+
+export async function reviewJobReportData(
+  jobId: string,
+  reportId: string,
+  input: JobReportReviewInput,
+) {
+  const token = await getAuthTokenOrThrow();
+  return fetchApiJson<JobReportItem>(`/api/jobs/${jobId}/reports/${reportId}/review`, {
+    authToken: token,
+    method: 'PATCH',
     json: input,
   });
 }
