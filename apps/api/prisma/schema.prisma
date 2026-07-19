@@ -39,6 +39,18 @@ enum JobActivityKind {
 
 enum ReportReviewStatus {
   SUBMITTED
+  PENDING_REVIEW
+  APPROVED
+  NEEDS_REVISION
+  REJECTED
+}
+
+enum JobReportType {
+  GENERAL
+  WORKER_FINDING
+  WORK_COMPLETION
+  INCIDENT_REPORT
+  FOLLOW_UP_REQUEST
 }
 
 enum AttachmentKind {
@@ -173,6 +185,7 @@ model User {
   memberships         Membership[]
   teamMembers         TeamMember[]
   authoredReports     JobReport[]     @relation("JobReportAuthor")
+  reviewedReports     JobReport[]     @relation("JobReportReviewer")
   uploadedAttachments JobAttachment[] @relation("JobAttachmentUploader")
   createdAssignments  Assignment[]    @relation("AssignmentCreatedBy")
 }
@@ -281,26 +294,38 @@ model JobActivity {
 }
 
 model JobReport {
-  id           String             @id @default(cuid())
-  companyId    String
-  jobId        String
-  teamId       String?
-  authorUserId String?
-  summary      String
-  details      String?
-  reviewStatus ReportReviewStatus @default(SUBMITTED)
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
-  company      Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  job          Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  team         Team?              @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  author       User?              @relation("JobReportAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
-  attachments  JobAttachment[]
+  id               String             @id @default(cuid())
+  companyId        String
+  jobId            String
+  teamId           String?
+  authorUserId     String?
+  reviewedByUserId String?
+  type             JobReportType      @default(GENERAL)
+  summary          String
+  details          String?
+  findingSummary   String?
+  workPerformed    String?
+  workStillNeeded  String?
+  followUpRequired Boolean            @default(false)
+  followUpNotes    String?
+  reviewStatus     ReportReviewStatus @default(SUBMITTED)
+  reviewedAt       DateTime?
+  reviewNotes      String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  company          Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job              Job                @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  team             Team?              @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  author           User?              @relation("JobReportAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  reviewer         User?              @relation("JobReportReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  attachments      JobAttachment[]
 
   @@index([companyId])
+  @@index([companyId, reviewStatus, createdAt])
   @@index([jobId, createdAt])
   @@index([teamId])
   @@index([authorUserId])
+  @@index([reviewedByUserId])
 }
 
 model JobAttachment {
