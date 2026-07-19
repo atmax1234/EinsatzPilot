@@ -29,9 +29,17 @@ function mapTeamSummary(team?: { id: string; name: string } | null) {
 
 export function mapJobReportItem(report: {
   id: string;
+  type: JobReportItem['type'];
   summary: string;
   details: string | null;
+  findingSummary: string | null;
+  workPerformed: string | null;
+  workStillNeeded: string | null;
+  followUpRequired: boolean;
+  followUpNotes: string | null;
   reviewStatus: JobReportItem['reviewStatus'];
+  reviewNotes: string | null;
+  reviewedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   author?: {
@@ -40,14 +48,42 @@ export function mapJobReportItem(report: {
     displayName: string | null;
   } | null;
   team?: { id: string; name: string } | null;
+  reviewer?: {
+    id: string;
+    email: string;
+    displayName: string | null;
+  } | null;
+  attachments?: Array<{
+    id: string;
+    kind: JobAttachmentItem['kind'];
+    fileName: string;
+    caption: string | null;
+    createdAt: Date;
+  }>;
 }): JobReportItem {
   return {
     id: report.id,
+    type: report.type,
     summary: report.summary,
     details: report.details ?? undefined,
+    findingSummary: report.findingSummary ?? undefined,
+    workPerformed: report.workPerformed ?? undefined,
+    workStillNeeded: report.workStillNeeded ?? undefined,
+    followUpRequired: report.followUpRequired,
+    followUpNotes: report.followUpNotes ?? undefined,
     reviewStatus: report.reviewStatus,
+    reviewNotes: report.reviewNotes ?? undefined,
+    reviewedAt: report.reviewedAt?.toISOString(),
     author: mapUserSummary(report.author),
     team: mapTeamSummary(report.team),
+    reviewedBy: mapUserSummary(report.reviewer),
+    attachments: (report.attachments ?? []).map((attachment) => ({
+      id: attachment.id,
+      kind: attachment.kind,
+      fileName: attachment.fileName,
+      caption: attachment.caption ?? undefined,
+      uploadedAt: attachment.createdAt.toISOString(),
+    })),
     createdAt: report.createdAt.toISOString(),
     updatedAt: report.updatedAt.toISOString(),
   };

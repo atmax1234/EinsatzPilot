@@ -31,6 +31,12 @@ const jobDetailInclude = {
     include: {
       author: true,
       team: true,
+      reviewer: true,
+      attachments: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
     },
     orderBy: {
       createdAt: 'desc',

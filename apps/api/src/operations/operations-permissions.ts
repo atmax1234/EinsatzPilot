@@ -6,6 +6,7 @@ const jobWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const teamWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const jobReopenRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const reportCreateRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
+const reportReviewRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const attachmentCreateRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 const companyReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 const masterDataWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
@@ -64,6 +65,14 @@ export function assertCanCreateJobReports(authContext: RequestAuthContext) {
     authContext,
     reportCreateRoles,
     'Nur angemeldete Firmenmitglieder duerfen Berichte fuer Auftraege erfassen.',
+  );
+}
+
+export function assertCanReviewJobReports(authContext: RequestAuthContext) {
+  assertRoleAllowed(
+    authContext,
+    reportReviewRoles,
+    'Nur OWNER oder OFFICE duerfen Berichte pruefen.',
   );
 }
 

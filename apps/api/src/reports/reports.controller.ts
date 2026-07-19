@@ -1,10 +1,12 @@
-import { Body, Controller, Get, Inject, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Param, Patch, Post, UseGuards } from '@nestjs/common';
 
 import type {
   ActiveCompanyContext,
   AuthenticatedUser,
   JobReportCreateInput,
+  JobReportItem,
   JobReportListResponse,
+  JobReportReviewInput,
   RequestAuthContext,
 } from '@einsatzpilot/types';
 
@@ -43,6 +45,25 @@ export class ReportsController {
     return this.reportsService.createJobReport({
       companyId: company.id,
       jobId,
+      actor: user,
+      authContext,
+      payload,
+    });
+  }
+
+  @Patch(':reportId/review')
+  reviewJobReport(
+    @CurrentCompany() company: ActiveCompanyContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentAuthContext() authContext: RequestAuthContext,
+    @Param('jobId') jobId: string,
+    @Param('reportId') reportId: string,
+    @Body() payload: JobReportReviewInput,
+  ): Promise<JobReportItem> {
+    return this.reportsService.reviewJobReport({
+      companyId: company.id,
+      jobId,
+      reportId,
       actor: user,
       authContext,
       payload,

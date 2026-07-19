@@ -4,7 +4,9 @@ import type {
   CompanyMemberItem,
   JobDetailResponse,
   JobListItem,
+  JobReportType,
   JobStatus,
+  ReportReviewStatus,
   TeamListItem,
 } from '@einsatzpilot/types';
 
@@ -193,9 +195,17 @@ export function mapJobDetailResponse(job: {
   }>;
   reports: Array<{
     id: string;
+    type: JobReportType;
     summary: string;
     details: string | null;
-    reviewStatus: 'SUBMITTED';
+    findingSummary: string | null;
+    workPerformed: string | null;
+    workStillNeeded: string | null;
+    followUpRequired: boolean;
+    followUpNotes: string | null;
+    reviewStatus: ReportReviewStatus;
+    reviewNotes: string | null;
+    reviewedAt: Date | null;
     createdAt: Date;
     updatedAt: Date;
     author: {
@@ -207,6 +217,18 @@ export function mapJobDetailResponse(job: {
       id: string;
       name: string;
     } | null;
+    reviewer: {
+      id: string;
+      email: string;
+      displayName: string | null;
+    } | null;
+    attachments: Array<{
+      id: string;
+      kind: 'PHOTO' | 'FILE';
+      fileName: string;
+      caption: string | null;
+      createdAt: Date;
+    }>;
   }>;
   attachments: Array<{
     id: string;
