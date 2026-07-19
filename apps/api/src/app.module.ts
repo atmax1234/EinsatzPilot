@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { AttachmentsModule } from './attachments/attachments.module';
+import { AssignmentsModule } from './assignments/assignments.module';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { DirectoryModule } from './directory/directory.module';
@@ -22,6 +23,7 @@ import { ReportsModule } from './reports/reports.module';
     ItemsModule,
     ReportsModule,
     AttachmentsModule,
+    AssignmentsModule,
   ],
   controllers: [AppController],
 })

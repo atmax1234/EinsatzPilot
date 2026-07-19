@@ -10,6 +10,8 @@ Directory and Job relation snapshot: Customer, Address, Object, and ObjectArea f
 
 Item foundation snapshot: tenant-safe ItemCategory and Item identity, validation, role rules, real-API administration, migration, and expanded smoke coverage were verified on 2026-07-19.
 
+Assignment foundation snapshot: typed tenant-safe source/target links, lifecycle, validation, role rules, real-API administration, migration, and expanded smoke coverage were verified on 2026-07-19.
+
 ---
 
 ## 1. Repo / Structure
@@ -203,7 +205,26 @@ You can do ALL of this without hacks:
 * [x] `/items` uses real API data for minimal create/list/update administration
 * [x] expanded smoke covers category/item CRUD, ID rules, tracking rules, roles, and tenant isolation
 * [x] Phase 1/2 smoke assertions remain intact and passing
-* [x] movement, assignment, custody, bundles, QR, and dashboards remain out of scope
+* [x] movement, custody, bundles, QR, and inventory dashboards remain out of scope
+
+---
+
+## 18. Generic Assignment Foundation
+
+* [x] Assignment schema, enums, and additive migration exist
+* [x] assignment source/target types are closed enums rather than arbitrary strings
+* [x] source and target IDs are validated against the active company in services
+* [x] USER assignment endpoints require an active company membership
+* [x] OWNER/OFFICE write and WORKER read permissions are enforced
+* [x] source, target, and kind remain immutable after creation
+* [x] optional timing rejects end values that do not follow start values
+* [x] duplicate exact active source/target/kind links are rejected in service and database rules
+* [x] assignment lifecycle transitions are explicit and terminal states remain terminal
+* [x] `Job.teamId` remains independent and passes post-assignment smoke verification
+* [x] `/assignments` uses grouped real API entity options and no fake state
+* [x] expanded smoke covers team-to-job, item-to-job, item-to-object, roles, validation, and tenant isolation
+* [x] Phase 1/2/3 smoke assertions remain intact and passing
+* [x] movement, custody, command board, drag/drop, QR, billing, AI, automation, and mobile remain out of scope
 
 ---
 

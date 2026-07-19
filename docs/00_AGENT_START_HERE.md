@@ -30,4 +30,4 @@ A meaningful change includes a new or changed model, migration, relationship, pe
 
 ## Current instruction
 
-The customer, address, object, and object-area foundation and the backwards-compatible Job relations are implemented, migrated, and covered by the expanded PostgreSQL smoke flow. Follow `07_NEXT_STEPS.md` for the next domain-foundation slice. Do not skip ahead to movement history, generic assignments, command-board polish, billing, QR codes, AI automation, or mobile work.
+The directory, backwards-compatible Job relation, item/category, and generic Assignment foundations are implemented, migrated, and covered by the expanded PostgreSQL smoke flow. Follow `07_NEXT_STEPS.md` for the next domain-foundation slice. Do not begin movement history until the Phase 4 migration, typecheck, builds, smoke flow, and diff checks are clean. Do not skip ahead to command-board polish, billing, QR codes, AI automation, or mobile work.

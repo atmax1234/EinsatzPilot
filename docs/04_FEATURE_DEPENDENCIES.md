@@ -60,4 +60,4 @@ A Prisma model or route alone is not a completed dependency. Before dependent UI
 
 Simple administrative UI may follow in the same vertical slice after these behaviors are real.
 
-The directory foundation, backwards-compatible structured Job links, and item/category identity foundation meet this gate and have live migration/smoke proof. Generic assignments are next, but must not begin until the Phase 3 migration, typechecks, builds, and expanded smoke flow remain clean. Assignment design must preserve current `Job.teamId`, item tracking invariants, tenant boundaries, and service-level role checks.
+The directory foundation, backwards-compatible structured Job links, item/category identity, and generic Assignment foundation meet this gate and have live migration/smoke proof. Item movement history is next, but must not begin until the Phase 4 migration, typechecks, builds, and expanded smoke flow remain clean. Movement design must use append-oriented records and preserve assignment identity, item tracking invariants, tenant boundaries, and service-level role checks.

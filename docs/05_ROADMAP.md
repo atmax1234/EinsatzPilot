@@ -42,7 +42,7 @@ Phases are dependency order, not calendar promises. Advance when goals and safet
 
 ## Phase 4 — Generic assignments
 
-**Status:** Next recommended phase after Phase 3 migration, typecheck, build, and smoke validation is clean.
+**Status:** Implemented and verified. Typed company-owned source/target links, tenant-safe entity resolution, active-duplicate and timing rules, explicit lifecycle, creator attribution, role checks, grouped real-data options, minimal web administration, migration, and expanded smoke coverage are in place. Existing `Job.teamId` remains unchanged and independent.
 
 **Goals:** Model time-aware allocation for jobs, teams, users, and approved resources; define status, conflicts, replacement/unassignment, history, and compatibility with `Job.teamId`; expose atomic tenant-safe operations.
 
@@ -51,6 +51,8 @@ Phases are dependency order, not calendar promises. Advance when goals and safet
 **Must not build yet:** Drag-and-drop dispatch, auto-scheduling, or client-only assignment state.
 
 ## Phase 5 — Movement history
+
+**Status:** Next recommended phase after Phase 4 migration, typecheck, build, and smoke validation is clean.
 
 **Goals:** Implement append-oriented movements with source, destination, quantity/unit, actor, reason, time, and work context; define transactional balance/current-location, correction, and concurrency behavior; verify audit and isolation.
 

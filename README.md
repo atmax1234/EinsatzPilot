@@ -9,15 +9,16 @@ It is designed for small companies, growing teams, and larger operational busine
 The repository currently provides a narrower working foundation:
 
 - pnpm TypeScript monorepo with NestJS API, Prisma/PostgreSQL, and Next.js web app.
-- Company, user, membership, role, team, job, activity, report, attachment, customer, address, object, object-area, item-category, and item models.
+- Company, user, membership, role, team, job, activity, report, attachment, customer, address, object, object-area, item-category, item, and generic assignment models.
 - Tenant-scoped operational reads/writes and role checks for implemented flows.
 - Optional, tenant-validated job links to customers, addresses, objects, and object areas while preserving legacy customer/location text.
 - Explicit job lifecycle transitions.
 - Admin web routes for development login, dashboard, jobs, teams, reports, attachments, customers/addresses, objects, and object areas using real API data.
 - Tenant-safe item/category APIs and a minimal `/items` administration page with generated company-unique custom IDs and strict quantity/serialized rules.
+- Tenant-safe generic assignment APIs and a minimal `/assignments` page using grouped real-data entity options while preserving `Job.teamId`.
 - PostgreSQL container helpers and an API smoke flow.
 
-This is not yet the full command center. Item movements, generic assignments, custody, bundles, billing, automation, and enterprise workflows remain planned. Authentication is development-only, file storage is local, automated tests/linting are not configured, and mobile is only a scaffold.
+This is not yet the full command center. Item movements, custody, command-board behavior, bundles, billing, automation, and enterprise workflows remain planned. Authentication is development-only, file storage is local, automated tests/linting are not configured, and mobile is only a scaffold.
 
 ## Documentation
 
@@ -102,7 +103,7 @@ The smoke flow creates development data. Package `lint` and `test` scripts curre
 
 ## Development direction
 
-Directory Gate 1, backwards-compatible Job relation Phase 2, and the tenant-safe `ItemCategory`/`Item` Phase 3 foundation are implemented, migrated, and covered by the live smoke flow. The next recommended slice is `Domain Foundation Phase 4 — Generic Assignment foundation`, but only after Phase 3 migration, typecheck, build, and smoke validation remain clean. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
+Directory Gate 1, backwards-compatible Job relation Phase 2, the tenant-safe `ItemCategory`/`Item` Phase 3 foundation, and generic Assignment Phase 4 are implemented, migrated, and covered by the live smoke flow. The next recommended slice is `Domain Foundation Phase 5 — Item Movement History`, but only after Phase 4 migration, typecheck, build, and smoke validation remain clean. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
 
 ## License
 

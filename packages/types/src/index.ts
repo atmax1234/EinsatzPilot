@@ -102,6 +102,23 @@ export type ItemUnit =
   | 'OTHER';
 export type ItemTrackingMode = 'QUANTITY' | 'SERIALIZED';
 export type ItemStatus = 'ACTIVE' | 'INACTIVE' | 'DAMAGED' | 'LOST' | 'ARCHIVED';
+export type AssignmentEntityType =
+  | 'USER'
+  | 'TEAM'
+  | 'JOB'
+  | 'CUSTOMER'
+  | 'ADDRESS'
+  | 'OBJECT'
+  | 'OBJECT_AREA'
+  | 'ITEM';
+export type AssignmentKind =
+  | 'RESPONSIBLE'
+  | 'SCHEDULED'
+  | 'ALLOCATED'
+  | 'RESERVED'
+  | 'SUPPORTING'
+  | 'OTHER';
+export type AssignmentStatus = 'ACTIVE' | 'PLANNED' | 'ENDED' | 'CANCELED';
 
 export type TeamMemberSummary = {
   id: string;
@@ -582,5 +599,65 @@ export type ItemUpdateInput = {
   trackingMode?: ItemTrackingMode;
   quantity?: number;
   status?: ItemStatus;
+  notes?: string | null;
+};
+
+export type AssignmentEntityOption = {
+  type: AssignmentEntityType;
+  id: string;
+  label: string;
+  detail?: string;
+};
+
+export type AssignmentEntityOptionsResponse = {
+  entities: Record<AssignmentEntityType, AssignmentEntityOption[]>;
+};
+
+export type AssignmentListItem = {
+  id: string;
+  sourceType: AssignmentEntityType;
+  sourceId: string;
+  source: AssignmentEntityOption;
+  targetType: AssignmentEntityType;
+  targetId: string;
+  target: AssignmentEntityOption;
+  kind: AssignmentKind;
+  status: AssignmentStatus;
+  startsAt?: string;
+  endsAt?: string;
+  notes?: string;
+  createdBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AssignmentListResponse = {
+  assignments: AssignmentListItem[];
+};
+
+export type AssignmentDetailResponse = {
+  assignment: AssignmentListItem;
+};
+
+export type AssignmentCreateInput = {
+  sourceType: AssignmentEntityType;
+  sourceId: string;
+  targetType: AssignmentEntityType;
+  targetId: string;
+  kind: AssignmentKind;
+  status?: AssignmentStatus;
+  startsAt?: string;
+  endsAt?: string;
+  notes?: string;
+};
+
+export type AssignmentUpdateInput = {
+  status?: AssignmentStatus;
+  startsAt?: string | null;
+  endsAt?: string | null;
   notes?: string | null;
 };

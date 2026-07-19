@@ -114,6 +114,33 @@ enum ItemStatus {
   ARCHIVED
 }
 
+enum AssignmentEntityType {
+  USER
+  TEAM
+  JOB
+  CUSTOMER
+  ADDRESS
+  OBJECT
+  OBJECT_AREA
+  ITEM
+}
+
+enum AssignmentKind {
+  RESPONSIBLE
+  SCHEDULED
+  ALLOCATED
+  RESERVED
+  SUPPORTING
+  OTHER
+}
+
+enum AssignmentStatus {
+  ACTIVE
+  PLANNED
+  ENDED
+  CANCELED
+}
+
 model Company {
   id             String          @id @default(cuid())
   name           String
@@ -132,6 +159,7 @@ model Company {
   objectAreas    ObjectArea[]
   itemCategories ItemCategory[]
   items          Item[]
+  assignments    Assignment[]
 }
 
 model User {
@@ -146,6 +174,7 @@ model User {
   teamMembers         TeamMember[]
   authoredReports     JobReport[]     @relation("JobReportAuthor")
   uploadedAttachments JobAttachment[] @relation("JobAttachmentUploader")
+  createdAssignments  Assignment[]    @relation("AssignmentCreatedBy")
 }
 
 model Membership {
@@ -424,4 +453,30 @@ model Item {
   @@index([companyId, categoryId])
   @@index([companyId, kind])
   @@index([companyId, status])
+}
+
+model Assignment {
+  id              String               @id @default(cuid())
+  companyId       String
+  sourceType      AssignmentEntityType
+  sourceId        String
+  targetType      AssignmentEntityType
+  targetId        String
+  kind            AssignmentKind
+  status          AssignmentStatus     @default(ACTIVE)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  notes           String?
+  createdByUserId String
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  company         Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy       User                 @relation("AssignmentCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, status])
+  @@index([companyId, sourceType, sourceId])
+  @@index([companyId, targetType, targetId])
+  @@index([companyId, kind])
+  @@index([companyId, startsAt])
+  @@index([createdByUserId])
 }

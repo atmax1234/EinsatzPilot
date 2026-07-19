@@ -41,4 +41,4 @@ The product is not only for gardeners, Hausmeister services, or cleaning compani
 
 ## Status boundary
 
-This document defines direction, not completion. Today the repository implements identity, teams, jobs, reports, attachments, customers, structured addresses, objects, and object areas. Jobs do not yet reference those new directory records. Items, movements, generic assignments, billing, automation, and enterprise workflow configuration remain planned.
+This document defines direction, not completion. Today the repository implements identity, teams, jobs, reports, attachments, customers, structured addresses, objects, object areas, item categories, items, optional backwards-compatible Job directory links, and a generic Assignment foundation. `Job.teamId` remains the existing operational team link and is not synchronized with generic assignments. Item movements, custody, command-board behavior, billing, automation, and enterprise workflow configuration remain planned.

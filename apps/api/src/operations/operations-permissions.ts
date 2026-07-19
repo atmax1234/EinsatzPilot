@@ -12,6 +12,8 @@ const masterDataWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const masterDataReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 const itemWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const itemReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
+const assignmentWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
+const assignmentReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 
 function assertAuthenticatedContext(
   authContext: RequestAuthContext,
@@ -110,5 +112,21 @@ export function assertCanReadItems(authContext: RequestAuthContext) {
     authContext,
     itemReadRoles,
     'Nur aktive Firmenmitglieder duerfen Kategorien und Artikel lesen.',
+  );
+}
+
+export function assertCanWriteAssignments(authContext: RequestAuthContext) {
+  assertRoleAllowed(
+    authContext,
+    assignmentWriteRoles,
+    'Nur OWNER oder OFFICE duerfen Zuweisungen aendern.',
+  );
+}
+
+export function assertCanReadAssignments(authContext: RequestAuthContext) {
+  assertRoleAllowed(
+    authContext,
+    assignmentReadRoles,
+    'Nur aktive Firmenmitglieder duerfen Zuweisungen lesen.',
   );
 }

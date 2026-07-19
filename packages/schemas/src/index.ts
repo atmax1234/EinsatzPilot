@@ -1,4 +1,7 @@
 import type {
+  AssignmentEntityType,
+  AssignmentKind,
+  AssignmentStatus,
   AttachmentKind,
   CustomerType,
   JobEditableStatus,
@@ -79,6 +82,30 @@ export const itemStatuses = [
   'LOST',
   'ARCHIVED',
 ] as const satisfies readonly ItemStatus[];
+export const assignmentEntityTypes = [
+  'USER',
+  'TEAM',
+  'JOB',
+  'CUSTOMER',
+  'ADDRESS',
+  'OBJECT',
+  'OBJECT_AREA',
+  'ITEM',
+] as const satisfies readonly AssignmentEntityType[];
+export const assignmentKinds = [
+  'RESPONSIBLE',
+  'SCHEDULED',
+  'ALLOCATED',
+  'RESERVED',
+  'SUPPORTING',
+  'OTHER',
+] as const satisfies readonly AssignmentKind[];
+export const assignmentStatuses = [
+  'ACTIVE',
+  'PLANNED',
+  'ENDED',
+  'CANCELED',
+] as const satisfies readonly AssignmentStatus[];
 
 export function parseMembershipRole(rawRole: string | undefined): MembershipRole | undefined {
   if (!rawRole) {
@@ -197,4 +224,35 @@ export function parseItemStatus(rawStatus: string | undefined): ItemStatus | und
 
   const normalized = rawStatus.toUpperCase() as ItemStatus;
   return itemStatuses.includes(normalized) ? normalized : undefined;
+}
+
+export function parseAssignmentEntityType(
+  rawType: string | undefined,
+): AssignmentEntityType | undefined {
+  if (!rawType) {
+    return undefined;
+  }
+
+  const normalized = rawType.toUpperCase() as AssignmentEntityType;
+  return assignmentEntityTypes.includes(normalized) ? normalized : undefined;
+}
+
+export function parseAssignmentKind(rawKind: string | undefined): AssignmentKind | undefined {
+  if (!rawKind) {
+    return undefined;
+  }
+
+  const normalized = rawKind.toUpperCase() as AssignmentKind;
+  return assignmentKinds.includes(normalized) ? normalized : undefined;
+}
+
+export function parseAssignmentStatus(
+  rawStatus: string | undefined,
+): AssignmentStatus | undefined {
+  if (!rawStatus) {
+    return undefined;
+  }
+
+  const normalized = rawStatus.toUpperCase() as AssignmentStatus;
+  return assignmentStatuses.includes(normalized) ? normalized : undefined;
 }
