@@ -79,22 +79,59 @@ enum ObjectAreaType {
   OTHER
 }
 
+enum ItemKind {
+  MATERIAL
+  TOOL
+  ASSET
+  CONSUMABLE
+  PACKAGE
+  OTHER
+}
+
+enum ItemUnit {
+  PIECE
+  KG
+  LITER
+  METER
+  SQUARE_METER
+  CUBIC_METER
+  PALLET
+  BOX
+  BAG
+  OTHER
+}
+
+enum ItemTrackingMode {
+  QUANTITY
+  SERIALIZED
+}
+
+enum ItemStatus {
+  ACTIVE
+  INACTIVE
+  DAMAGED
+  LOST
+  ARCHIVED
+}
+
 model Company {
-  id          String          @id @default(cuid())
-  name        String
-  slug        String          @unique
-  isActive    Boolean         @default(true)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  memberships Membership[]
-  teams       Team[]
-  jobs        Job[]
-  reports     JobReport[]
-  attachments JobAttachment[]
-  customers   Customer[]
-  addresses   Address[]
-  objects     Object[]
-  objectAreas ObjectArea[]
+  id             String          @id @default(cuid())
+  name           String
+  slug           String          @unique
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  memberships    Membership[]
+  teams          Team[]
+  jobs           Job[]
+  reports        JobReport[]
+  attachments    JobAttachment[]
+  customers      Customer[]
+  addresses      Address[]
+  objects        Object[]
+  objectAreas    ObjectArea[]
+  itemCategories ItemCategory[]
+  items          Item[]
 }
 
 model User {
@@ -345,4 +382,46 @@ model ObjectArea {
 
   @@index([companyId, objectId, name])
   @@index([companyId, type])
+}
+
+model ItemCategory {
+  id          String   @id @default(cuid())
+  companyId   String
+  name        String
+  description String?
+  kind        ItemKind @default(OTHER)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  items       Item[]
+
+  @@unique([companyId, name])
+  @@index([companyId, isActive])
+  @@index([companyId, kind])
+}
+
+model Item {
+  id           String           @id @default(cuid())
+  companyId    String
+  categoryId   String?
+  customId     String
+  name         String
+  description  String?
+  kind         ItemKind         @default(OTHER)
+  unit         ItemUnit         @default(PIECE)
+  trackingMode ItemTrackingMode @default(QUANTITY)
+  quantity     Decimal          @default(0) @db.Decimal(14, 3)
+  status       ItemStatus       @default(ACTIVE)
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  category     ItemCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, customId])
+  @@index([companyId, name])
+  @@index([companyId, categoryId])
+  @@index([companyId, kind])
+  @@index([companyId, status])
 }

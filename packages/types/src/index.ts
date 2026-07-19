@@ -82,6 +82,26 @@ export type ObjectAreaType =
   | 'ROOM'
   | 'STORAGE_AREA'
   | 'OTHER';
+export type ItemKind =
+  | 'MATERIAL'
+  | 'TOOL'
+  | 'ASSET'
+  | 'CONSUMABLE'
+  | 'PACKAGE'
+  | 'OTHER';
+export type ItemUnit =
+  | 'PIECE'
+  | 'KG'
+  | 'LITER'
+  | 'METER'
+  | 'SQUARE_METER'
+  | 'CUBIC_METER'
+  | 'PALLET'
+  | 'BOX'
+  | 'BAG'
+  | 'OTHER';
+export type ItemTrackingMode = 'QUANTITY' | 'SERIALIZED';
+export type ItemStatus = 'ACTIVE' | 'INACTIVE' | 'DAMAGED' | 'LOST' | 'ARCHIVED';
 
 export type TeamMemberSummary = {
   id: string;
@@ -476,5 +496,91 @@ export type ObjectAreaCreateInput = {
 export type ObjectAreaUpdateInput = {
   name?: string;
   type?: ObjectAreaType;
+  notes?: string | null;
+};
+
+export type ItemCategoryListItem = {
+  id: string;
+  name: string;
+  description?: string;
+  kind: ItemKind;
+  isActive: boolean;
+  itemCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ItemCategoryListResponse = {
+  categories: ItemCategoryListItem[];
+};
+
+export type ItemCategoryCreateInput = {
+  name: string;
+  description?: string;
+  kind: ItemKind;
+  isActive?: boolean;
+};
+
+export type ItemCategoryUpdateInput = {
+  name?: string;
+  description?: string | null;
+  kind?: ItemKind;
+  isActive?: boolean;
+};
+
+export type ItemCategorySummary = {
+  id: string;
+  name: string;
+  kind: ItemKind;
+  isActive: boolean;
+};
+
+export type ItemListItem = {
+  id: string;
+  customId: string;
+  name: string;
+  description?: string;
+  kind: ItemKind;
+  unit: ItemUnit;
+  trackingMode: ItemTrackingMode;
+  quantity: number;
+  status: ItemStatus;
+  notes?: string;
+  category?: ItemCategorySummary;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ItemListResponse = {
+  items: ItemListItem[];
+};
+
+export type ItemDetailResponse = {
+  item: ItemListItem;
+};
+
+export type ItemCreateInput = {
+  categoryId?: string;
+  customId?: string;
+  name: string;
+  description?: string;
+  kind: ItemKind;
+  unit: ItemUnit;
+  trackingMode: ItemTrackingMode;
+  quantity?: number;
+  status?: ItemStatus;
+  notes?: string;
+};
+
+export type ItemUpdateInput = {
+  categoryId?: string | null;
+  customId?: string;
+  name?: string;
+  description?: string | null;
+  kind?: ItemKind;
+  unit?: ItemUnit;
+  trackingMode?: ItemTrackingMode;
+  quantity?: number;
+  status?: ItemStatus;
   notes?: string | null;
 };

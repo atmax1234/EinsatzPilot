@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { DirectoryModule } from './directory/directory.module';
 import { FoundationModule } from './foundation/foundation.module';
 import { HealthModule } from './health/health.module';
+import { ItemsModule } from './items/items.module';
 import { OperationsModule } from './operations/operations.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReportsModule } from './reports/reports.module';
@@ -18,6 +19,7 @@ import { ReportsModule } from './reports/reports.module';
     HealthModule,
     OperationsModule,
     DirectoryModule,
+    ItemsModule,
     ReportsModule,
     AttachmentsModule,
   ],

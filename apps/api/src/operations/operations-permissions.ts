@@ -10,6 +10,8 @@ const attachmentCreateRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 const companyReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 const masterDataWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const masterDataReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
+const itemWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
+const itemReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 
 function assertAuthenticatedContext(
   authContext: RequestAuthContext,
@@ -92,5 +94,21 @@ export function assertCanReadMasterData(authContext: RequestAuthContext) {
     authContext,
     masterDataReadRoles,
     'Nur aktive Firmenmitglieder duerfen Kunden, Adressen und Objekte lesen.',
+  );
+}
+
+export function assertCanWriteItems(authContext: RequestAuthContext) {
+  assertRoleAllowed(
+    authContext,
+    itemWriteRoles,
+    'Nur OWNER oder OFFICE duerfen Kategorien und Artikel aendern.',
+  );
+}
+
+export function assertCanReadItems(authContext: RequestAuthContext) {
+  assertRoleAllowed(
+    authContext,
+    itemReadRoles,
+    'Nur aktive Firmenmitglieder duerfen Kategorien und Artikel lesen.',
   );
 }

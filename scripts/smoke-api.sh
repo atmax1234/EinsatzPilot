@@ -140,12 +140,33 @@ second_object_id="$(printf '%s' "$second_object" | jq -r '.id')"
 missing_object_status="$(curl -sS -o "${TMP_DIR}/missing-object.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Missing Object\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T08:00:00.000Z\",\"priority\":\"NORMAL\",\"objectAreaId\":\"${area_id}\"}")"
 mismatched_area_status="$(curl -sS -o "${TMP_DIR}/mismatched-area.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Area Object\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T09:00:00.000Z\",\"priority\":\"NORMAL\",\"objectId\":\"${second_object_id}\",\"objectAreaId\":\"${area_id}\"}")"
 
+create_item_category="$(json_post "${API_BASE}/item-categories" "{\"name\":\"Smoke Material ${SMOKE_SUFFIX}\",\"description\":\"Initial category description\",\"kind\":\"MATERIAL\"}" "$token")"
+item_category_id="$(printf '%s' "$create_item_category" | jq -r '.id')"
+update_item_category="$(json_patch "${API_BASE}/item-categories/${item_category_id}" '{"description":"Updated category description","isActive":true}' "$token")"
+item_categories="$(json_get "${API_BASE}/item-categories" "$token")"
+
+create_quantity_item="$(json_post "${API_BASE}/items" "{\"categoryId\":\"${item_category_id}\",\"name\":\"Smoke Quantity Item ${SMOKE_SUFFIX}\",\"description\":\"Quantity item proof\",\"kind\":\"MATERIAL\",\"unit\":\"KG\",\"trackingMode\":\"QUANTITY\",\"quantity\":12.5,\"status\":\"ACTIVE\"}" "$token")"
+quantity_item_id="$(printf '%s' "$create_quantity_item" | jq -r '.id')"
+quantity_item_custom_id="$(printf '%s' "$create_quantity_item" | jq -r '.customId')"
+quantity_item_detail="$(json_get "${API_BASE}/items/${quantity_item_id}" "$token")"
+update_quantity_item="$(json_patch "${API_BASE}/items/${quantity_item_id}" '{"name":"Updated Smoke Quantity Item","quantity":10.25,"notes":"Quantity update proof"}' "$token")"
+items="$(json_get "${API_BASE}/items" "$token")"
+duplicate_custom_id_status="$(curl -sS -o "${TMP_DIR}/duplicate-custom-id.json" -w '%{http_code}' -X POST "${API_BASE}/items" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"customId\":\"${quantity_item_custom_id}\",\"name\":\"Duplicate Custom ID\",\"kind\":\"OTHER\",\"unit\":\"PIECE\",\"trackingMode\":\"QUANTITY\",\"quantity\":1}")"
+create_serialized_item="$(json_post "${API_BASE}/items" "{\"name\":\"Smoke Serialized Item ${SMOKE_SUFFIX}\",\"kind\":\"TOOL\",\"unit\":\"PIECE\",\"trackingMode\":\"SERIALIZED\"}" "$token")"
+serialized_item_id="$(printf '%s' "$create_serialized_item" | jq -r '.id')"
+invalid_serialized_status="$(curl -sS -o "${TMP_DIR}/invalid-serialized.json" -w '%{http_code}' -X POST "${API_BASE}/items" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"name\":\"Invalid Serialized Item\",\"kind\":\"TOOL\",\"unit\":\"PIECE\",\"trackingMode\":\"SERIALIZED\",\"quantity\":2}")"
+
 worker_login="$(json_post "${API_BASE}/auth/development-login" '{"email":"worker@luetjens.example.de","displayName":"Worker Proof","companySlug":"luetjens","companyName":"Luetjens Service","membershipRole":"WORKER"}')"
 worker_token="$(printf '%s' "$worker_login" | jq -r '.token')"
 worker_objects="$(json_get "${API_BASE}/objects" "$worker_token")"
 worker_relation_options="$(json_get "${API_BASE}/jobs/relation-options" "$worker_token")"
+worker_item_categories="$(json_get "${API_BASE}/item-categories" "$worker_token")"
+worker_items="$(json_get "${API_BASE}/items" "$worker_token")"
+worker_item_detail="$(json_get "${API_BASE}/items/${quantity_item_id}" "$worker_token")"
 worker_write_status="$(curl -sS -o "${TMP_DIR}/worker-write.json" -w '%{http_code}' -X POST "${API_BASE}/customers" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"name":"Forbidden Worker Customer","type":"OTHER"}')"
 worker_job_write_status="$(curl -sS -o "${TMP_DIR}/worker-job-write.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d "{\"title\":\"Forbidden Worker Job\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T11:00:00.000Z\",\"priority\":\"NORMAL\",\"customerId\":\"${customer_id}\"}")"
+worker_category_write_status="$(curl -sS -o "${TMP_DIR}/worker-category-write.json" -w '%{http_code}' -X POST "${API_BASE}/item-categories" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"name":"Forbidden Worker Category","kind":"OTHER"}')"
+worker_item_write_status="$(curl -sS -o "${TMP_DIR}/worker-item-write.json" -w '%{http_code}' -X PATCH "${API_BASE}/items/${quantity_item_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"notes":"Forbidden worker update"}')"
 
 other_login="$(json_post "${API_BASE}/auth/development-login" '{"email":"owner@otherco.example.de","displayName":"Other Owner","companySlug":"otherco","companyName":"Other Co","membershipRole":"OWNER"}')"
 other_token="$(printf '%s' "$other_login" | jq -r '.token')"
@@ -160,11 +181,18 @@ other_object="$(json_post "${API_BASE}/objects" "{\"customerId\":\"${other_custo
 other_object_id="$(printf '%s' "$other_object" | jq -r '.id')"
 other_area="$(json_post "${API_BASE}/objects/${other_object_id}/areas" '{"name":"Other Area","type":"OTHER"}' "$other_token")"
 other_area_id="$(printf '%s' "$other_area" | jq -r '.id')"
+other_item_category="$(json_post "${API_BASE}/item-categories" "{\"name\":\"Other Category ${SMOKE_SUFFIX}\",\"kind\":\"OTHER\"}" "$other_token")"
+other_item_category_id="$(printf '%s' "$other_item_category" | jq -r '.id')"
+other_item="$(json_post "${API_BASE}/items" "{\"categoryId\":\"${other_item_category_id}\",\"name\":\"Other Item ${SMOKE_SUFFIX}\",\"kind\":\"OTHER\",\"unit\":\"PIECE\",\"trackingMode\":\"QUANTITY\",\"quantity\":1}" "$other_token")"
+other_item_id="$(printf '%s' "$other_item" | jq -r '.id')"
 cross_relation_status="$(curl -sS -o "${TMP_DIR}/cross-relation.json" -w '%{http_code}' -X POST "${API_BASE}/objects" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"addressId\":\"${other_address_id}\",\"name\":\"Invalid Cross Tenant Object\",\"type\":\"OTHER\"}")"
 cross_job_relation_status="$(curl -sS -o "${TMP_DIR}/cross-job-relation.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Cross Tenant Job\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T10:00:00.000Z\",\"priority\":\"NORMAL\",\"addressId\":\"${other_address_id}\"}")"
 cross_job_customer_status="$(curl -sS -o "${TMP_DIR}/cross-job-customer.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Cross Tenant Customer\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T12:00:00.000Z\",\"priority\":\"NORMAL\",\"customerId\":\"${other_customer_id}\"}")"
 cross_job_object_status="$(curl -sS -o "${TMP_DIR}/cross-job-object.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Cross Tenant Object Job\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T13:00:00.000Z\",\"priority\":\"NORMAL\",\"objectId\":\"${other_object_id}\"}")"
 cross_job_area_status="$(curl -sS -o "${TMP_DIR}/cross-job-area.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Cross Tenant Area Job\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T14:00:00.000Z\",\"priority\":\"NORMAL\",\"objectId\":\"${object_id}\",\"objectAreaId\":\"${other_area_id}\"}")"
+cross_item_status="$(curl -sS -o "${TMP_DIR}/cross-item.json" -w '%{http_code}' "${API_BASE}/items/${other_item_id}" -H "Authorization: Bearer ${token}")"
+cross_item_category_status="$(curl -sS -o "${TMP_DIR}/cross-item-category.json" -w '%{http_code}' -X PATCH "${API_BASE}/item-categories/${other_item_category_id}" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"description":"Forbidden cross-company update"}')"
+cross_item_relation_status="$(curl -sS -o "${TMP_DIR}/cross-item-relation.json" -w '%{http_code}' -X POST "${API_BASE}/items" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"categoryId\":\"${other_item_category_id}\",\"name\":\"Invalid Cross Tenant Item\",\"kind\":\"OTHER\",\"unit\":\"PIECE\",\"trackingMode\":\"QUANTITY\",\"quantity\":1}")"
 
 jq -n \
   --argjson health "$health" \
@@ -194,6 +222,17 @@ jq -n \
   --argjson linkedJob "$linked_job" \
   --argjson workerObjects "$worker_objects" \
   --argjson workerRelationOptions "$worker_relation_options" \
+  --argjson createItemCategory "$create_item_category" \
+  --argjson updateItemCategory "$update_item_category" \
+  --argjson itemCategories "$item_categories" \
+  --argjson createQuantityItem "$create_quantity_item" \
+  --argjson quantityItemDetail "$quantity_item_detail" \
+  --argjson updateQuantityItem "$update_quantity_item" \
+  --argjson items "$items" \
+  --argjson createSerializedItem "$create_serialized_item" \
+  --argjson workerItemCategories "$worker_item_categories" \
+  --argjson workerItems "$worker_items" \
+  --argjson workerItemDetail "$worker_item_detail" \
   --arg crossStatus "$cross_status" \
   --arg crossBody "$cross_body" \
   --arg crossObjectStatus "$cross_object_status" \
@@ -206,6 +245,13 @@ jq -n \
   --arg mismatchedAreaStatus "$mismatched_area_status" \
   --arg workerWriteStatus "$worker_write_status" \
   --arg workerJobWriteStatus "$worker_job_write_status" \
+  --arg workerCategoryWriteStatus "$worker_category_write_status" \
+  --arg workerItemWriteStatus "$worker_item_write_status" \
+  --arg duplicateCustomIdStatus "$duplicate_custom_id_status" \
+  --arg invalidSerializedStatus "$invalid_serialized_status" \
+  --arg crossItemStatus "$cross_item_status" \
+  --arg crossItemCategoryStatus "$cross_item_category_status" \
+  --arg crossItemRelationStatus "$cross_item_relation_status" \
   --arg attachmentFileStatus "$attachment_file_status" \
   --arg firstJobId "$first_job_id" \
   --arg teamName "$TEAM_NAME" \
@@ -214,6 +260,9 @@ jq -n \
   --arg addressId "$address_id" \
   --arg objectId "$object_id" \
   --arg areaId "$area_id" \
+  --arg itemCategoryId "$item_category_id" \
+  --arg quantityItemId "$quantity_item_id" \
+  --arg serializedItemId "$serialized_item_id" \
   '{
     healthOk: $health.ok,
     sessionAuthenticated: $session.authenticated,
@@ -282,7 +331,28 @@ jq -n \
     crossJobRelationStatus: $crossJobRelationStatus,
     crossJobCustomerStatus: $crossJobCustomerStatus,
     crossJobObjectStatus: $crossJobObjectStatus,
-    crossJobAreaStatus: $crossJobAreaStatus
+    crossJobAreaStatus: $crossJobAreaStatus,
+    createdItemCategoryKind: $createItemCategory.kind,
+    updatedItemCategoryDescription: $updateItemCategory.description,
+    itemCategoryListContainsCreated: ([$itemCategories.categories[].id] | index($itemCategoryId) != null),
+    autoCustomIdGenerated: ($createQuantityItem.customId | test("^ITEM-[A-Z0-9]{12}$")),
+    quantityItemCreateValue: $createQuantityItem.quantity,
+    quantityItemDetailMatches: ($quantityItemDetail.item.id == $quantityItemId),
+    quantityItemUpdatedValue: $updateQuantityItem.quantity,
+    quantityItemUpdatedNotes: $updateQuantityItem.notes,
+    itemListContainsCreated: ([$items.items[].id] | index($quantityItemId) != null),
+    duplicateCustomIdStatus: $duplicateCustomIdStatus,
+    serializedItemDefaultQuantity: $createSerializedItem.quantity,
+    serializedItemCreated: ($createSerializedItem.id == $serializedItemId),
+    invalidSerializedStatus: $invalidSerializedStatus,
+    workerItemCategoryCount: ($workerItemCategories.categories | length),
+    workerItemCount: ($workerItems.items | length),
+    workerItemDetailMatches: ($workerItemDetail.item.id == $quantityItemId),
+    workerCategoryWriteStatus: $workerCategoryWriteStatus,
+    workerItemWriteStatus: $workerItemWriteStatus,
+    crossItemStatus: $crossItemStatus,
+    crossItemCategoryStatus: $crossItemCategoryStatus,
+    crossItemRelationStatus: $crossItemRelationStatus
   }' > "${TMP_DIR}/summary.json"
 
 jq -e \
@@ -328,7 +398,28 @@ jq -e \
     .crossJobRelationStatus == "404" and
     .crossJobCustomerStatus == "404" and
     .crossJobObjectStatus == "404" and
-    .crossJobAreaStatus == "404"
+    .crossJobAreaStatus == "404" and
+    .createdItemCategoryKind == "MATERIAL" and
+    .updatedItemCategoryDescription == "Updated category description" and
+    .itemCategoryListContainsCreated == true and
+    .autoCustomIdGenerated == true and
+    .quantityItemCreateValue == 12.5 and
+    .quantityItemDetailMatches == true and
+    .quantityItemUpdatedValue == 10.25 and
+    .quantityItemUpdatedNotes == "Quantity update proof" and
+    .itemListContainsCreated == true and
+    .duplicateCustomIdStatus == "409" and
+    .serializedItemDefaultQuantity == 1 and
+    .serializedItemCreated == true and
+    .invalidSerializedStatus == "400" and
+    .workerItemCategoryCount >= 1 and
+    .workerItemCount >= 2 and
+    .workerItemDetailMatches == true and
+    .workerCategoryWriteStatus == "403" and
+    .workerItemWriteStatus == "403" and
+    .crossItemStatus == "404" and
+    .crossItemCategoryStatus == "404" and
+    .crossItemRelationStatus == "404"
   ' "${TMP_DIR}/summary.json" >/dev/null
 
 cat "${TMP_DIR}/summary.json"

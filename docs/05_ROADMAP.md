@@ -32,6 +32,8 @@ Phases are dependency order, not calendar promises. Advance when goals and safet
 
 ## Phase 3 — Items/materials/assets foundation
 
+**Status:** Implemented and verified. Company-owned categories and items, explicit enums, optional tenant-safe category links, company-unique/generated custom IDs, strict quantity/serialized rules, role checks, real-API administration, migration, and expanded smoke coverage are in place.
+
 **Goals:** Add `ItemCategory` and `Item` with explicit consumable/durable, quantity/serialized, unit, custom-ID, lifecycle, lookup, and tenant rules; define location/custody and bundle/asset specialization boundaries.
 
 **Dependencies:** Phase 0 and Phase 1 locations where placement requires them.
@@ -39,6 +41,8 @@ Phases are dependency order, not calendar promises. Advance when goals and safet
 **Must not build yet:** Movement UI, QR scanning, stock dashboards, predictive replenishment, or full vehicle maintenance.
 
 ## Phase 4 — Generic assignments
+
+**Status:** Next recommended phase after Phase 3 migration, typecheck, build, and smoke validation is clean.
 
 **Goals:** Model time-aware allocation for jobs, teams, users, and approved resources; define status, conflicts, replacement/unassignment, history, and compatibility with `Job.teamId`; expose atomic tenant-safe operations.
 

@@ -3,6 +3,10 @@ import type {
   CustomerType,
   JobEditableStatus,
   JobPriority,
+  ItemKind,
+  ItemStatus,
+  ItemTrackingMode,
+  ItemUnit,
   MembershipRole,
   ObjectAreaType,
   ObjectStatus,
@@ -44,6 +48,37 @@ export const objectAreaTypes = [
   'STORAGE_AREA',
   'OTHER',
 ] as const satisfies readonly ObjectAreaType[];
+export const itemKinds = [
+  'MATERIAL',
+  'TOOL',
+  'ASSET',
+  'CONSUMABLE',
+  'PACKAGE',
+  'OTHER',
+] as const satisfies readonly ItemKind[];
+export const itemUnits = [
+  'PIECE',
+  'KG',
+  'LITER',
+  'METER',
+  'SQUARE_METER',
+  'CUBIC_METER',
+  'PALLET',
+  'BOX',
+  'BAG',
+  'OTHER',
+] as const satisfies readonly ItemUnit[];
+export const itemTrackingModes = [
+  'QUANTITY',
+  'SERIALIZED',
+] as const satisfies readonly ItemTrackingMode[];
+export const itemStatuses = [
+  'ACTIVE',
+  'INACTIVE',
+  'DAMAGED',
+  'LOST',
+  'ARCHIVED',
+] as const satisfies readonly ItemStatus[];
 
 export function parseMembershipRole(rawRole: string | undefined): MembershipRole | undefined {
   if (!rawRole) {
@@ -124,4 +159,42 @@ export function parseObjectAreaType(rawType: string | undefined): ObjectAreaType
 
   const normalized = rawType.toUpperCase() as ObjectAreaType;
   return objectAreaTypes.includes(normalized) ? normalized : undefined;
+}
+
+export function parseItemKind(rawKind: string | undefined): ItemKind | undefined {
+  if (!rawKind) {
+    return undefined;
+  }
+
+  const normalized = rawKind.toUpperCase() as ItemKind;
+  return itemKinds.includes(normalized) ? normalized : undefined;
+}
+
+export function parseItemUnit(rawUnit: string | undefined): ItemUnit | undefined {
+  if (!rawUnit) {
+    return undefined;
+  }
+
+  const normalized = rawUnit.toUpperCase() as ItemUnit;
+  return itemUnits.includes(normalized) ? normalized : undefined;
+}
+
+export function parseItemTrackingMode(
+  rawMode: string | undefined,
+): ItemTrackingMode | undefined {
+  if (!rawMode) {
+    return undefined;
+  }
+
+  const normalized = rawMode.toUpperCase() as ItemTrackingMode;
+  return itemTrackingModes.includes(normalized) ? normalized : undefined;
+}
+
+export function parseItemStatus(rawStatus: string | undefined): ItemStatus | undefined {
+  if (!rawStatus) {
+    return undefined;
+  }
+
+  const normalized = rawStatus.toUpperCase() as ItemStatus;
+  return itemStatuses.includes(normalized) ? normalized : undefined;
 }

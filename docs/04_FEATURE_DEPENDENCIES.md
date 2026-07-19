@@ -37,7 +37,7 @@ Trusted events + stable workflows + permissions
 | Customer/object UI | **Implemented foundation:** tenant-owned models, migration, contracts, validation, API, permissions | Static cards or job strings presented as records |
 | Structured job links | **Implemented foundation:** customer/address/object API, tenant checks, area/object invariant, and legacy compatibility | Removing `customerName`/`location` without migration/history decisions |
 | Drag-and-drop board | Assignment, conflict, lifecycle, and atomic API rules | Browser-only card movement |
-| Item/inventory UI | Item/category model, units/tracking semantics, tenant-safe API | Mock counts or arbitrary JSON lists |
+| Item administration | **Implemented foundation:** item/category model, units/tracking semantics, tenant-safe API, role rules, real-data UI | Mock counts or arbitrary JSON lists |
 | Movement UI | Append-only backend, validated endpoints, transactional state rules | Editing location without movement history |
 | QR codes | Stable custom IDs, uniqueness, lookup API, permissions, collision behavior | Encoding database IDs and calling scanning complete |
 | Bundles | Resource identity and composition semantics | Treating a label as stock or assignment history |
@@ -60,4 +60,4 @@ A Prisma model or route alone is not a completed dependency. Before dependent UI
 
 Simple administrative UI may follow in the same vertical slice after these behaviors are real.
 
-The directory foundation and backwards-compatible structured Job links meet this gate and have live migration/smoke proof. The next domain slice must preserve these tenant and compatibility rules rather than bypass them with client-only state.
+The directory foundation, backwards-compatible structured Job links, and item/category identity foundation meet this gate and have live migration/smoke proof. Generic assignments are next, but must not begin until the Phase 3 migration, typechecks, builds, and expanded smoke flow remain clean. Assignment design must preserve current `Job.teamId`, item tracking invariants, tenant boundaries, and service-level role checks.

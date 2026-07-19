@@ -8,6 +8,8 @@ Verification now includes real PostgreSQL migrations, the API smoke flow, and we
 
 Directory and Job relation snapshot: Customer, Address, Object, and ObjectArea foundation plus backwards-compatible Job relations were migrated and verified through the expanded live PostgreSQL smoke flow on 2026-07-19.
 
+Item foundation snapshot: tenant-safe ItemCategory and Item identity, validation, role rules, real-API administration, migration, and expanded smoke coverage were verified on 2026-07-19.
+
 ---
 
 ## 1. Repo / Structure
@@ -184,6 +186,24 @@ You can do ALL of this without hacks:
 * [x] object-area links require and match the selected object
 * [x] Job relation options and forms use company-scoped real API data
 * [x] Job relation create/update, activity, mismatch, and cross-tenant smoke checks pass
+
+---
+
+## 17. Item Foundation
+
+* [x] ItemCategory and Item schema plus additive migration exist
+* [x] categories and items are scoped by company in every API read/write
+* [x] OWNER/OFFICE write and WORKER read permissions are enforced in services
+* [x] category names and item custom IDs are unique per company
+* [x] omitted custom IDs are generated in a safe stable format
+* [x] optional category relations reject foreign-company IDs with safe not-found errors
+* [x] quantity items accept validated nonnegative decimal quantities
+* [x] serialized items require quantity 1 in service and database rules
+* [x] shared contracts and enum/schema helpers cover item/category payloads
+* [x] `/items` uses real API data for minimal create/list/update administration
+* [x] expanded smoke covers category/item CRUD, ID rules, tracking rules, roles, and tenant isolation
+* [x] Phase 1/2 smoke assertions remain intact and passing
+* [x] movement, assignment, custody, bundles, QR, and dashboards remain out of scope
 
 ---
 

@@ -2,57 +2,60 @@
 
 ## Completed gate
 
-Directory Gate 1 and Domain Foundation Phase 2 are complete in the verified local setup.
+Domain Foundation Phase 3 is complete in the verified local setup.
 
-- All six migrations are applied to PostgreSQL.
-- Existing jobs still work with required `customerName` and `location` text only.
-- Jobs may optionally link to a customer, address, object, and object area.
-- Company ownership and object-area parent rules are enforced in backend services.
-- Relation changes are recorded in `JobActivity`.
-- Web selectors use company-scoped API data.
-- The expanded smoke flow covers happy paths, worker permissions, invalid combinations, and cross-tenant injection.
+- All seven migrations are applied to PostgreSQL.
+- `ItemCategory` and `Item` are tenant-owned and exposed through company-scoped APIs.
+- `OWNER` and `OFFICE` can create/update; `WORKER` can read.
+- Category names and item custom IDs are unique per company.
+- Missing item custom IDs are generated automatically.
+- Category references are optional and tenant-validated.
+- Quantity items accept nonnegative decimal quantities; serialized items require quantity `1`.
+- The `/items` page uses real API data for minimal category/item administration.
+- The expanded smoke flow preserves Phase 1/2 checks and covers Phase 3 happy paths, validation, roles, and cross-tenant protection.
 
 ## Recommended next implementation slice
 
-Begin Domain Foundation Phase 3 with tenant-owned `ItemCategory` and `Item` records only.
+Begin `Domain Foundation Phase 4 — Generic Assignment foundation` only after the Phase 3 migration, focused and root typechecks, API/web builds, and expanded smoke flow are clean.
 
-The purpose of this slice is stable resource identity and classification. It is not an inventory workflow. Decide and document category ownership, item custom IDs, lifecycle, units, consumable/durable behavior, quantity-versus-serialized tracking, uniqueness, deletion/deactivation, and tenant-safe lookup before adding UI beyond simple administration.
+The purpose of Phase 4 is a tenant-safe, time-aware allocation model. It must preserve existing `Job.teamId` behavior while defining explicit assignment subjects, assignees, lifecycle, replacement/unassignment, conflicts, history, and role rules. It is not a command-board or drag-and-drop phase.
 
 ## Required scope
 
-- Prisma models and a reviewed additive migration.
-- Shared contracts and runtime payload validation.
-- Company-scoped read/write services and clear role rules.
-- Safe custom-ID uniqueness and lookup behavior.
-- Minimal web administration backed by real API data.
-- Focused typechecks/builds and expanded PostgreSQL smoke coverage.
-- Current-state, domain, dependency, roadmap, next-step, and checklist updates.
+- Review and document assignment cardinality, time semantics, lifecycle, compatibility, and history rules.
+- Add an additive Prisma migration and shared contracts.
+- Implement runtime validation, company-scoped relation lookups, and service-level role permissions.
+- Preserve existing Job team assignment and JobActivity behavior.
+- Add only minimal real-API administration needed to verify the domain behavior.
+- Expand PostgreSQL smoke coverage without weakening Phase 1/2/3 assertions.
+- Update current-state, domain, dependency, roadmap, next-step, and checklist docs.
 
 ## Still out of scope
 
-- Item movement or stock history.
-- Generic assignments or custody workflows.
-- Command board or drag-and-drop.
+- Movement or stock history.
+- Custody transfers or current-location calculations.
+- Command board, drag-and-drop, or auto-scheduling.
 - QR/barcode generation or scanning.
-- Bundles, vehicles, maintenance, or advanced assets.
+- Bundles or package composition.
 - Billing, offers, invoices, AI, automation, or mobile features.
 
-## Known Job relation limitations
+## Known Item limitations
 
-- Directory links are optional and are not inferred from one another.
-- `customerName` and `location` remain required independent text; no snapshot or synchronization rule exists yet.
-- Existing free-text jobs are not automatically matched or backfilled.
-- Inactive directory records remain available in the current relation-options response.
-- Foreign keys use `SET NULL`; no directory delete endpoints currently expose that behavior.
+- Items are identities and current basic attributes, not an inventory ledger.
+- Quantity is stored directly; there is no movement history, reservation, balance reconciliation, or concurrency workflow.
+- Serialized tracking enforces quantity `1` but has no serial-number child records yet.
+- Categories and items have no delete endpoints.
+- Categories do not constrain an item's independently selected kind.
+- There is no location, depot, custody, assignment, bundle, QR, lot, or maintenance model.
 
 ## Exact recommended prompt
 
 ```text
-Implement `Domain Foundation Phase 3 — Tenant-safe ItemCategory and Item foundation`.
+Implement `Domain Foundation Phase 4 — Generic Assignment foundation`.
 
-Add additive Prisma models/migration, shared types and schema helpers, strict runtime validation, company-scoped lookup/write services, explicit OWNER/OFFICE write and WORKER read rules, safe company-unique custom item IDs, minimal real-API web administration, focused typechecks/builds, expanded PostgreSQL smoke coverage, and documentation updates.
+First verify that all Phase 3 migrations are applied and that focused/root typechecks, API/web builds, the expanded smoke flow, and git diff checks are clean. Stop if existing Phase 1/2/3 smoke coverage breaks.
 
-Define item lifecycle, category ownership, units, consumable-versus-durable behavior, and quantity-versus-serialized tracking explicitly. Preserve all current Job, directory, role, tenant, status, report, and attachment behavior.
+Add a tenant-safe, time-aware assignment foundation with additive Prisma migration, shared contracts, strict runtime validation, service-level role checks, company-scoped relation lookups, compatibility with existing Job.teamId behavior, explicit assignment lifecycle and history, minimal real-API administration, expanded smoke coverage, and documentation updates.
 
-Do not add movement history, assignments, custody, inventory dashboards, command board, drag-and-drop, QR/barcodes, bundles, billing, AI, automation, or mobile features.
+Do not add movement history, custody transfers, command board, drag-and-drop, auto-scheduling, QR/barcodes, bundles, billing, AI, automation, or mobile features.
 ```
