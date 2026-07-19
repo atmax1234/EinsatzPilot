@@ -7,6 +7,15 @@
 - Stable identity, lifecycle, and important history belong in explicit models, not labels or arbitrary JSON.
 - Planned names and cardinalities below are direction, not a finished schema. Confirm and document them during each phase.
 
+## Domain center
+
+- Jobs are the star and the primary unit of planning, execution, review, and commercial preparation.
+- Objects are the memory that connects customers, addresses, recurring work, incidents, reports, and history.
+- Reports are the proof created by workers, reviewed by the office, and shared with customers.
+- Costs are the money layer attached to governed work.
+- Assignments are the control layer connecting responsibility and supporting resources.
+- Items/materials are supporting context for work and cost, not an inventory-led product domain.
+
 ## Current models
 
 - **Company:** tenant root owning memberships, teams, jobs, reports, attachments, directory records, item categories, items, and assignments. Future business entities should also be company-scoped.
@@ -20,15 +29,33 @@
 - **Address:** company-owned structured address with label, street, postal code, city, country, and notes. It may belong directly to one customer and may be reused by multiple objects. Customer deletion would set the relation null, but no delete API exists. Address history/snapshots are deferred until jobs and billing link to it.
 - **Object:** industry-neutral managed site/entity with type and `ACTIVE`/`INACTIVE` status. Customer and address are optional. When both are present, service validation rejects an address owned by a different customer. Names are not unique. Jobs may optionally reference objects.
 - **ObjectArea:** one-level, company-owned subdivision that must belong to an object. The API validates both company and parent object. Nested areas and delete endpoints are not implemented.
-- **ItemCategory:** company-owned item classification with a company-unique name, optional description, explicit `MATERIAL`, `TOOL`, `ASSET`, `CONSUMABLE`, `PACKAGE`, or `OTHER` kind, and non-destructive active flag. It is optional on items and does not replace item tracking behavior. There are no global categories or delete endpoints.
-- **Item:** company-owned tracked identity with a company-unique custom ID, name, optional category, kind, unit, tracking mode, decimal quantity, lifecycle status, description, and notes. A missing custom ID is generated automatically. `QUANTITY` items accept nonnegative values with up to three decimal places; `SERIALIZED` items always have quantity `1`. Category references must belong to the same active company. Status is `ACTIVE`, `INACTIVE`, `DAMAGED`, `LOST`, or `ARCHIVED`. Item state does not yet represent stock movement, custody, assignment, bundle composition, or physical location.
+- **ItemCategory:** company-owned classification for materials, tools, assets, consumables, packages, or other things referenced by operational work. It has a company-unique name, optional description, kind, and non-destructive active flag. Categories support job documentation and cost context; they are not warehouse taxonomy.
+- **Item:** company-owned supporting identity with a company-unique custom ID, name, optional category, kind, unit, tracking mode, decimal quantity, lifecycle status, description, and notes. A missing custom ID is generated automatically. `QUANTITY` items accept nonnegative values with up to three decimal places; `SERIALIZED` items always have quantity `1`. Category references must belong to the same active company. Items can later support material purchases/use, tool references, job proof, and cost lines. The current model is not a stock ledger, warehouse balance, delivery workflow, or logistics system.
 - **Assignment:** company-owned link in which `sourceType/sourceId` is the assigned entity and `targetType/targetId` is its context. Types are closed to `USER`, `TEAM`, `JOB`, `CUSTOMER`, `ADDRESS`, `OBJECT`, `OBJECT_AREA`, and `ITEM`; both endpoints are tenant-validated by the service. USER identity means an active company membership. Assignment kind is `RESPONSIBLE`, `SCHEDULED`, `ALLOCATED`, `RESERVED`, `SUPPORTING`, or `OTHER`. Status has explicit planned/active/terminal transitions. Timing is optional, but an end must follow a start. Exact duplicate active links are prohibited. Source, target, and kind are immutable; status, timing, and notes may change. The creator is retained through a real User relation. `Job.teamId` remains an independent compatibility path and is neither created nor changed by generic assignments.
 
 ## Planned models
 
-### ItemMovement
+### Job Execution Findings
 
-An append-oriented record of quantity, custody, or location change. It belongs to a company and item and records time, quantity/unit where relevant, reason/type, actor, and validated source/destination. It may reference a job, assignment, object/area, team/user, or depot. Corrections should use governed adjustments or counter-events, not silent edits. “Current location” is derived or transactionally maintained state, not a replacement for history.
+An additive evolution of current `JobReport` behavior for worker findings, work performed, work still needed, follow-up requirements, structured evidence, and office review. It must preserve existing reports and attachments while making execution output clear enough for customer proof and cost preparation.
+
+### Job Cost Ledger
+
+Company- and job-owned cost records for labor time, travel, purchased or used materials, external/subcontractor work, and custom lines. Cost history needs explicit units, amounts, currency/tax decisions, actor, source, review state, and immutable commercial snapshots where later invoicing requires them.
+
+Items may be referenced by material cost lines, but item identity must not become mandatory for every receipt or custom expense.
+
+### Customer/Object Report Output
+
+Reviewed customer-facing documents derived from jobs, findings, photos, work performed, costs, and object context. Damage, maintenance, proof-of-work, and object-history reports need versioned inputs and reproducible output rather than mutable browser-only documents.
+
+### Recurring Service Contract
+
+Object- and customer-grounded definitions for recurring cleaning, window, caretaking, garden, winter-service, inspection, or maintenance work. A contract/template describes expected service and schedule; generated jobs remain the operational execution records.
+
+### Optional ItemMovement
+
+Item movement may later provide append-oriented quantity, custody, or location traceability for specific tools, assets, or regulated materials. It is optional supporting infrastructure and should only be built for a demonstrated workflow. It must not turn EinsatzPilot into a warehouse or logistics application and is not a prerequisite for worker findings, job costs, customer reports, or recurring services.
 
 ### Package / Bundle
 
@@ -43,22 +70,23 @@ Durable resources with lifecycle needs such as serial/registration data, mainten
 ```text
 Company
 ├── Membership ── User ── TeamMember ── Team
-├── Customer ── Address
-│   └── Object ── ObjectArea
+├── Customer / Verwaltung ── Address
+│   └── Object ── ObjectArea ── Recurring Service Contract (planned)
 ├── Job ── JobActivity
-│   ├── JobReport ── JobAttachment
+│   ├── JobReport / Finding ── JobAttachment
+│   ├── JobCost (planned) ── Item reference (optional)
 │   └── Assignment ── Team / User / Item
-├── ItemCategory ── Item
-│                  ├── Assignment
-│                  └── ItemMovement (later)
-└── Bundle / Asset / Vehicle (later)
+├── Customer/Object Report Output (planned)
+└── ItemCategory ── Item ── ItemMovement (optional later)
 ```
 
 - A job may reference customer, execution address, object, and object area.
-- Reports/attachments remain job-grounded initially; wider ownership needs an explicit design, not casually added nullable links.
-- Assignments say who or what is allocated. Movements say what physically or custodially changed. They are not interchangeable.
-- Teams group users, but history must retain individual actors where reports, movements, or auditing require them.
+- Reports/attachments remain job-grounded initially and should evolve into reviewed execution proof.
+- Costs belong to jobs first and may reference items/materials where useful without requiring catalog identity for every expense.
+- Assignments say who or what is responsible or allocated. They are the control layer, not a visual board by themselves.
+- Teams group users, but history must retain individual actors where reports, costs, or auditing require them.
 - Company is the security boundary across every relationship.
-- Item category, item identity, and generic assignments are implemented; future movements must preserve their company boundaries and current tracking invariants.
+- Item category, item identity, and generic assignments are implemented foundations that support the job-centered product.
+- Optional future movements must preserve company boundaries and item invariants, but movement is not the default next dependency.
 - Assignment entity types are database enums rather than arbitrary strings, but source/target IDs are polymorphic and have no direct database foreign keys. Service validation is therefore mandatory on every write.
 - Assignment currently records current state and creator attribution, not append-only assignment change history or scheduling-conflict decisions.

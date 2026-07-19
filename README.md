@@ -1,8 +1,8 @@
 # EinsatzPilot
 
-EinsatzPilot is becoming a modular operations command center for companies that coordinate people, teams, jobs, customers, objects, locations, materials, assets, packages, assignments, movements, reports, and operational workflows.
+EinsatzPilot is a modular company operations command center for managing customers, objects, jobs, teams, reports, costs, responsibilities, and customer-facing proof.
 
-It is designed for small companies, growing teams, and larger operational businesses across industries. Gardening, facility services, and cleaning are valid use cases, but the platform is not limited to them.
+It is designed for service companies coordinating recurring work, one-time jobs, incidents, teams, worker findings, customer proof, and commercial preparation. It is not an inventory, logistics, delivery, or warehouse app. Items and materials support job documentation and costs rather than defining the product.
 
 ## Current status
 
@@ -18,7 +18,18 @@ The repository currently provides a narrower working foundation:
 - Tenant-safe generic assignment APIs and a minimal `/assignments` page using grouped real-data entity options while preserving `Job.teamId`.
 - PostgreSQL container helpers and an API smoke flow.
 
-This is not yet the full command center. Item movements, custody, command-board behavior, bundles, billing, automation, and enterprise workflows remain planned. Authentication is development-only, file storage is local, automated tests/linting are not configured, and mobile is only a scaffold.
+This is not yet the full command center. Rich worker findings, office report review, job costs, customer report generation, recurring service contracts, command-center metrics, and commercial preparation remain planned. Authentication is development-only, file storage is local, automated tests/linting are not configured, and mobile is only a scaffold.
+
+## Product direction
+
+- Jobs are the star.
+- Objects are the memory.
+- Reports are the proof.
+- Costs are the money layer.
+- Assignments are the control layer.
+- Items and materials are supporting context, not the main product.
+
+A representative workflow starts with recurring services at a managed object, continues through an incident job, team assignment, worker findings and photos, office review, material/labor/travel costs, and ends in customer-facing proof with an invoice-ready summary.
 
 ## Documentation
 
@@ -103,7 +114,7 @@ The smoke flow creates development data. Package `lint` and `test` scripts curre
 
 ## Development direction
 
-Directory Gate 1, backwards-compatible Job relation Phase 2, the tenant-safe `ItemCategory`/`Item` Phase 3 foundation, and generic Assignment Phase 4 are implemented, migrated, and covered by the live smoke flow. The next recommended slice is `Domain Foundation Phase 5 — Item Movement History`, but only after Phase 4 migration, typecheck, build, and smoke validation remain clean. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
+Directory Gate 1, backwards-compatible Job relation Phase 2, the tenant-safe `ItemCategory`/`Item` Phase 3 foundation, and generic Assignment Phase 4 are implemented, migrated, and covered by the live smoke flow. The next recommended slice is `Phase 5 — Job Execution Reports / Worker Findings`. Item movement is optional later infrastructure, not the default product direction. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
 
 ## License
 

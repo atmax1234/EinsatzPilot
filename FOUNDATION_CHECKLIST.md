@@ -126,6 +126,11 @@ Assignment foundation snapshot: typed tenant-safe source/target links, lifecycle
 * [x] ownership model defined
 * [ ] structure won’t require redesign later
 * [x] ready for future uploads
+* [ ] structured worker findings exist
+* [ ] work performed / still needed / follow-up fields exist
+* [ ] OWNER/OFFICE report review lifecycle exists
+* [ ] customer-facing report output exists
+* [ ] job cost ledger exists
 
 ---
 
@@ -206,6 +211,7 @@ You can do ALL of this without hacks:
 * [x] expanded smoke covers category/item CRUD, ID rules, tracking rules, roles, and tenant isolation
 * [x] Phase 1/2 smoke assertions remain intact and passing
 * [x] movement, custody, bundles, QR, and inventory dashboards remain out of scope
+* [x] items/materials are documented as supporting job and cost context, not the product center
 
 ---
 

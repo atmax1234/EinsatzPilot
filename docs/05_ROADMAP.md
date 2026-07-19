@@ -1,101 +1,87 @@
 # Roadmap
 
-Phases are dependency order, not calendar promises. Advance when goals and safety checks are implemented, verified, and documented.
+Phases are dependency order, not calendar promises. EinsatzPilot is job-centered service-operations software, not an inventory, logistics, delivery, or warehouse application.
 
 ## Phase 0 — Protect and verify existing foundation
 
-**Goals:** Reverify auth context, tenant isolation, roles, teams, jobs, lifecycle, activity, reports, and attachments; reconcile stale guidance; add real tests/linting and useful logs; make local boot repeatable; define migration compatibility standards.
+**Status:** Implemented baseline and continuously reverified.
 
-**Dependencies:** Existing repository.
-
-**Must not build yet:** Command board, inventory UI, billing, QR, AI, or enterprise workflows.
+**Goals:** Protect tenant isolation, roles, teams, jobs, lifecycle, activity, reports, attachments, migrations, builds, and smoke coverage.
 
 ## Phase 1 — Customers, addresses, objects
 
-**Status:** Implemented and verified in schema, migration, shared contracts, API, simple web administration, and the expanded live PostgreSQL smoke flow.
+**Status:** Implemented and verified in schema, migration, shared contracts, API, simple web administration, and the expanded PostgreSQL smoke flow.
 
-**Goals:** Add tenant-owned `Customer`, `Address`, `Object`, and `ObjectArea`; decide identifiers, archive behavior, address reuse, ownership, deletion, indexes, and uniqueness; add shared contracts, validation, permissions, API, and verification. Add only minimal admin UI after backend behavior is stable if included in scope.
-
-**Dependencies:** Phase 0 safety baseline.
-
-**Must not build yet:** Items, generic assignments, drag-and-drop, billing, automation, or broad UI redesign.
+**Purpose:** Establish customer/Verwaltung and object memory for operational work.
 
 ## Phase 2 — Link jobs to customers/objects/addresses
 
-**Status:** Implemented and verified. Jobs retain required `customerName`/`location` fields and may optionally link to tenant-owned customers, addresses, objects, and object areas. Object-area parent validation, relation activity, real-data selectors, migration, focused builds/typechecks, and smoke coverage are in place.
+**Status:** Implemented and verified while preserving required `customerName` and `location` compatibility fields.
 
-**Goals:** Add structured job relations; validate allowed combinations and tenant ownership; preserve/migrate `customerName` and `location` intentionally; update contracts, writes, reads, activity, forms, and verification.
+**Purpose:** Ground recurring, one-time, incident, and follow-up jobs in real customer and object context.
 
-**Dependencies:** Phase 1 models and API.
+## Phase 3 — Items/materials/assets supporting foundation
 
-**Must not build yet:** Billing, generalized scheduling, assignment board, inventory/movements, or custom workflows.
+**Status:** Implemented and verified.
 
-## Phase 3 — Items/materials/assets foundation
-
-**Status:** Implemented and verified. Company-owned categories and items, explicit enums, optional tenant-safe category links, company-unique/generated custom IDs, strict quantity/serialized rules, role checks, real-API administration, migration, and expanded smoke coverage are in place.
-
-**Goals:** Add `ItemCategory` and `Item` with explicit consumable/durable, quantity/serialized, unit, custom-ID, lifecycle, lookup, and tenant rules; define location/custody and bundle/asset specialization boundaries.
-
-**Dependencies:** Phase 0 and Phase 1 locations where placement requires them.
-
-**Must not build yet:** Movement UI, QR scanning, stock dashboards, predictive replenishment, or full vehicle maintenance.
+**Purpose:** Provide stable optional identities for materials, tools, consumables, and assets referenced by jobs, costs, purchases, or proof. This is supporting context, not an inventory-product pivot.
 
 ## Phase 4 — Generic assignments
 
-**Status:** Implemented and verified. Typed company-owned source/target links, tenant-safe entity resolution, active-duplicate and timing rules, explicit lifecycle, creator attribution, role checks, grouped real-data options, minimal web administration, migration, and expanded smoke coverage are in place. Existing `Job.teamId` remains unchanged and independent.
+**Status:** Implemented and verified while keeping `Job.teamId` working and independent.
 
-**Goals:** Model time-aware allocation for jobs, teams, users, and approved resources; define status, conflicts, replacement/unassignment, history, and compatibility with `Job.teamId`; expose atomic tenant-safe operations.
+**Purpose:** Provide the control layer for responsibility and supporting-resource allocation without building a command board yet.
 
-**Dependencies:** Stable Phase 2 jobs and Phase 3 resource identities where included.
+## Phase 5 — Job Execution Reports / Worker Findings
 
-**Must not build yet:** Drag-and-drop dispatch, auto-scheduling, or client-only assignment state.
+**Status:** Next recommended implementation phase after the Phase 4 migration, typecheck, builds, smoke flow, and diff checks are clean.
 
-## Phase 5 — Movement history
+**Goals:** Evolve current reports and attachments additively to capture findings, issue condition, work performed, work still needed, follow-up required, photos/evidence, worker attribution, submission, and office review. Preserve existing report and attachment behavior.
 
-**Status:** Next recommended phase after Phase 4 migration, typecheck, build, and smoke validation is clean.
+**Product outcome:** A worker visit produces structured, reviewable operational proof that can drive follow-up work, costs, and customer communication.
 
-**Goals:** Implement append-oriented movements with source, destination, quantity/unit, actor, reason, time, and work context; define transactional balance/current-location, correction, and concurrency behavior; verify audit and isolation.
+**Must not build yet:** Cost accounting, PDF generation, recurring job generation, command-board drag-and-drop, or AI-generated official records.
 
-**Dependencies:** Phase 3 items and Phase 4 assignments where allocation context is needed.
+## Phase 6 — Job Cost Ledger
 
-**Must not build yet:** Polished inventory control room, QR-first flows, silent history edits, or balance-based automation.
+**Goals:** Record job-grounded material purchases/use, labor time, travel costs, external/subcontractor costs, and custom cost lines. Define units, amounts, currency/tax boundaries, actor/review behavior, corrections, and invoice-ready summaries.
 
-## Phase 6 — Command board UI
+**Dependencies:** Stable jobs and reviewed execution findings. Item references are optional supporting context, not mandatory inventory transactions.
 
-**Goals:** Build a board over real jobs, assignments, teams, resources, and lifecycle; add server-backed filters, permissions, conflicts, and atomic interactions. Drag-and-drop is allowed only when gestures map to validated commands.
+**Must not build yet:** Full accounting, stock control, payment processing, or mutable issued invoices.
 
-**Dependencies:** Phases 2 and 4, plus any Phase 5 state displayed.
+## Phase 7 — Customer/Object Report Generator
 
-**Must not build yet:** Optimistic-only interactions, hidden scheduling rules, billing, or ungoverned AI scheduling.
+**Goals:** Generate customer-facing damage, maintenance, service, proof-of-work, and object-history reports from reviewed findings, photos, work performed, costs, and follow-up notes. Make output reproducible and suitable for PDF/export.
 
-## Phase 7 — Reports/documents
+**Dependencies:** Reviewed execution findings, durable attachments, object/customer context, and governed cost summaries where included.
 
-**Goals:** Evolve current reports/attachments with review states, templates, approvals, ownership, production storage, retention, and generation; safely connect evidence to stable jobs, objects, assignments, people, and resources; preserve existing flows.
+**Must not build yet:** Unreviewed automatic sending, invoice issuance, or mutable official records.
 
-**Dependencies:** Stable context relations and explicit document ownership.
+## Phase 8 — Recurring Service Contracts
 
-**Must not build yet:** Invoice generation disguised as reporting, uncontrolled sharing, or unreviewed AI official records.
+**Goals:** Model object-based recurring cleaning, caretaking, window, garden, winter-service, inspection, and maintenance definitions; add service templates, schedules, idempotent job generation, exceptions, and lifecycle.
 
-## Phase 8 — Billing/offers/invoices
+**Dependencies:** Stable customer/object relations, jobs, and explicit timezone/scheduling rules.
 
-**Goals:** Model offers, invoice identity, immutable party/address and line-item snapshots, taxes, currency, prices, totals, status, and numbering; derive inputs from governed work while retaining approval; add exports only after correctness.
+**Must not build yet:** Browser-only recurrence, hidden scheduling assumptions, or automatic commercial commitments.
 
-**Dependencies:** Customers/addresses, linked jobs, relevant service/item concepts, and reliable performed-work records.
+## Phase 9 — Command Center Dashboard
 
-**Must not build yet:** Frontend-only totals, mutable issued invoices, unsupported payment claims, or AI-controlled invoicing.
+**Goals:** Provide a company-wide operational overview of jobs, teams, assignments, reports awaiting review, costs, objects, incidents, follow-up work, and recurring services using trusted server-backed metrics.
 
-## Phase 9 — AI/automation
+**Dependencies:** Stable upstream workflows and defined meanings for every count and status.
 
-**Goals:** Add event-driven rules, idempotent work, notifications, integration audit, and human approval boundaries; use AI only for defined measurable tasks; enforce data boundaries and traceability.
+**Must not build yet:** Drag-and-drop unless assignment commands, conflicts, permissions, and atomic updates are mature; no fake dashboard data.
 
-**Dependencies:** Trusted data, stable workflows, permissions, audit events, and monitoring.
+## Phase 10 — Smart Planning / AI / Automation
 
-**Must not build yet:** Autonomous high-impact actions, opaque cross-tenant data use, or AI replacing absent logic.
+**Goals:** Assist with German customer replies, report summaries, job creation from messages, follow-up suggestions, and offer/invoice drafting. Add event-driven automation only with idempotency, permissions, auditability, and human review.
 
-## Phase 10 — Enterprise/custom workflow layer
+**Dependencies:** Trusted jobs, findings, reports, costs, customer context, and stable operational workflows.
 
-**Goals:** Add configurable fields/forms/states, approval chains, policies, integrations, organizational structures, and audit/export; keep configuration versioned, validated, isolated, and compatible with core invariants.
+**Must not build yet:** Autonomous high-impact actions, opaque cross-tenant data use, or AI as a substitute for missing business rules.
 
-**Dependencies:** Stable modules, event model, permissions, reporting, relevant billing, and production maturity.
+## Optional later infrastructure — Item Movement History
 
-**Must not build yet:** Unrestricted tenant scripts, permission bypasses, or one-off forks that fragment the core.
+Item movement may be implemented later for a demonstrated need such as tool custody, asset traceability, regulated material history, or installation/removal evidence. It is not the next default phase, is not required for job costs or customer reports, and must not turn EinsatzPilot into a warehouse or logistics product.

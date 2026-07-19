@@ -2,7 +2,7 @@
 
 ## What EinsatzPilot is
 
-EinsatzPilot is becoming a modular operations command center for companies that coordinate people, teams, jobs, customers, objects, locations, materials, assets, packages, assignments, movements, reports, and operational workflows.
+EinsatzPilot is a modular company operations command center for managing customers, objects, jobs, teams, reports, costs, responsibilities, and customer-facing proof.
 
 It began as a smaller, Lütjens-oriented protocol and job application. The existing implementation remains valuable: it provides a tenant-aware foundation for companies, users, memberships, teams, jobs, activity, reports, attachments, and an office web app. The direction is broader now, but agents must extend this foundation deliberately rather than discard it.
 
@@ -30,4 +30,4 @@ A meaningful change includes a new or changed model, migration, relationship, pe
 
 ## Current instruction
 
-The directory, backwards-compatible Job relation, item/category, and generic Assignment foundations are implemented, migrated, and covered by the expanded PostgreSQL smoke flow. Follow `07_NEXT_STEPS.md` for the next domain-foundation slice. Do not begin movement history until the Phase 4 migration, typecheck, builds, smoke flow, and diff checks are clean. Do not skip ahead to command-board polish, billing, QR codes, AI automation, or mobile work.
+The directory, backwards-compatible Job relation, item/category, and generic Assignment foundations are implemented, migrated, and covered by the expanded PostgreSQL smoke flow. Follow `07_NEXT_STEPS.md` for the next product slice: richer job execution reports and worker findings. Items support job documentation and costs; they are not the center of an inventory or logistics product. Do not skip ahead to command-board polish, billing, AI automation, or mobile work.
