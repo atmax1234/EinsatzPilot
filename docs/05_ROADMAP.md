@@ -34,7 +34,7 @@ Phases are dependency order, not calendar promises. EinsatzPilot is job-centered
 
 ## Phase 5 — Job Execution Reports / Worker Findings
 
-**Status:** Next recommended implementation phase after the Phase 4 migration, typecheck, builds, smoke flow, and diff checks are clean.
+**Status:** Implemented and verified with an additive migration, shared contracts, tenant-safe service rules, explicit review transitions, real-data web flows, and expanded Phase 1-5 smoke coverage.
 
 **Goals:** Evolve current reports and attachments additively to capture findings, issue condition, work performed, work still needed, follow-up required, photos/evidence, worker attribution, submission, and office review. Preserve existing report and attachment behavior.
 
@@ -43,6 +43,8 @@ Phases are dependency order, not calendar promises. EinsatzPilot is job-centered
 **Must not build yet:** Cost accounting, PDF generation, recurring job generation, command-board drag-and-drop, or AI-generated official records.
 
 ## Phase 6 — Job Cost Ledger
+
+**Status:** Next recommended implementation phase after the Phase 5 migration, typecheck, builds, smoke flow, and diff checks are clean.
 
 **Goals:** Record job-grounded material purchases/use, labor time, travel costs, external/subcontractor costs, and custom cost lines. Define units, amounts, currency/tax boundaries, actor/review behavior, corrections, and invoice-ready summaries.
 

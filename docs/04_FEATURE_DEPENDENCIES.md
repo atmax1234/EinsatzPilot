@@ -40,7 +40,7 @@ ItemCategory + Item
 | Customer/object UI | **Implemented foundation:** tenant-owned models, migration, contracts, validation, API, permissions | Static cards or job strings presented as records |
 | Structured job links | **Implemented foundation:** customer/address/object API, tenant checks, area/object invariant, legacy compatibility | Removing `customerName`/`location` without migration/history decisions |
 | Assignment administration | **Implemented foundation:** typed links, lifecycle, tenant checks, role rules | Browser-only assignment state |
-| Worker findings | Existing JobReport/Attachment compatibility, explicit fields, actor, tenant rules, review lifecycle | Free-form UI that loses existing reports or evidence |
+| Worker findings | **Implemented foundation:** compatible report types/fields, actor, worker job access, tenant rules, linked evidence, explicit office review | Free-form UI that loses existing reports or evidence |
 | Job cost ledger | Jobs, cost kinds, units, currency/tax decisions, actor/review rules | Frontend-only totals or treating item quantity as job cost |
 | Customer report generator | Reviewed findings, durable photo/file references, work-performed and cost summaries | Generating official documents from unreviewed mutable state |
 | Recurring service contracts | Stable customers/objects/jobs, schedule/timezone rules, templates, generation idempotency | Repeating browser reminders without durable definitions |
@@ -53,4 +53,4 @@ ItemCategory + Item
 
 A model or route alone is not a completed dependency. Before dependent UI begins, require reviewed ownership and lifecycle, shared contracts, runtime validation, tenant-safe references, service-level roles, useful errors, representative denial/cross-tenant verification, and updated documentation.
 
-The directory, Job relations, item/category identity, and generic Assignment foundation meet this gate. The next default slice is richer job execution reports and worker findings. Item movement is not a prerequisite for the corrected roadmap and should remain optional until a concrete traceability workflow justifies it.
+The directory, Job relations, item/category identity, generic Assignment, and Job Execution Reports / Worker Findings foundations meet this gate. The next default slice is the Job Cost Ledger. Item movement is not a prerequisite and should remain optional until a concrete traceability workflow justifies it.

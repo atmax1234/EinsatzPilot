@@ -12,6 +12,8 @@ Item foundation snapshot: tenant-safe ItemCategory and Item identity, validation
 
 Assignment foundation snapshot: typed tenant-safe source/target links, lifecycle, validation, role rules, real-API administration, migration, and expanded smoke coverage were verified on 2026-07-19.
 
+Job execution report snapshot: backwards-compatible structured findings, follow-up data, worker assignment access, linked evidence, explicit OWNER/OFFICE review, migration, UI, and expanded smoke coverage were verified on 2026-07-19.
+
 ---
 
 ## 1. Repo / Structure
@@ -124,11 +126,11 @@ Assignment foundation snapshot: typed tenant-safe source/target links, lifecycle
 
 * [x] schema direction exists
 * [x] ownership model defined
-* [ ] structure won’t require redesign later
+* [x] structure won’t require redesign for the Phase 5 workflow
 * [x] ready for future uploads
-* [ ] structured worker findings exist
-* [ ] work performed / still needed / follow-up fields exist
-* [ ] OWNER/OFFICE report review lifecycle exists
+* [x] structured worker findings exist
+* [x] work performed / still needed / follow-up fields exist
+* [x] OWNER/OFFICE report review lifecycle exists
 * [ ] customer-facing report output exists
 * [ ] job cost ledger exists
 
@@ -231,6 +233,24 @@ You can do ALL of this without hacks:
 * [x] expanded smoke covers team-to-job, item-to-job, item-to-object, roles, validation, and tenant isolation
 * [x] Phase 1/2/3 smoke assertions remain intact and passing
 * [x] movement, custody, command board, drag/drop, QR, billing, AI, automation, and mobile remain out of scope
+
+---
+
+## 19. Job Execution Reports / Worker Findings
+
+* [x] existing simple reports remain valid as GENERAL/SUBMITTED
+* [x] structured report types and finding/work/follow-up fields are migrated
+* [x] report and review payload validation is strict and readable
+* [x] WORKER submission requires direct-team or active user/team assignment access
+* [x] OWNER/OFFICE can submit for any job in the active company
+* [x] OWNER/OFFICE review decisions are explicit and service-enforced
+* [x] WORKER review attempts are blocked
+* [x] reports and review writes are tenant-scoped with safe not-found behavior
+* [x] report-linked attachments remain supported and visible
+* [x] report creation and review produce readable JobActivity entries
+* [x] job detail and Reports pages use real API data for structured reports
+* [x] expanded smoke preserves Phase 1/2/3/4 coverage and proves Phase 5 roles/tenancy
+* [x] costs, PDFs, recurrence, movement, command board, AI, and mobile remain out of scope
 
 ---
 

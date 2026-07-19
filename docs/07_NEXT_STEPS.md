@@ -2,63 +2,62 @@
 
 ## Completed gate
 
-Domain Foundation Phase 4 is complete in the verified local setup.
+Phase 5 — Job Execution Reports / Worker Findings is complete in the verified local setup.
 
-- All eight migrations are applied to PostgreSQL.
-- Tenant-safe directory, Job relation, item/category, and generic Assignment foundations are implemented.
-- Existing Job lifecycle, `Job.teamId`, reports, attachments, roles, and cross-tenant protections remain covered by the expanded smoke flow.
-
-## Corrected product direction
-
-EinsatzPilot is a company operations command center, not an inventory or logistics application.
-
-- Jobs are the star.
-- Objects are the memory.
-- Reports are the proof.
-- Costs are the money layer.
-- Assignments are the control layer.
-- Items/materials are supporting context for job costs, purchases, tools, quantities, and evidence.
-
-The next implementation should improve what workers document and what the office can review. Item movement is optional later infrastructure and is not a prerequisite.
+- All nine migrations are applied to PostgreSQL.
+- Existing simple reports remain compatible as `GENERAL`/`SUBMITTED`.
+- Structured findings, performed and outstanding work, follow-up data, reviewer attribution, and linked evidence are implemented.
+- WORKER submission is limited to jobs reached through direct team membership, active user-to-job assignment, or active team-to-job assignment.
+- OWNER/OFFICE can submit for any company job and make explicit approve, needs-revision, or reject decisions.
+- Review decisions create readable `JobActivity`; WORKER review and cross-tenant report access are blocked.
+- The real-data job detail and Reports pages display structured execution and review context.
+- The expanded smoke flow preserves Phase 1/2/3/4 checks and covers Phase 5 compatibility, validation, roles, evidence, activity, and tenant isolation.
 
 ## Recommended next implementation slice
 
-Begin `Phase 5 — Job Execution Reports / Worker Findings` after confirming the Phase 4 migration, root typecheck, API/web builds, expanded smoke flow, and diff checks are clean.
+Begin `Phase 6 — Job Cost Ledger` only after confirming the Phase 5 migration, root typecheck, API/web builds, expanded smoke flow, and diff checks remain clean.
 
-Build additively on current `JobReport` and `JobAttachment` behavior. The goal is structured worker output for incidents, inspections, service visits, repairs, and follow-up work, followed by office review.
+The purpose of Phase 6 is a tenant-safe, job-grounded money layer for actual operational costs. Cost lines should describe materials purchased or used, labor time, travel, external/subcontractor work, and custom expenses without turning items into a warehouse ledger or issuing invoices prematurely.
 
 ## Required scope
 
-- Define additive fields or related records for findings, work performed, work still needed, and follow-up required.
-- Preserve current report creation/listing and attachment/photo behavior.
-- Retain worker/author attribution and company/job ownership.
-- Add an explicit office review state and clear transition rules.
-- Support tenant-safe worker submission and OWNER/OFFICE review.
-- Add minimal worker/admin UI backed only by real API data.
-- Expand smoke coverage without weakening Phase 1/2/3/4 assertions.
-- Update current-state, domain, dependency, roadmap, next-step, and checklist docs.
+- Define additive company- and job-owned cost-line models with explicit cost kinds.
+- Decide quantity, unit, unit price, totals, currency, tax boundary, dates, notes, actor, and correction behavior.
+- Support optional Item references for material context without requiring catalog items for every expense.
+- Keep totals backend-derived from validated persisted lines.
+- Enforce OWNER/OFFICE write and company-member read rules in services.
+- Add minimal real-API job cost entry/list/edit behavior and an invoice-ready summary that is clearly not an invoice.
+- Expand smoke coverage without weakening Phase 1/2/3/4/5 assertions.
+- Update current-state, domain, dependency, roadmap, next-step, checklist, and README documentation.
 
 ## Guiding workflow
 
-For an incident at `Musterstr. 1`, a worker should be able to document the issue found, upload photos, record work performed, state what remains, and request follow-up. The office should review that submission before it becomes customer-facing proof or feeds the later job cost ledger.
+After an approved incident finding at `Musterstr. 1`, the office should record labor time, travel, purchased replacement material, and any external plumber cost against the same job. The resulting summary should be understandable and ready to support a later customer report, offer, or invoice workflow, but it must not issue commercial documents in Phase 6.
 
-## Still out of scope for Phase 5
+## Still out of scope for Phase 6
 
-- Job cost ledger and invoice totals.
+- Offers, invoices, payment, numbering, or accounting integration.
 - Customer PDF/report generation.
-- Recurring service contract generation.
-- Command center dashboard or drag-and-drop.
+- Recurring service contracts.
 - Item movement, stock, warehouse, delivery, or custody workflows.
-- AI-generated official reports or automated customer sending.
+- Command-center dashboard, drag-and-drop, QR/barcodes, AI/automation, or mobile features.
+
+## Known report limitations
+
+- Review decisions are terminal in Phase 5; worker editing/resubmission and review correction are not implemented.
+- Active generic assignment access is status-based and does not interpret assignment date windows.
+- Attachments remain in local filesystem storage without production retention or object storage.
+- The Reports overview hydrates job details rather than using a dedicated paginated company report endpoint.
+- Review output is operational state, not a customer-facing generated document.
 
 ## Exact recommended prompt
 
 ```text
-Implement `Phase 5 — Job Execution Reports / Worker Findings`.
+Implement `Phase 6 — Job Cost Ledger`.
 
-First read `/docs` and verify that all Phase 4 migrations are applied and that root typecheck, API/web builds, the expanded smoke flow, and git diff checks are clean. Stop if existing Phase 1/2/3/4 smoke coverage breaks.
+First read `/docs` and verify that all Phase 5 migrations are applied and that Prisma validation/generation, root typecheck, API/web builds, the expanded smoke flow, and git diff checks are clean. Stop if existing Phase 1/2/3/4/5 smoke coverage breaks.
 
-Evolve the existing JobReport and JobAttachment foundation additively so workers can submit structured findings, work performed, work still needed, follow-up required, notes, and photos/evidence. Add explicit office review states and tenant-safe role rules: workers may submit for jobs they can access; OWNER/OFFICE may review. Preserve current report and attachment behavior, Job.teamId, Job lifecycle, directory relations, assignments, and tenant isolation.
+Add an additive, tenant-safe job cost ledger for material purchases/use, labor time, travel costs, external/subcontractor costs, and custom cost lines. Define strict cost kinds, quantities/units, amounts, currency and tax boundaries, actor attribution, notes, dates, correction/update rules, and backend-derived invoice-ready summaries. Item references must be optional supporting context and must belong to the active company when provided.
 
-Add shared contracts, runtime validation, service-level permissions, real-API worker/admin UI, expanded smoke coverage, and documentation updates. Do not add job cost accounting, PDF generation, recurring contracts, command-board drag-and-drop, item movement, warehouse/logistics behavior, billing, AI automation, or mobile features in this phase.
+Enforce OWNER/OFFICE writes and company-member reads in service/business logic, preserve all existing Job, report/review, attachment, assignment, directory, item, role, lifecycle, and tenant behavior, add shared contracts/runtime validation, minimal real-API job cost UI, expanded smoke coverage, and documentation updates. Do not add invoice issuance, payment handling, PDF generation, recurring contracts, item movement, warehouse/logistics behavior, command-board drag-and-drop, QR/barcodes, AI/automation, or mobile features.
 ```

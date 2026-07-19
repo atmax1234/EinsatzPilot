@@ -23,7 +23,7 @@
 - **Team / TeamMember:** a company group and its user members. `Team.currentAssignment` is only free text and must not become a second source of truth after structured assignments exist.
 - **Job:** a company-owned scheduled unit of work with reference, title, description, required free-text customer/location, schedule, lifecycle, priority, and optional direct team. It may independently link to a customer, address, object, and object area. All linked records must belong to the active company; an object area requires and must belong to the selected object. The free-text fields remain the compatibility and display baseline and are not inferred or backfilled from directory records.
 - **JobActivity:** readable, append-oriented job history with status, note, or report kind. It is not yet a generic audit/event model.
-- **JobReport:** job- and company-owned summary/details with optional team/author and only `SUBMITTED` review status.
+- **JobReport:** job- and company-owned execution proof with a closed type, legacy summary/details, structured findings/work/follow-up fields, optional team/author, explicit review lifecycle, reviewer attribution, review notes, timestamps, and linked attachments. Legacy simple reports remain `GENERAL`/`SUBMITTED`; structured reports start `PENDING_REVIEW`. OWNER/OFFICE may transition pending reports once to `APPROVED`, `NEEDS_REVISION`, or `REJECTED`. WORKER creation requires direct-team membership or an active user/team assignment to the job.
 - **JobAttachment:** photo/file metadata attached to a job and optionally a report, team, and uploader. It is evidence, not an inventory item or asset.
 - **Customer:** company-owned organization/person record typed as `PRIVATE`, `BUSINESS`, `PROPERTY_MANAGEMENT`, or `OTHER`. Names are deliberately not unique and there is no customer-number scheme yet. `isActive` provides non-destructive deactivation. Customers may own addresses and objects.
 - **Address:** company-owned structured address with label, street, postal code, city, country, and notes. It may belong directly to one customer and may be reused by multiple objects. Customer deletion would set the relation null, but no delete API exists. Address history/snapshots are deferred until jobs and billing link to it.
@@ -34,10 +34,6 @@
 - **Assignment:** company-owned link in which `sourceType/sourceId` is the assigned entity and `targetType/targetId` is its context. Types are closed to `USER`, `TEAM`, `JOB`, `CUSTOMER`, `ADDRESS`, `OBJECT`, `OBJECT_AREA`, and `ITEM`; both endpoints are tenant-validated by the service. USER identity means an active company membership. Assignment kind is `RESPONSIBLE`, `SCHEDULED`, `ALLOCATED`, `RESERVED`, `SUPPORTING`, or `OTHER`. Status has explicit planned/active/terminal transitions. Timing is optional, but an end must follow a start. Exact duplicate active links are prohibited. Source, target, and kind are immutable; status, timing, and notes may change. The creator is retained through a real User relation. `Job.teamId` remains an independent compatibility path and is neither created nor changed by generic assignments.
 
 ## Planned models
-
-### Job Execution Findings
-
-An additive evolution of current `JobReport` behavior for worker findings, work performed, work still needed, follow-up requirements, structured evidence, and office review. It must preserve existing reports and attachments while making execution output clear enough for customer proof and cost preparation.
 
 ### Job Cost Ledger
 
@@ -81,7 +77,7 @@ Company
 ```
 
 - A job may reference customer, execution address, object, and object area.
-- Reports/attachments remain job-grounded initially and should evolve into reviewed execution proof.
+- Reports/attachments are job-grounded reviewed execution proof and preserve legacy simple reports.
 - Costs belong to jobs first and may reference items/materials where useful without requiring catalog identity for every expense.
 - Assignments say who or what is responsible or allocated. They are the control layer, not a visual board by themselves.
 - Teams group users, but history must retain individual actors where reports, costs, or auditing require them.
@@ -90,3 +86,4 @@ Company
 - Optional future movements must preserve company boundaries and item invariants, but movement is not the default next dependency.
 - Assignment entity types are database enums rather than arbitrary strings, but source/target IDs are polymorphic and have no direct database foreign keys. Service validation is therefore mandatory on every write.
 - Assignment currently records current state and creator attribution, not append-only assignment change history or scheduling-conflict decisions.
+- Report review decisions are terminal in Phase 5; report editing, worker resubmission, and review correction require a later explicit lifecycle extension.
