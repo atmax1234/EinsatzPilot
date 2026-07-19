@@ -62,7 +62,19 @@ export type JobStatus = 'PLANNED' | 'IN_PROGRESS' | 'DONE' | 'CANCELED';
 export type JobPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 export type JobEditableStatus = 'PLANNED' | 'IN_PROGRESS' | 'DONE' | 'CANCELED';
 export type AttachmentKind = 'PHOTO' | 'FILE';
-export type ReportReviewStatus = 'SUBMITTED';
+export type JobReportType =
+  | 'GENERAL'
+  | 'WORKER_FINDING'
+  | 'WORK_COMPLETION'
+  | 'INCIDENT_REPORT'
+  | 'FOLLOW_UP_REQUEST';
+export type ReportReviewStatus =
+  | 'SUBMITTED'
+  | 'PENDING_REVIEW'
+  | 'APPROVED'
+  | 'NEEDS_REVISION'
+  | 'REJECTED';
+export type ReportReviewDecisionStatus = 'APPROVED' | 'NEEDS_REVISION' | 'REJECTED';
 export type CustomerType = 'PRIVATE' | 'BUSINESS' | 'PROPERTY_MANAGEMENT' | 'OTHER';
 export type ObjectType =
   | 'BUILDING'
@@ -224,9 +236,17 @@ export type JobActivityItem = {
 
 export type JobReportItem = {
   id: string;
+  type: JobReportType;
   summary: string;
   details?: string;
+  findingSummary?: string;
+  workPerformed?: string;
+  workStillNeeded?: string;
+  followUpRequired: boolean;
+  followUpNotes?: string;
   reviewStatus: ReportReviewStatus;
+  reviewNotes?: string;
+  reviewedAt?: string;
   author?: {
     id: string;
     name: string;
@@ -236,6 +256,18 @@ export type JobReportItem = {
     id: string;
     name: string;
   };
+  reviewedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  attachments: Array<{
+    id: string;
+    kind: AttachmentKind;
+    fileName: string;
+    caption?: string;
+    uploadedAt: string;
+  }>;
   createdAt: string;
   updatedAt: string;
 };
@@ -330,10 +362,21 @@ export type JobReportCreateInput = {
   summary: string;
   details?: string;
   teamId?: string;
+  type?: JobReportType;
+  findingSummary?: string;
+  workPerformed?: string;
+  workStillNeeded?: string;
+  followUpRequired?: boolean;
+  followUpNotes?: string;
 };
 
 export type JobReportListResponse = {
   reports: JobReportItem[];
+};
+
+export type JobReportReviewInput = {
+  reviewStatus: ReportReviewDecisionStatus;
+  reviewNotes?: string;
 };
 
 export type JobAttachmentListResponse = {
