@@ -63,6 +63,25 @@ export type JobPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 export type JobEditableStatus = 'PLANNED' | 'IN_PROGRESS' | 'DONE' | 'CANCELED';
 export type AttachmentKind = 'PHOTO' | 'FILE';
 export type ReportReviewStatus = 'SUBMITTED';
+export type CustomerType = 'PRIVATE' | 'BUSINESS' | 'PROPERTY_MANAGEMENT' | 'OTHER';
+export type ObjectType =
+  | 'BUILDING'
+  | 'GARDEN'
+  | 'WAREHOUSE'
+  | 'CONSTRUCTION_SITE'
+  | 'OFFICE'
+  | 'FACILITY'
+  | 'OTHER';
+export type ObjectStatus = 'ACTIVE' | 'INACTIVE';
+export type ObjectAreaType =
+  | 'STAIRCASE'
+  | 'BASEMENT'
+  | 'ENTRANCE'
+  | 'PARKING'
+  | 'GARDEN_AREA'
+  | 'ROOM'
+  | 'STORAGE_AREA'
+  | 'OTHER';
 
 export type TeamMemberSummary = {
   id: string;
@@ -263,4 +282,151 @@ export type TeamMemberAddInput = {
 
 export type TeamMemberRemoveInput = {
   userId: string;
+};
+
+export type CustomerListItem = {
+  id: string;
+  name: string;
+  type: CustomerType;
+  email?: string;
+  phone?: string;
+  notes?: string;
+  isActive: boolean;
+  addressCount: number;
+  objectCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CustomerListResponse = {
+  customers: CustomerListItem[];
+};
+
+export type CustomerCreateInput = {
+  name: string;
+  type: CustomerType;
+  email?: string;
+  phone?: string;
+  notes?: string;
+  isActive?: boolean;
+};
+
+export type CustomerUpdateInput = {
+  name?: string;
+  type?: CustomerType;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+  isActive?: boolean;
+};
+
+export type AddressListItem = {
+  id: string;
+  label: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  notes?: string;
+  customer?: {
+    id: string;
+    name: string;
+  };
+  objectCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AddressListResponse = {
+  addresses: AddressListItem[];
+};
+
+export type AddressCreateInput = {
+  customerId?: string;
+  label: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  notes?: string;
+};
+
+export type AddressUpdateInput = {
+  customerId?: string | null;
+  label?: string;
+  street?: string;
+  postalCode?: string;
+  city?: string;
+  country?: string;
+  notes?: string | null;
+};
+
+export type ObjectAreaItem = {
+  id: string;
+  objectId: string;
+  name: string;
+  type: ObjectAreaType;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ObjectAreaListResponse = {
+  areas: ObjectAreaItem[];
+};
+
+export type ObjectListItem = {
+  id: string;
+  name: string;
+  type: ObjectType;
+  status: ObjectStatus;
+  notes?: string;
+  customer?: {
+    id: string;
+    name: string;
+  };
+  address?: AddressListItem;
+  areaCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ObjectListResponse = {
+  objects: ObjectListItem[];
+};
+
+export type ObjectDetailResponse = {
+  object: ObjectListItem & {
+    areas: ObjectAreaItem[];
+  };
+};
+
+export type ObjectCreateInput = {
+  customerId?: string;
+  addressId?: string;
+  name: string;
+  type: ObjectType;
+  status?: ObjectStatus;
+  notes?: string;
+};
+
+export type ObjectUpdateInput = {
+  customerId?: string | null;
+  addressId?: string | null;
+  name?: string;
+  type?: ObjectType;
+  status?: ObjectStatus;
+  notes?: string | null;
+};
+
+export type ObjectAreaCreateInput = {
+  name: string;
+  type: ObjectAreaType;
+  notes?: string;
+};
+
+export type ObjectAreaUpdateInput = {
+  name?: string;
+  type?: ObjectAreaType;
+  notes?: string | null;
 };

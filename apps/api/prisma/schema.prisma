@@ -46,44 +46,81 @@ enum AttachmentKind {
   FILE
 }
 
+enum CustomerType {
+  PRIVATE
+  BUSINESS
+  PROPERTY_MANAGEMENT
+  OTHER
+}
+
+enum ObjectType {
+  BUILDING
+  GARDEN
+  WAREHOUSE
+  CONSTRUCTION_SITE
+  OFFICE
+  FACILITY
+  OTHER
+}
+
+enum ObjectStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ObjectAreaType {
+  STAIRCASE
+  BASEMENT
+  ENTRANCE
+  PARKING
+  GARDEN_AREA
+  ROOM
+  STORAGE_AREA
+  OTHER
+}
+
 model Company {
-  id          String       @id @default(cuid())
+  id          String          @id @default(cuid())
   name        String
-  slug        String       @unique
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  slug        String          @unique
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
   memberships Membership[]
   teams       Team[]
   jobs        Job[]
   reports     JobReport[]
   attachments JobAttachment[]
+  customers   Customer[]
+  addresses   Address[]
+  objects     Object[]
+  objectAreas ObjectArea[]
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  displayName  String?
-  passwordHash String?
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  memberships  Membership[]
-  teamMembers  TeamMember[]
-  authoredReports JobReport[]      @relation("JobReportAuthor")
+  id                  String          @id @default(cuid())
+  email               String          @unique
+  displayName         String?
+  passwordHash        String?
+  isActive            Boolean         @default(true)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  memberships         Membership[]
+  teamMembers         TeamMember[]
+  authoredReports     JobReport[]     @relation("JobReportAuthor")
   uploadedAttachments JobAttachment[] @relation("JobAttachmentUploader")
 }
 
 model Membership {
-  id         String         @id @default(cuid())
-  userId     String
-  companyId  String
-  role       MembershipRole
-  isActive   Boolean        @default(true)
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
-  company    Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String         @id @default(cuid())
+  userId    String
+  companyId String
+  role      MembershipRole
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  company   Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, companyId])
   @@index([companyId])
@@ -91,16 +128,16 @@ model Membership {
 }
 
 model Team {
-  id                String       @id @default(cuid())
+  id                String          @id @default(cuid())
   companyId         String
   name              String
   code              String?
   specialty         String?
-  status            TeamStatus   @default(ACTIVE)
+  status            TeamStatus      @default(ACTIVE)
   currentAssignment String?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  company           Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  company           Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   members           TeamMember[]
   jobs              Job[]
   reports           JobReport[]
@@ -152,14 +189,14 @@ model Job {
 
 model JobActivity {
   id         String          @id @default(cuid())
-  jobId       String
-  kind        JobActivityKind
-  title       String
-  content     String?
-  authorName  String?
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  job         Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId      String
+  kind       JobActivityKind
+  title      String
+  content    String?
+  authorName String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  job        Job             @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@index([jobId])
   @@index([createdAt])
@@ -215,4 +252,81 @@ model JobAttachment {
   @@index([teamId])
   @@index([uploaderUserId])
   @@index([kind, createdAt])
+}
+
+model Customer {
+  id        String       @id @default(cuid())
+  companyId String
+  name      String
+  type      CustomerType @default(BUSINESS)
+  email     String?
+  phone     String?
+  notes     String?
+  isActive  Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  addresses Address[]
+  objects   Object[]
+
+  @@index([companyId, name])
+  @@index([companyId, isActive])
+}
+
+model Address {
+  id         String    @id @default(cuid())
+  companyId  String
+  customerId String?
+  label      String
+  street     String
+  postalCode String
+  city       String
+  country    String    @default("DE")
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  company    Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  objects    Object[]
+
+  @@index([companyId, label])
+  @@index([companyId, customerId])
+}
+
+model Object {
+  id         String       @id @default(cuid())
+  companyId  String
+  customerId String?
+  addressId  String?
+  name       String
+  type       ObjectType   @default(OTHER)
+  status     ObjectStatus @default(ACTIVE)
+  notes      String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  company    Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer   Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  address    Address?     @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  areas      ObjectArea[]
+
+  @@index([companyId, name])
+  @@index([companyId, status])
+  @@index([companyId, customerId])
+  @@index([companyId, addressId])
+}
+
+model ObjectArea {
+  id        String         @id @default(cuid())
+  companyId String
+  objectId  String
+  name      String
+  type      ObjectAreaType @default(OTHER)
+  notes     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  company   Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  object    Object         @relation(fields: [objectId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, objectId, name])
+  @@index([companyId, type])
 }

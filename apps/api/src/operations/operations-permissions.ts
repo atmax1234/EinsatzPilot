@@ -8,6 +8,8 @@ const jobReopenRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const reportCreateRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 const attachmentCreateRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 const companyReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
+const masterDataWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
+const masterDataReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 
 function assertAuthenticatedContext(
   authContext: RequestAuthContext,
@@ -74,5 +76,21 @@ export function assertCanReadCompanyArtifacts(authContext: RequestAuthContext) {
     authContext,
     companyReadRoles,
     'Nur angemeldete Firmenmitglieder duerfen Berichte und Dateien der aktiven Firma sehen.',
+  );
+}
+
+export function assertCanWriteMasterData(authContext: RequestAuthContext) {
+  assertRoleAllowed(
+    authContext,
+    masterDataWriteRoles,
+    'Nur OWNER oder OFFICE duerfen Kunden, Adressen, Objekte und Objektbereiche aendern.',
+  );
+}
+
+export function assertCanReadMasterData(authContext: RequestAuthContext) {
+  assertRoleAllowed(
+    authContext,
+    masterDataReadRoles,
+    'Nur aktive Firmenmitglieder duerfen Kunden, Adressen und Objekte lesen.',
   );
 }

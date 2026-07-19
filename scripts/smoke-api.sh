@@ -109,10 +109,39 @@ attachment_meta="$(json_get "${API_BASE}/attachments/${attachment_id}" "$token")
 attachment_file_status="$(curl -fsS -o "${TMP_DIR}/proof-download.bin" -w '%{http_code} %{content_type}' "${API_BASE}/attachments/${attachment_id}/file" -H "Authorization: Bearer ${token}")"
 job_detail="$(json_get "${API_BASE}/jobs/${job_id}" "$token")"
 
+create_customer="$(json_post "${API_BASE}/customers" "{\"name\":\"Smoke Customer ${SMOKE_SUFFIX}\",\"type\":\"BUSINESS\",\"email\":\"customer.${SMOKE_SUFFIX}@example.de\",\"phone\":\"0201 123456\",\"notes\":\"Directory smoke proof\"}" "$token")"
+customer_id="$(printf '%s' "$create_customer" | jq -r '.id')"
+update_customer="$(json_patch "${API_BASE}/customers/${customer_id}" '{"phone":"0201 654321"}' "$token")"
+
+create_address="$(json_post "${API_BASE}/addresses" "{\"customerId\":\"${customer_id}\",\"label\":\"Smoke Hauptadresse\",\"street\":\"Teststrasse 42\",\"postalCode\":\"45127\",\"city\":\"Essen\",\"country\":\"DE\"}" "$token")"
+address_id="$(printf '%s' "$create_address" | jq -r '.id')"
+update_address="$(json_patch "${API_BASE}/addresses/${address_id}" '{"notes":"Address update proof"}' "$token")"
+
+create_object="$(json_post "${API_BASE}/objects" "{\"customerId\":\"${customer_id}\",\"addressId\":\"${address_id}\",\"name\":\"Smoke Object ${SMOKE_SUFFIX}\",\"type\":\"FACILITY\",\"status\":\"ACTIVE\"}" "$token")"
+object_id="$(printf '%s' "$create_object" | jq -r '.id')"
+update_object="$(json_patch "${API_BASE}/objects/${object_id}" '{"notes":"Object update proof"}' "$token")"
+create_area="$(json_post "${API_BASE}/objects/${object_id}/areas" '{"name":"Eingang A","type":"ENTRANCE"}' "$token")"
+area_id="$(printf '%s' "$create_area" | jq -r '.id')"
+update_area="$(json_patch "${API_BASE}/objects/${object_id}/areas/${area_id}" '{"notes":"Area update proof"}' "$token")"
+
+customers="$(json_get "${API_BASE}/customers" "$token")"
+addresses="$(json_get "${API_BASE}/addresses" "$token")"
+objects="$(json_get "${API_BASE}/objects" "$token")"
+object_detail="$(json_get "${API_BASE}/objects/${object_id}" "$token")"
+
+worker_login="$(json_post "${API_BASE}/auth/development-login" '{"email":"worker@luetjens.example.de","displayName":"Worker Proof","companySlug":"luetjens","companyName":"Luetjens Service","membershipRole":"WORKER"}')"
+worker_token="$(printf '%s' "$worker_login" | jq -r '.token')"
+worker_objects="$(json_get "${API_BASE}/objects" "$worker_token")"
+worker_write_status="$(curl -sS -o "${TMP_DIR}/worker-write.json" -w '%{http_code}' -X POST "${API_BASE}/customers" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"name":"Forbidden Worker Customer","type":"OTHER"}')"
+
 other_login="$(json_post "${API_BASE}/auth/development-login" '{"email":"owner@otherco.example.de","displayName":"Other Owner","companySlug":"otherco","companyName":"Other Co","membershipRole":"OWNER"}')"
 other_token="$(printf '%s' "$other_login" | jq -r '.token')"
 cross_status="$(curl -sS -o "${TMP_DIR}/cross-company.json" -w '%{http_code}' "${API_BASE}/jobs/${job_id}" -H "Authorization: Bearer ${other_token}")"
 cross_body="$(cat "${TMP_DIR}/cross-company.json")"
+cross_object_status="$(curl -sS -o "${TMP_DIR}/cross-object.json" -w '%{http_code}' "${API_BASE}/objects/${object_id}" -H "Authorization: Bearer ${other_token}")"
+other_address="$(json_post "${API_BASE}/addresses" '{"label":"Other Address","street":"Other Street 1","postalCode":"10115","city":"Berlin","country":"DE"}' "$other_token")"
+other_address_id="$(printf '%s' "$other_address" | jq -r '.id')"
+cross_relation_status="$(curl -sS -o "${TMP_DIR}/cross-relation.json" -w '%{http_code}' -X POST "${API_BASE}/objects" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"addressId\":\"${other_address_id}\",\"name\":\"Invalid Cross Tenant Object\",\"type\":\"OTHER\"}")"
 
 jq -n \
   --argjson health "$health" \
@@ -128,8 +157,20 @@ jq -n \
   --argjson photos "$photos" \
   --argjson attachmentMeta "$attachment_meta" \
   --argjson jobDetail "$job_detail" \
+  --argjson updateCustomer "$update_customer" \
+  --argjson updateAddress "$update_address" \
+  --argjson updateObject "$update_object" \
+  --argjson updateArea "$update_area" \
+  --argjson customers "$customers" \
+  --argjson addresses "$addresses" \
+  --argjson objects "$objects" \
+  --argjson objectDetail "$object_detail" \
+  --argjson workerObjects "$worker_objects" \
   --arg crossStatus "$cross_status" \
   --arg crossBody "$cross_body" \
+  --arg crossObjectStatus "$cross_object_status" \
+  --arg crossRelationStatus "$cross_relation_status" \
+  --arg workerWriteStatus "$worker_write_status" \
   --arg attachmentFileStatus "$attachment_file_status" \
   --arg firstJobId "$first_job_id" \
   --arg teamName "$TEAM_NAME" \
@@ -151,8 +192,20 @@ jq -n \
     photoLibraryCount: ($photos.attachments | length),
     attachmentMetadataKind: $attachmentMeta.attachment.kind,
     attachmentFileFetch: $attachmentFileStatus,
+    updatedCustomerPhone: $updateCustomer.phone,
+    updatedAddressNotes: $updateAddress.notes,
+    updatedObjectNotes: $updateObject.notes,
+    updatedAreaNotes: $updateArea.notes,
+    customerCount: ($customers.customers | length),
+    addressCount: ($addresses.addresses | length),
+    objectCount: ($objects.objects | length),
+    objectAreaCount: ($objectDetail.object.areas | length),
+    workerObjectCount: ($workerObjects.objects | length),
+    workerWriteStatus: $workerWriteStatus,
     crossCompanyStatus: $crossStatus,
-    crossCompanyBody: $crossBody
+    crossCompanyBody: $crossBody,
+    crossObjectStatus: $crossObjectStatus,
+    crossRelationStatus: $crossRelationStatus
   }' > "${TMP_DIR}/summary.json"
 
 jq -e \
@@ -173,7 +226,19 @@ jq -e \
     .photoLibraryCount >= 1 and
     .attachmentMetadataKind == "PHOTO" and
     .attachmentFileFetch == "200 image/jpeg" and
-    .crossCompanyStatus == "404"
+    .updatedCustomerPhone == "0201 654321" and
+    .updatedAddressNotes == "Address update proof" and
+    .updatedObjectNotes == "Object update proof" and
+    .updatedAreaNotes == "Area update proof" and
+    .customerCount >= 1 and
+    .addressCount >= 1 and
+    .objectCount >= 1 and
+    .objectAreaCount == 1 and
+    .workerObjectCount >= 1 and
+    .workerWriteStatus == "403" and
+    .crossCompanyStatus == "404" and
+    .crossObjectStatus == "404" and
+    .crossRelationStatus == "404"
   ' "${TMP_DIR}/summary.json" >/dev/null
 
 cat "${TMP_DIR}/summary.json"

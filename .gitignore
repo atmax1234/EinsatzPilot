@@ -7,6 +7,9 @@ coverage/
 .env.*
 .DS_Store
 *.log
+*.tsbuildinfo
 .expo/
 apps/api/storage/
 data/
+docs/
+apps/api/.env

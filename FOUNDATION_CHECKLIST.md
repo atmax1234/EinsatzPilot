@@ -6,6 +6,8 @@ Be strict. “Kinda works” = not done.
 Assessment snapshot: checked items below were verified on 2026-04-18 against the live local setup where applicable.
 Verification now includes real PostgreSQL migrations, the API smoke flow, and web pages rendering live updated data from the database.
 
+Directory expansion snapshot: Customer, Address, Object, and ObjectArea code was added on 2026-07-19. Prisma validation, generation, typechecks, and build verification are tracked separately from the still-pending live migration/smoke run.
+
 ---
 
 ## 1. Repo / Structure
@@ -162,6 +164,21 @@ You can do ALL of this without hacks:
 * [x] edit job
 * [x] see activity updates
 * [x] see changes reflected in UI
+
+---
+
+## 16. Directory Foundation
+
+* [x] Customer/Address/Object/ObjectArea schema and migration exist
+* [x] shared types and runtime payload validation exist
+* [x] OWNER/OFFICE write permissions are enforced in backend services
+* [x] WORKER read policy is explicit
+* [x] company-scoped relation lookups reject foreign tenant IDs in code
+* [x] customer/address/object/object-area admin pages use real API data
+* [x] Prisma validation/generation, directory typechecks, and production builds pass
+* [ ] new migration applied against live PostgreSQL
+* [ ] expanded directory smoke flow passes, including role and cross-tenant checks
+* [ ] jobs linked to structured customer/object/address data (Phase 2)
 
 ---
 
