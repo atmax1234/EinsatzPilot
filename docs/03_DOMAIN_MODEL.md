@@ -18,7 +18,7 @@
 
 ## Current models
 
-- **Company:** tenant root owning memberships, teams, jobs, reports, attachments, directory records, item categories, items, and assignments. Future business entities should also be company-scoped.
+- **Company:** tenant root owning memberships, teams, jobs, reports, attachments, job costs, directory records, item categories, items, and assignments. Future business entities should also be company-scoped.
 - **User / Membership:** a global user account and its company-specific active membership with `OWNER`, `OFFICE`, or `WORKER` role. A user may have multiple company memberships; the current session resolves one.
 - **Team / TeamMember:** a company group and its user members. `Team.currentAssignment` is only free text and must not become a second source of truth after structured assignments exist.
 - **Job:** a company-owned scheduled unit of work with reference, title, description, required free-text customer/location, schedule, lifecycle, priority, and optional direct team. It may independently link to a customer, address, object, and object area. All linked records must belong to the active company; an object area requires and must belong to the selected object. The free-text fields remain the compatibility and display baseline and are not inferred or backfilled from directory records.
@@ -32,14 +32,9 @@
 - **ItemCategory:** company-owned classification for materials, tools, assets, consumables, packages, or other things referenced by operational work. It has a company-unique name, optional description, kind, and non-destructive active flag. Categories support job documentation and cost context; they are not warehouse taxonomy.
 - **Item:** company-owned supporting identity with a company-unique custom ID, name, optional category, kind, unit, tracking mode, decimal quantity, lifecycle status, description, and notes. A missing custom ID is generated automatically. `QUANTITY` items accept nonnegative values with up to three decimal places; `SERIALIZED` items always have quantity `1`. Category references must belong to the same active company. Items can later support material purchases/use, tool references, job proof, and cost lines. The current model is not a stock ledger, warehouse balance, delivery workflow, or logistics system.
 - **Assignment:** company-owned link in which `sourceType/sourceId` is the assigned entity and `targetType/targetId` is its context. Types are closed to `USER`, `TEAM`, `JOB`, `CUSTOMER`, `ADDRESS`, `OBJECT`, `OBJECT_AREA`, and `ITEM`; both endpoints are tenant-validated by the service. USER identity means an active company membership. Assignment kind is `RESPONSIBLE`, `SCHEDULED`, `ALLOCATED`, `RESERVED`, `SUPPORTING`, or `OTHER`. Status has explicit planned/active/terminal transitions. Timing is optional, but an end must follow a start. Exact duplicate active links are prohibited. Source, target, and kind are immutable; status, timing, and notes may change. The creator is retained through a real User relation. `Job.teamId` remains an independent compatibility path and is neither created nor changed by generic assignments.
+- **JobCostLine:** company- and job-owned money-layer record for material purchase/use, labor, travel, external service, fee, or other cost. It stores a positive quantity, closed unit, optional unit cost, backend-governed total, one job currency, optional tax metadata, cost date, vendor/receipt context, notes, and creator/updater attribution. Material/labor/travel totals are derived from quantity times unit cost. External/fee/other lines may instead use a manual nonnegative total. An optional Item relation is supporting context and must remain in the same company. Cost lines do not change item quantity and are not invoices, payments, or accounting entries.
 
 ## Planned models
-
-### Job Cost Ledger
-
-Company- and job-owned cost records for labor time, travel, purchased or used materials, external/subcontractor work, and custom lines. Cost history needs explicit units, amounts, currency/tax decisions, actor, source, review state, and immutable commercial snapshots where later invoicing requires them.
-
-Items may be referenced by material cost lines, but item identity must not become mandatory for every receipt or custom expense.
 
 ### Customer/Object Report Output
 
@@ -70,7 +65,7 @@ Company
 │   └── Object ── ObjectArea ── Recurring Service Contract (planned)
 ├── Job ── JobActivity
 │   ├── JobReport / Finding ── JobAttachment
-│   ├── JobCost (planned) ── Item reference (optional)
+│   ├── JobCostLine ── Item reference (optional)
 │   └── Assignment ── Team / User / Item
 ├── Customer/Object Report Output (planned)
 └── ItemCategory ── Item ── ItemMovement (optional later)
@@ -87,3 +82,4 @@ Company
 - Assignment entity types are database enums rather than arbitrary strings, but source/target IDs are polymorphic and have no direct database foreign keys. Service validation is therefore mandatory on every write.
 - Assignment currently records current state and creator attribution, not append-only assignment change history or scheduling-conflict decisions.
 - Report review decisions are terminal in Phase 5; report editing, worker resubmission, and review correction require a later explicit lifecycle extension.
+- Job cost summaries group persisted cost lines into material, labor, travel, external-service, other, and grand totals. They are backend-derived preparatory data, not immutable issued-document snapshots.

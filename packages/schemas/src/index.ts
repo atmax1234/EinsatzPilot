@@ -5,6 +5,8 @@ import type {
   AttachmentKind,
   CustomerType,
   JobReportType,
+  JobCostKind,
+  JobCostUnit,
   JobEditableStatus,
   JobPriority,
   ItemKind,
@@ -102,6 +104,27 @@ export const itemStatuses = [
   'LOST',
   'ARCHIVED',
 ] as const satisfies readonly ItemStatus[];
+export const jobCostKinds = [
+  'MATERIAL_PURCHASE',
+  'MATERIAL_USED',
+  'LABOR',
+  'TRAVEL',
+  'EXTERNAL_SERVICE',
+  'FEE',
+  'OTHER',
+] as const satisfies readonly JobCostKind[];
+export const jobCostUnits = [
+  'PIECE',
+  'HOUR',
+  'KILOMETER',
+  'KG',
+  'LITER',
+  'METER',
+  'SQUARE_METER',
+  'CUBIC_METER',
+  'FLAT_RATE',
+  'OTHER',
+] as const satisfies readonly JobCostUnit[];
 export const assignmentEntityTypes = [
   'USER',
   'TEAM',
@@ -264,6 +287,24 @@ export function parseItemStatus(rawStatus: string | undefined): ItemStatus | und
 
   const normalized = rawStatus.toUpperCase() as ItemStatus;
   return itemStatuses.includes(normalized) ? normalized : undefined;
+}
+
+export function parseJobCostKind(rawKind: string | undefined): JobCostKind | undefined {
+  if (!rawKind) {
+    return undefined;
+  }
+
+  const normalized = rawKind.toUpperCase() as JobCostKind;
+  return jobCostKinds.includes(normalized) ? normalized : undefined;
+}
+
+export function parseJobCostUnit(rawUnit: string | undefined): JobCostUnit | undefined {
+  if (!rawUnit) {
+    return undefined;
+  }
+
+  const normalized = rawUnit.toUpperCase() as JobCostUnit;
+  return jobCostUnits.includes(normalized) ? normalized : undefined;
 }
 
 export function parseAssignmentEntityType(

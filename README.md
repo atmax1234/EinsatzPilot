@@ -9,7 +9,7 @@ It is designed for service companies coordinating recurring work, one-time jobs,
 The repository currently provides a narrower working foundation:
 
 - pnpm TypeScript monorepo with NestJS API, Prisma/PostgreSQL, and Next.js web app.
-- Company, user, membership, role, team, job, activity, report, attachment, customer, address, object, object-area, item-category, item, and generic assignment models.
+- Company, user, membership, role, team, job, activity, report, attachment, job-cost, customer, address, object, object-area, item-category, item, and generic assignment models.
 - Tenant-scoped operational reads/writes and role checks for implemented flows.
 - Optional, tenant-validated job links to customers, addresses, objects, and object areas while preserving legacy customer/location text.
 - Explicit job lifecycle transitions.
@@ -17,9 +17,10 @@ The repository currently provides a narrower working foundation:
 - Tenant-safe item/category APIs and a minimal `/items` administration page with generated company-unique custom IDs and strict quantity/serialized rules.
 - Tenant-safe generic assignment APIs and a minimal `/assignments` page using grouped real-data entity options while preserving `Job.teamId`.
 - Backwards-compatible structured execution reports with worker findings, performed/outstanding work, follow-up data, linked evidence, assignment-aware WORKER submission, and explicit OWNER/OFFICE review.
+- Tenant-safe job cost APIs and job-detail UI for material, labor, travel, external, fee, and custom cost lines with optional item references and backend-derived summaries.
 - PostgreSQL container helpers and an API smoke flow.
 
-This is not yet the full command center. Job costs, customer report generation, recurring service contracts, command-center metrics, and commercial preparation remain planned. Authentication is development-only, file storage is local, report revision/resubmission is not implemented, automated tests/linting are not configured, and mobile is only a scaffold.
+This is not yet the full command center. Customer report generation, recurring service contracts, command-center metrics, invoice/offer preparation, and commercial document workflows remain planned. Authentication is development-only, file storage is local, report revision/resubmission and cost correction history are not implemented, automated tests/linting are not configured, and mobile is only a scaffold.
 
 ## Product direction
 
@@ -115,7 +116,7 @@ The smoke flow creates development data. Package `lint` and `test` scripts curre
 
 ## Development direction
 
-Directory Gate 1, backwards-compatible Job relation Phase 2, the supporting `ItemCategory`/`Item` Phase 3 foundation, generic Assignment Phase 4, and Job Execution Reports / Worker Findings Phase 5 are implemented, migrated, and covered by the live smoke flow. The next recommended slice is `Phase 6 — Job Cost Ledger`. Item movement remains optional later infrastructure. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
+Directory Gate 1, backwards-compatible Job relation Phase 2, the supporting `ItemCategory`/`Item` Phase 3 foundation, generic Assignment Phase 4, Job Execution Reports / Worker Findings Phase 5, and Job Cost Ledger Phase 6 are implemented, migrated, and covered by the live smoke flow. The next recommended slice is `Phase 7 — Customer/Object Report Generator`. Item movement remains optional later infrastructure. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
 
 ## License
 

@@ -1,4 +1,9 @@
-import type { JobEditableStatus, JobStatus } from '@einsatzpilot/types';
+import type {
+  JobCostKind,
+  JobCostUnit,
+  JobEditableStatus,
+  JobStatus,
+} from '@einsatzpilot/types';
 
 import { notFound } from 'next/navigation';
 
@@ -10,6 +15,19 @@ import {
   uploadJobAttachmentAction,
 } from '../../../../lib/admin-actions';
 import { getStatusTone } from '../../../../lib/admin-mvp';
+import {
+  createJobCostAction,
+  updateJobCostAction,
+} from '../../../../lib/job-cost-actions';
+import {
+  formatJobCostDate,
+  formatJobCostMoney,
+  getJobCostKindLabel,
+  getJobCostUnitLabel,
+  getJobCostsData,
+  toDateInputValue,
+} from '../../../../lib/job-costs';
+import { getItemsData } from '../../../../lib/items';
 import {
   formatDateTime,
   getJobDetailData,
@@ -36,7 +54,32 @@ const jobDetailNoticeLabels: Record<string, string> = {
   'report-created': 'Der Bericht wurde direkt am Auftrag erfasst.',
   'report-reviewed': 'Die Berichtspruefung wurde gespeichert und im Aktivitaetslog dokumentiert.',
   'attachment-uploaded': 'Der Nachweis wurde am Auftrag hinterlegt.',
+  'cost-created': 'Die Kostenzeile wurde am Auftrag erfasst.',
+  'cost-updated': 'Die Kostenzeile wurde aktualisiert.',
 };
+
+const jobCostKinds = [
+  'MATERIAL_PURCHASE',
+  'MATERIAL_USED',
+  'LABOR',
+  'TRAVEL',
+  'EXTERNAL_SERVICE',
+  'FEE',
+  'OTHER',
+] as const satisfies readonly JobCostKind[];
+
+const jobCostUnits = [
+  'PIECE',
+  'HOUR',
+  'KILOMETER',
+  'KG',
+  'LITER',
+  'METER',
+  'SQUARE_METER',
+  'CUBIC_METER',
+  'FLAT_RATE',
+  'OTHER',
+] as const satisfies readonly JobCostUnit[];
 
 const jobStatusTargets: Record<JobStatus, JobEditableStatus[]> = {
   PLANNED: ['IN_PROGRESS', 'CANCELED'],
@@ -59,10 +102,19 @@ export default async function JobDetailPage({
   const session = await requireServerSession();
 
   const { jobId } = await params;
-  const [jobResult, teamsResult, relationOptionsResult, resolvedSearchParams] = await Promise.all([
+  const [
+    jobResult,
+    teamsResult,
+    relationOptionsResult,
+    jobCostsResult,
+    itemsResult,
+    resolvedSearchParams,
+  ] = await Promise.all([
     getJobDetailData(jobId),
     getTeamsData(),
     getJobRelationOptionsData(),
+    getJobCostsData(jobId),
+    getItemsData(),
     searchParams,
   ]);
 
@@ -82,6 +134,10 @@ export default async function JobDetailPage({
   const allowedStatusTargets = getAllowedStatusTargets(job.status);
   const canReviewReports =
     session.membershipRole === 'OWNER' || session.membershipRole === 'OFFICE';
+  const canWriteCosts =
+    session.membershipRole === 'OWNER' || session.membershipRole === 'OFFICE';
+  const jobCosts = jobCostsResult.ok ? jobCostsResult.data : undefined;
+  const itemOptions = itemsResult.ok ? itemsResult.data?.items ?? [] : [];
   const flashMessage = resolvedSearchParams?.error
     ? {
         tone: 'error' as const,
@@ -309,6 +365,315 @@ export default async function JobDetailPage({
             </div>
           </form>
         </article>
+      </section>
+
+      <section className="content-grid">
+        <article className="panel">
+          <p className="eyebrow">Kostenuebersicht</p>
+          <h2>Kosten zum Auftrag</h2>
+          {jobCosts ? (
+            <>
+              <dl className="info-list">
+                <div>
+                  <dt>Material</dt>
+                  <dd>{formatJobCostMoney(jobCosts.summary.materialTotal, jobCosts.summary.currency)}</dd>
+                </div>
+                <div>
+                  <dt>Arbeitszeit</dt>
+                  <dd>{formatJobCostMoney(jobCosts.summary.laborTotal, jobCosts.summary.currency)}</dd>
+                </div>
+                <div>
+                  <dt>Fahrt</dt>
+                  <dd>{formatJobCostMoney(jobCosts.summary.travelTotal, jobCosts.summary.currency)}</dd>
+                </div>
+                <div>
+                  <dt>Fremdleistung</dt>
+                  <dd>
+                    {formatJobCostMoney(
+                      jobCosts.summary.externalServiceTotal,
+                      jobCosts.summary.currency,
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Sonstiges</dt>
+                  <dd>{formatJobCostMoney(jobCosts.summary.otherTotal, jobCosts.summary.currency)}</dd>
+                </div>
+                <div>
+                  <dt>Gesamt</dt>
+                  <dd>
+                    <strong>
+                      {formatJobCostMoney(jobCosts.summary.grandTotal, jobCosts.summary.currency)}
+                    </strong>
+                  </dd>
+                </div>
+              </dl>
+              <p className="muted-note">
+                {jobCosts.summary.lineCount} Kostenzeile(n). Die Summen werden vom Backend
+                berechnet und sind vorbereitende Kostendaten, keine Rechnung.
+              </p>
+            </>
+          ) : (
+            <p>
+              Kosten konnten nicht geladen werden: {jobCostsResult.error ?? 'Unbekannter Fehler'}
+            </p>
+          )}
+        </article>
+
+        <article className="panel">
+          <p className="eyebrow">Kosten erfassen</p>
+          <h2>Neue Kostenzeile</h2>
+          {canWriteCosts ? (
+            <form action={createJobCostAction.bind(null, job.id)} className="form-stack">
+              <div className="form-grid">
+                <label className="form-field">
+                  <span>Kostenart</span>
+                  <select defaultValue="MATERIAL_PURCHASE" name="kind">
+                    {jobCostKinds.map((kind) => (
+                      <option key={kind} value={kind}>
+                        {getJobCostKindLabel(kind)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="form-field">
+                  <span>Artikelbezug</span>
+                  <select defaultValue="" name="itemId">
+                    <option value="">Ohne Artikelbezug</option>
+                    {itemOptions.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.customId} · {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="form-field full-span">
+                  <span>Beschreibung</span>
+                  <input name="description" required />
+                </label>
+
+                <label className="form-field">
+                  <span>Menge</span>
+                  <input defaultValue="1" min="0.001" name="quantity" step="0.001" type="number" required />
+                </label>
+
+                <label className="form-field">
+                  <span>Einheit</span>
+                  <select defaultValue="PIECE" name="unit">
+                    {jobCostUnits.map((unit) => (
+                      <option key={unit} value={unit}>
+                        {getJobCostUnitLabel(unit)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="form-field">
+                  <span>Einzelkosten</span>
+                  <input min="0" name="unitCost" step="0.01" type="number" />
+                </label>
+
+                <label className="form-field">
+                  <span>Manueller Gesamtbetrag</span>
+                  <input min="0" name="totalCost" step="0.01" type="number" />
+                </label>
+
+                <label className="form-field">
+                  <span>Waehrung</span>
+                  <input defaultValue="EUR" maxLength={3} minLength={3} name="currency" required />
+                </label>
+
+                <label className="form-field">
+                  <span>Steuersatz in Prozent</span>
+                  <input max="100" min="0" name="taxRate" step="0.01" type="number" />
+                </label>
+
+                <label className="form-field">
+                  <span>Kostendatum</span>
+                  <input defaultValue={toDateInputValue()} name="costDate" type="date" required />
+                </label>
+
+                <label className="form-field">
+                  <span>Lieferant / Dienstleister</span>
+                  <input name="vendorName" />
+                </label>
+
+                <label className="form-field">
+                  <span>Belegreferenz</span>
+                  <input name="receiptReference" />
+                </label>
+
+                <label className="form-field full-span">
+                  <span>Notizen</span>
+                  <textarea name="notes" rows={3} />
+                </label>
+              </div>
+
+              <p className="muted-note">
+                Bei Material, Arbeitszeit und Fahrt berechnet das Backend den Gesamtbetrag aus
+                Menge mal Einzelkosten. Fuer Fremdleistungen und sonstige Kosten kann stattdessen
+                ein manueller Gesamtbetrag angegeben werden.
+              </p>
+
+              {!itemsResult.ok ? (
+                <p className="muted-note">
+                  Artikel konnten nicht geladen werden. Die Kostenzeile kann ohne Artikelbezug
+                  erfasst werden.
+                </p>
+              ) : null}
+
+              <div className="form-actions">
+                <button className="primary-button" type="submit">
+                  Kostenzeile speichern
+                </button>
+              </div>
+            </form>
+          ) : (
+            <p>Kostenzeilen sind fuer Worker lesbar. Aenderungen duerfen nur Office und Owner vornehmen.</p>
+          )}
+        </article>
+      </section>
+
+      <section className="panel">
+        <p className="eyebrow">Kostenbuch</p>
+        <h2>Erfasste Kostenzeilen</h2>
+        {jobCosts && jobCosts.costLines.length > 0 ? (
+          <div className="stack-list">
+            {jobCosts.costLines.map((costLine) => (
+              <div className="stack-item" key={costLine.id}>
+                <div className="row-spread">
+                  <div>
+                    <strong>{costLine.description}</strong>
+                    <p className="compact-text">
+                      {getJobCostKindLabel(costLine.kind)} · {formatJobCostDate(costLine.costDate)}
+                    </p>
+                  </div>
+                  <strong>{formatJobCostMoney(costLine.totalCost, costLine.currency)}</strong>
+                </div>
+                <div className="meta-inline">
+                  <span>
+                    {costLine.quantity} {getJobCostUnitLabel(costLine.unit)}
+                  </span>
+                  <span>
+                    Einzelkosten:{' '}
+                    {costLine.unitCost === undefined
+                      ? 'manueller Gesamtbetrag'
+                      : formatJobCostMoney(costLine.unitCost, costLine.currency)}
+                  </span>
+                  <span>{costLine.item ? `${costLine.item.customId} · ${costLine.item.name}` : 'Ohne Artikelbezug'}</span>
+                  {costLine.vendorName ? <span>{costLine.vendorName}</span> : null}
+                  {costLine.receiptReference ? <span>Beleg: {costLine.receiptReference}</span> : null}
+                </div>
+                {costLine.notes ? <p>{costLine.notes}</p> : null}
+
+                {canWriteCosts ? (
+                  <details className="nested-stack">
+                    <summary>Kostenzeile bearbeiten</summary>
+                    <form
+                      action={updateJobCostAction.bind(null, job.id, costLine.id)}
+                      className="form-stack"
+                    >
+                      <div className="form-grid">
+                        <label className="form-field">
+                          <span>Kostenart</span>
+                          <select defaultValue={costLine.kind} name="kind">
+                            {jobCostKinds.map((kind) => (
+                              <option key={kind} value={kind}>
+                                {getJobCostKindLabel(kind)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="form-field">
+                          <span>Artikelbezug</span>
+                          <select defaultValue={costLine.item?.id ?? ''} name="itemId">
+                            <option value="">Ohne Artikelbezug</option>
+                            {itemOptions.map((item) => (
+                              <option key={item.id} value={item.id}>
+                                {item.customId} · {item.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="form-field full-span">
+                          <span>Beschreibung</span>
+                          <input defaultValue={costLine.description} name="description" required />
+                        </label>
+                        <label className="form-field">
+                          <span>Menge</span>
+                          <input defaultValue={costLine.quantity} min="0.001" name="quantity" step="0.001" type="number" required />
+                        </label>
+                        <label className="form-field">
+                          <span>Einheit</span>
+                          <select defaultValue={costLine.unit} name="unit">
+                            {jobCostUnits.map((unit) => (
+                              <option key={unit} value={unit}>
+                                {getJobCostUnitLabel(unit)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="form-field">
+                          <span>Einzelkosten</span>
+                          <input defaultValue={costLine.unitCost} min="0" name="unitCost" step="0.01" type="number" />
+                        </label>
+                        <label className="form-field">
+                          <span>Manueller Gesamtbetrag</span>
+                          <input
+                            defaultValue={costLine.unitCost === undefined ? costLine.totalCost : undefined}
+                            min="0"
+                            name="totalCost"
+                            step="0.01"
+                            type="number"
+                          />
+                        </label>
+                        <label className="form-field">
+                          <span>Waehrung</span>
+                          <input defaultValue={costLine.currency} maxLength={3} minLength={3} name="currency" required />
+                        </label>
+                        <label className="form-field">
+                          <span>Steuersatz in Prozent</span>
+                          <input defaultValue={costLine.taxRate} max="100" min="0" name="taxRate" step="0.01" type="number" />
+                        </label>
+                        <label className="form-field">
+                          <span>Kostendatum</span>
+                          <input defaultValue={toDateInputValue(costLine.costDate)} name="costDate" type="date" required />
+                        </label>
+                        <label className="form-field">
+                          <span>Lieferant / Dienstleister</span>
+                          <input defaultValue={costLine.vendorName ?? ''} name="vendorName" />
+                        </label>
+                        <label className="form-field">
+                          <span>Belegreferenz</span>
+                          <input defaultValue={costLine.receiptReference ?? ''} name="receiptReference" />
+                        </label>
+                        <label className="form-field full-span">
+                          <span>Notizen</span>
+                          <textarea defaultValue={costLine.notes ?? ''} name="notes" rows={3} />
+                        </label>
+                      </div>
+                      <p className="muted-note">
+                        Bei vorhandenen Einzelkosten berechnet das Backend den Gesamtbetrag neu.
+                        Fuer einen manuellen Gesamtbetrag das Feld Einzelkosten leer lassen.
+                      </p>
+                      <div className="form-actions">
+                        <button className="secondary-button" type="submit">
+                          Kostenzeile aktualisieren
+                        </button>
+                      </div>
+                    </form>
+                  </details>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : jobCosts ? (
+          <p>Zu diesem Auftrag wurden noch keine Kostenzeilen erfasst.</p>
+        ) : (
+          <p>Das Kostenbuch ist derzeit nicht verfuegbar.</p>
+        )}
       </section>
 
       <section className="content-grid">

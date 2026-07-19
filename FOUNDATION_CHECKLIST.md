@@ -14,6 +14,8 @@ Assignment foundation snapshot: typed tenant-safe source/target links, lifecycle
 
 Job execution report snapshot: backwards-compatible structured findings, follow-up data, worker assignment access, linked evidence, explicit OWNER/OFFICE review, migration, UI, and expanded smoke coverage were verified on 2026-07-19.
 
+Job cost ledger snapshot: tenant-safe job cost lines, strict amount rules, optional item references, actor attribution, backend-derived summaries, real-API job-detail UI, migration, and expanded smoke coverage were verified on 2026-07-19.
+
 ---
 
 ## 1. Repo / Structure
@@ -132,7 +134,7 @@ Job execution report snapshot: backwards-compatible structured findings, follow-
 * [x] work performed / still needed / follow-up fields exist
 * [x] OWNER/OFFICE report review lifecycle exists
 * [ ] customer-facing report output exists
-* [ ] job cost ledger exists
+* [x] job cost ledger exists
 
 ---
 
@@ -250,7 +252,24 @@ You can do ALL of this without hacks:
 * [x] report creation and review produce readable JobActivity entries
 * [x] job detail and Reports pages use real API data for structured reports
 * [x] expanded smoke preserves Phase 1/2/3/4 coverage and proves Phase 5 roles/tenancy
-* [x] costs, PDFs, recurrence, movement, command board, AI, and mobile remain out of scope
+* [x] Phase 5 report behavior remains intact after the separate Phase 6 cost ledger addition
+
+---
+
+## 20. Job Cost Ledger
+
+* [x] JobCostLine schema, closed kind/unit enums, and additive migration exist
+* [x] every line is scoped to company and job in API reads/writes
+* [x] optional item references reject foreign-company IDs with safe not-found errors
+* [x] quantity is positive and monetary/tax/currency inputs have strict bounds
+* [x] material, labor, and travel totals derive from quantity times unit cost in backend logic
+* [x] external, fee, and other lines support validated manual totals
+* [x] one currency is enforced per job and defaults to EUR
+* [x] creator and updater users are retained
+* [x] OWNER/OFFICE write and WORKER read permissions are service-enforced
+* [x] job detail uses real API data for cost list/create/edit and backend-derived summaries
+* [x] expanded smoke preserves Phase 1/2/3/4/5 coverage and proves Phase 6 roles/tenancy
+* [x] invoices, payments, PDFs, item movement, warehouse behavior, command board, AI, and mobile remain out of scope
 
 ---
 

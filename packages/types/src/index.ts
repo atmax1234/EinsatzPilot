@@ -114,6 +114,25 @@ export type ItemUnit =
   | 'OTHER';
 export type ItemTrackingMode = 'QUANTITY' | 'SERIALIZED';
 export type ItemStatus = 'ACTIVE' | 'INACTIVE' | 'DAMAGED' | 'LOST' | 'ARCHIVED';
+export type JobCostKind =
+  | 'MATERIAL_PURCHASE'
+  | 'MATERIAL_USED'
+  | 'LABOR'
+  | 'TRAVEL'
+  | 'EXTERNAL_SERVICE'
+  | 'FEE'
+  | 'OTHER';
+export type JobCostUnit =
+  | 'PIECE'
+  | 'HOUR'
+  | 'KILOMETER'
+  | 'KG'
+  | 'LITER'
+  | 'METER'
+  | 'SQUARE_METER'
+  | 'CUBIC_METER'
+  | 'FLAT_RATE'
+  | 'OTHER';
 export type AssignmentEntityType =
   | 'USER'
   | 'TEAM'
@@ -377,6 +396,87 @@ export type JobReportListResponse = {
 export type JobReportReviewInput = {
   reviewStatus: ReportReviewDecisionStatus;
   reviewNotes?: string;
+};
+
+export type JobCostLineItem = {
+  id: string;
+  kind: JobCostKind;
+  description: string;
+  quantity: number;
+  unit: JobCostUnit;
+  unitCost?: number;
+  totalCost: number;
+  currency: string;
+  taxRate?: number;
+  costDate: string;
+  vendorName?: string;
+  receiptReference?: string;
+  notes?: string;
+  item?: {
+    id: string;
+    customId: string;
+    name: string;
+  };
+  createdBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  updatedBy: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type JobCostSummary = {
+  materialTotal: number;
+  laborTotal: number;
+  travelTotal: number;
+  externalServiceTotal: number;
+  otherTotal: number;
+  grandTotal: number;
+  currency: string;
+  lineCount: number;
+};
+
+export type JobCostListResponse = {
+  costLines: JobCostLineItem[];
+  summary: JobCostSummary;
+};
+
+export type JobCostCreateInput = {
+  itemId?: string;
+  kind: JobCostKind;
+  description: string;
+  quantity: number;
+  unit: JobCostUnit;
+  unitCost?: number;
+  totalCost?: number;
+  currency?: string;
+  taxRate?: number;
+  costDate?: string;
+  vendorName?: string;
+  receiptReference?: string;
+  notes?: string;
+};
+
+export type JobCostUpdateInput = {
+  itemId?: string | null;
+  kind?: JobCostKind;
+  description?: string;
+  quantity?: number;
+  unit?: JobCostUnit;
+  unitCost?: number | null;
+  totalCost?: number;
+  currency?: string;
+  taxRate?: number | null;
+  costDate?: string;
+  vendorName?: string | null;
+  receiptReference?: string | null;
+  notes?: string | null;
 };
 
 export type JobAttachmentListResponse = {

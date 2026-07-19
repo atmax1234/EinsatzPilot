@@ -134,6 +134,7 @@ link_job="$(json_patch "${API_BASE}/jobs/${job_id}" "{\"customerId\":\"${custome
 job_detail="$(json_get "${API_BASE}/jobs/${job_id}" "$token")"
 
 linked_job="$(json_post "${API_BASE}/jobs" "{\"title\":\"Linked Job ${SMOKE_SUFFIX}\",\"description\":\"Job relation create proof\",\"customerName\":\"Legacy Linked Customer\",\"location\":\"Legacy Linked Location\",\"scheduledStart\":\"2026-04-19T08:00:00.000Z\",\"priority\":\"NORMAL\",\"customerId\":\"${customer_id}\",\"addressId\":\"${address_id}\",\"objectId\":\"${object_id}\",\"objectAreaId\":\"${area_id}\"}" "$token")"
+linked_job_id="$(printf '%s' "$linked_job" | jq -r '.job.id')"
 
 second_object="$(json_post "${API_BASE}/objects" "{\"name\":\"Second Smoke Object ${SMOKE_SUFFIX}\",\"type\":\"OTHER\",\"status\":\"ACTIVE\"}" "$token")"
 second_object_id="$(printf '%s' "$second_object" | jq -r '.id')"
@@ -170,6 +171,17 @@ assignment_options="$(json_get "${API_BASE}/assignments/options" "$token")"
 job_after_assignments="$(json_get "${API_BASE}/jobs/${job_id}" "$token")"
 invalid_assignment_time_status="$(curl -sS -o "${TMP_DIR}/invalid-assignment-time.json" -w '%{http_code}' -X POST "${API_BASE}/assignments" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"sourceType\":\"USER\",\"sourceId\":\"${user_id}\",\"targetType\":\"JOB\",\"targetId\":\"${job_id}\",\"kind\":\"SCHEDULED\",\"startsAt\":\"2026-04-20T12:00:00.000Z\",\"endsAt\":\"2026-04-20T10:00:00.000Z\"}")"
 
+material_cost="$(json_post "${API_BASE}/jobs/${job_id}/costs" "{\"itemId\":\"${quantity_item_id}\",\"kind\":\"MATERIAL_PURCHASE\",\"description\":\"Smoke repair material\",\"quantity\":2.5,\"unit\":\"KG\",\"unitCost\":12.4,\"currency\":\"EUR\",\"taxRate\":19,\"costDate\":\"2026-04-18T12:00:00.000Z\",\"vendorName\":\"Smoke Supplier\",\"receiptReference\":\"SMOKE-RECEIPT\"}" "$token")"
+material_cost_id="$(printf '%s' "$material_cost" | jq -r '.id')"
+labor_cost="$(json_post "${API_BASE}/jobs/${job_id}/costs" '{"kind":"LABOR","description":"Smoke labor time","quantity":3,"unit":"HOUR","unitCost":45,"currency":"EUR","costDate":"2026-04-18T12:00:00.000Z"}' "$token")"
+labor_cost_id="$(printf '%s' "$labor_cost" | jq -r '.id')"
+external_cost="$(json_post "${API_BASE}/jobs/${job_id}/costs" '{"kind":"EXTERNAL_SERVICE","description":"Smoke external service","quantity":1,"unit":"FLAT_RATE","totalCost":250,"currency":"EUR","costDate":"2026-04-18T12:00:00.000Z"}' "$token")"
+external_cost_id="$(printf '%s' "$external_cost" | jq -r '.id')"
+update_material_cost="$(json_patch "${API_BASE}/jobs/${job_id}/costs/${material_cost_id}" '{"quantity":3,"notes":"Updated cost proof"}' "$token")"
+job_costs="$(json_get "${API_BASE}/jobs/${job_id}/costs" "$token")"
+job_cost_summary="$(json_get "${API_BASE}/jobs/${job_id}/cost-summary" "$token")"
+wrong_job_cost_status="$(curl -sS -o "${TMP_DIR}/wrong-job-cost.json" -w '%{http_code}' -X PATCH "${API_BASE}/jobs/${linked_job_id}/costs/${material_cost_id}" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"notes":"Wrong job update"}')"
+
 worker_login="$(json_post "${API_BASE}/auth/development-login" '{"email":"worker@luetjens.example.de","displayName":"Worker Proof","companySlug":"luetjens","companyName":"Luetjens Service","membershipRole":"WORKER"}')"
 worker_token="$(printf '%s' "$worker_login" | jq -r '.token')"
 worker_user_id="$(printf '%s' "$worker_login" | jq -r '.session.user.id')"
@@ -181,7 +193,6 @@ approve_worker_finding="$(json_patch "${API_BASE}/jobs/${job_id}/reports/${worke
 revision_report="$(json_post "${API_BASE}/jobs/${job_id}/reports" '{"type":"INCIDENT_REPORT","summary":"Incident revision proof","findingSummary":"Moisture visible near service shaft","followUpRequired":true,"followUpNotes":"Clarify affected floor"}' "$token")"
 revision_report_id="$(printf '%s' "$revision_report" | jq -r '.reports[] | select(.summary == "Incident revision proof") | .id')"
 needs_revision_report="$(json_patch "${API_BASE}/jobs/${job_id}/reports/${revision_report_id}/review" '{"reviewStatus":"NEEDS_REVISION","reviewNotes":"Add exact floor and another photo"}' "$token")"
-linked_job_id="$(printf '%s' "$linked_job" | jq -r '.job.id')"
 worker_inaccessible_report_status="$(curl -sS -o "${TMP_DIR}/worker-inaccessible-report.json" -w '%{http_code}' -X POST "${API_BASE}/jobs/${linked_job_id}/reports" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"type":"WORKER_FINDING","summary":"Forbidden unrelated finding","findingSummary":"Should not be accepted"}')"
 wrong_job_report_review_status="$(curl -sS -o "${TMP_DIR}/wrong-job-report-review.json" -w '%{http_code}' -X PATCH "${API_BASE}/jobs/${linked_job_id}/reports/${worker_finding_id}/review" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"reviewStatus":"REJECTED"}')"
 invalid_finding_status="$(curl -sS -o "${TMP_DIR}/invalid-finding.json" -w '%{http_code}' -X POST "${API_BASE}/jobs/${job_id}/reports" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"type":"WORKER_FINDING","summary":"Missing meaningful body"}')"
@@ -193,12 +204,16 @@ worker_item_detail="$(json_get "${API_BASE}/items/${quantity_item_id}" "$worker_
 worker_assignments="$(json_get "${API_BASE}/assignments" "$worker_token")"
 worker_assignment_options="$(json_get "${API_BASE}/assignments/options" "$worker_token")"
 worker_assignment_detail="$(json_get "${API_BASE}/assignments/${team_job_assignment_id}" "$worker_token")"
+worker_job_costs="$(json_get "${API_BASE}/jobs/${job_id}/costs" "$worker_token")"
+worker_job_cost_summary="$(json_get "${API_BASE}/jobs/${job_id}/cost-summary" "$worker_token")"
 worker_write_status="$(curl -sS -o "${TMP_DIR}/worker-write.json" -w '%{http_code}' -X POST "${API_BASE}/customers" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"name":"Forbidden Worker Customer","type":"OTHER"}')"
 worker_job_write_status="$(curl -sS -o "${TMP_DIR}/worker-job-write.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d "{\"title\":\"Forbidden Worker Job\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T11:00:00.000Z\",\"priority\":\"NORMAL\",\"customerId\":\"${customer_id}\"}")"
 worker_category_write_status="$(curl -sS -o "${TMP_DIR}/worker-category-write.json" -w '%{http_code}' -X POST "${API_BASE}/item-categories" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"name":"Forbidden Worker Category","kind":"OTHER"}')"
 worker_item_write_status="$(curl -sS -o "${TMP_DIR}/worker-item-write.json" -w '%{http_code}' -X PATCH "${API_BASE}/items/${quantity_item_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"notes":"Forbidden worker update"}')"
 worker_assignment_write_status="$(curl -sS -o "${TMP_DIR}/worker-assignment-write.json" -w '%{http_code}' -X POST "${API_BASE}/assignments" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d "{\"sourceType\":\"ITEM\",\"sourceId\":\"${quantity_item_id}\",\"targetType\":\"JOB\",\"targetId\":\"${job_id}\",\"kind\":\"SUPPORTING\"}")"
 worker_assignment_update_status="$(curl -sS -o "${TMP_DIR}/worker-assignment-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/assignments/${team_job_assignment_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"notes":"Forbidden worker assignment update"}')"
+worker_cost_write_status="$(curl -sS -o "${TMP_DIR}/worker-cost-write.json" -w '%{http_code}' -X POST "${API_BASE}/jobs/${job_id}/costs" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"kind":"OTHER","description":"Forbidden worker cost","quantity":1,"unit":"FLAT_RATE","totalCost":1}')"
+worker_cost_update_status="$(curl -sS -o "${TMP_DIR}/worker-cost-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/jobs/${job_id}/costs/${labor_cost_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"notes":"Forbidden worker cost update"}')"
 
 other_login="$(json_post "${API_BASE}/auth/development-login" '{"email":"owner@otherco.example.de","displayName":"Other Owner","companySlug":"otherco","companyName":"Other Co","membershipRole":"OWNER"}')"
 other_token="$(printf '%s' "$other_login" | jq -r '.token')"
@@ -232,6 +247,9 @@ cross_item_relation_status="$(curl -sS -o "${TMP_DIR}/cross-item-relation.json" 
 cross_assignment_read_status="$(curl -sS -o "${TMP_DIR}/cross-assignment-read.json" -w '%{http_code}' "${API_BASE}/assignments/${other_assignment_id}" -H "Authorization: Bearer ${token}")"
 cross_assignment_source_status="$(curl -sS -o "${TMP_DIR}/cross-assignment-source.json" -w '%{http_code}' -X POST "${API_BASE}/assignments" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"sourceType\":\"ITEM\",\"sourceId\":\"${other_item_id}\",\"targetType\":\"JOB\",\"targetId\":\"${job_id}\",\"kind\":\"OTHER\"}")"
 cross_assignment_target_status="$(curl -sS -o "${TMP_DIR}/cross-assignment-target.json" -w '%{http_code}' -X POST "${API_BASE}/assignments" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"sourceType\":\"ITEM\",\"sourceId\":\"${quantity_item_id}\",\"targetType\":\"OBJECT\",\"targetId\":\"${other_object_id}\",\"kind\":\"OTHER\"}")"
+cross_cost_job_status="$(curl -sS -o "${TMP_DIR}/cross-cost-job.json" -w '%{http_code}' "${API_BASE}/jobs/${job_id}/costs" -H "Authorization: Bearer ${other_token}")"
+cross_cost_update_status="$(curl -sS -o "${TMP_DIR}/cross-cost-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/jobs/${job_id}/costs/${material_cost_id}" -H "Authorization: Bearer ${other_token}" -H 'Content-Type: application/json' -d '{"notes":"Forbidden cross-company update"}')"
+cross_cost_item_status="$(curl -sS -o "${TMP_DIR}/cross-cost-item.json" -w '%{http_code}' -X POST "${API_BASE}/jobs/${job_id}/costs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"itemId\":\"${other_item_id}\",\"kind\":\"MATERIAL_USED\",\"description\":\"Forbidden cross-company item\",\"quantity\":1,\"unit\":\"PIECE\",\"unitCost\":1}")"
 job_detail="$(json_get "${API_BASE}/jobs/${job_id}" "$token")"
 
 jq -n \
@@ -281,9 +299,17 @@ jq -n \
   --argjson assignments "$assignments" \
   --argjson assignmentOptions "$assignment_options" \
   --argjson jobAfterAssignments "$job_after_assignments" \
+  --argjson materialCost "$material_cost" \
+  --argjson laborCost "$labor_cost" \
+  --argjson externalCost "$external_cost" \
+  --argjson updateMaterialCost "$update_material_cost" \
+  --argjson jobCosts "$job_costs" \
+  --argjson jobCostSummary "$job_cost_summary" \
   --argjson workerAssignments "$worker_assignments" \
   --argjson workerAssignmentOptions "$worker_assignment_options" \
   --argjson workerAssignmentDetail "$worker_assignment_detail" \
+  --argjson workerJobCosts "$worker_job_costs" \
+  --argjson workerJobCostSummary "$worker_job_cost_summary" \
   --argjson addWorkerMember "$add_worker_member" \
   --argjson workerFinding "$worker_finding" \
   --argjson approveWorkerFinding "$approve_worker_finding" \
@@ -320,6 +346,12 @@ jq -n \
   --arg crossAssignmentReadStatus "$cross_assignment_read_status" \
   --arg crossAssignmentSourceStatus "$cross_assignment_source_status" \
   --arg crossAssignmentTargetStatus "$cross_assignment_target_status" \
+  --arg wrongJobCostStatus "$wrong_job_cost_status" \
+  --arg workerCostWriteStatus "$worker_cost_write_status" \
+  --arg workerCostUpdateStatus "$worker_cost_update_status" \
+  --arg crossCostJobStatus "$cross_cost_job_status" \
+  --arg crossCostUpdateStatus "$cross_cost_update_status" \
+  --arg crossCostItemStatus "$cross_cost_item_status" \
   --arg attachmentFileStatus "$attachment_file_status" \
   --arg firstJobId "$first_job_id" \
   --arg teamName "$TEAM_NAME" \
@@ -489,7 +521,36 @@ jq -n \
     workerAssignmentUpdateStatus: $workerAssignmentUpdateStatus,
     crossAssignmentReadStatus: $crossAssignmentReadStatus,
     crossAssignmentSourceStatus: $crossAssignmentSourceStatus,
-    crossAssignmentTargetStatus: $crossAssignmentTargetStatus
+    crossAssignmentTargetStatus: $crossAssignmentTargetStatus,
+    materialCostDerivedTotal: $materialCost.totalCost,
+    materialCostItemMatches: ($materialCost.item.id == $quantityItemId),
+    laborCostDerivedTotal: $laborCost.totalCost,
+    externalCostManualTotal: $externalCost.totalCost,
+    externalCostHasNoUnitCost: ($externalCost.unitCost == null),
+    updatedMaterialCostTotal: $updateMaterialCost.totalCost,
+    updatedMaterialCostNotes: $updateMaterialCost.notes,
+    costListContainsCreated: (
+      ([$jobCosts.costLines[].id] | index($materialCost.id) != null) and
+      ([$jobCosts.costLines[].id] | index($laborCost.id) != null) and
+      ([$jobCosts.costLines[].id] | index($externalCost.id) != null)
+    ),
+    costListLineCount: ($jobCosts.costLines | length),
+    costSummaryMaterial: $jobCostSummary.materialTotal,
+    costSummaryLabor: $jobCostSummary.laborTotal,
+    costSummaryTravel: $jobCostSummary.travelTotal,
+    costSummaryExternal: $jobCostSummary.externalServiceTotal,
+    costSummaryOther: $jobCostSummary.otherTotal,
+    costSummaryGrand: $jobCostSummary.grandTotal,
+    costSummaryCurrency: $jobCostSummary.currency,
+    costListSummaryMatches: ($jobCosts.summary == $jobCostSummary),
+    wrongJobCostStatus: $wrongJobCostStatus,
+    workerCostLineCount: ($workerJobCosts.costLines | length),
+    workerCostSummaryGrand: $workerJobCostSummary.grandTotal,
+    workerCostWriteStatus: $workerCostWriteStatus,
+    workerCostUpdateStatus: $workerCostUpdateStatus,
+    crossCostJobStatus: $crossCostJobStatus,
+    crossCostUpdateStatus: $crossCostUpdateStatus,
+    crossCostItemStatus: $crossCostItemStatus
   }' > "${TMP_DIR}/summary.json"
 
 jq -e \
@@ -591,7 +652,32 @@ jq -e \
     .workerAssignmentUpdateStatus == "403" and
     .crossAssignmentReadStatus == "404" and
     .crossAssignmentSourceStatus == "404" and
-    .crossAssignmentTargetStatus == "404"
+    .crossAssignmentTargetStatus == "404" and
+    .materialCostDerivedTotal == 31 and
+    .materialCostItemMatches == true and
+    .laborCostDerivedTotal == 135 and
+    .externalCostManualTotal == 250 and
+    .externalCostHasNoUnitCost == true and
+    .updatedMaterialCostTotal == 37.2 and
+    .updatedMaterialCostNotes == "Updated cost proof" and
+    .costListContainsCreated == true and
+    .costListLineCount == 3 and
+    .costSummaryMaterial == 37.2 and
+    .costSummaryLabor == 135 and
+    .costSummaryTravel == 0 and
+    .costSummaryExternal == 250 and
+    .costSummaryOther == 0 and
+    .costSummaryGrand == 422.2 and
+    .costSummaryCurrency == "EUR" and
+    .costListSummaryMatches == true and
+    .wrongJobCostStatus == "404" and
+    .workerCostLineCount == 3 and
+    .workerCostSummaryGrand == 422.2 and
+    .workerCostWriteStatus == "403" and
+    .workerCostUpdateStatus == "403" and
+    .crossCostJobStatus == "404" and
+    .crossCostUpdateStatus == "404" and
+    .crossCostItemStatus == "404"
   ' "${TMP_DIR}/summary.json" >/dev/null
 
 cat "${TMP_DIR}/summary.json"

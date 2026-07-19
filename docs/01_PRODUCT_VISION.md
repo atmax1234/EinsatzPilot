@@ -75,6 +75,6 @@ Item movement history may be added later as supporting infrastructure. It must n
 
 ## Status boundary
 
-Today the repository implements identity, teams, jobs, structured execution reports and office review, attachments, customers, structured addresses, objects, object areas, item categories, items, optional backwards-compatible Job directory links, and a generic Assignment foundation. `Job.teamId` remains the existing operational team link and is not synchronized with generic assignments.
+Today the repository implements identity, teams, jobs, structured execution reports and office review, attachments, customers, structured addresses, objects, object areas, item categories, items, optional backwards-compatible Job directory links, a generic Assignment foundation, and a tenant-safe job cost ledger with backend-derived summaries. `Job.teamId` remains the existing operational team link and is not synchronized with generic assignments.
 
-Job cost ledgers, customer report generation, recurring service contracts, and a company command-center dashboard remain planned. Item movement is optional later infrastructure, not the next default phase.
+Customer report generation, recurring service contracts, and a company command-center dashboard remain planned. Invoice/payment workflows are not implemented. Item movement is optional later infrastructure, not the next default phase.

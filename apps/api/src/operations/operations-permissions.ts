@@ -15,6 +15,8 @@ const itemWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const itemReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 const assignmentWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const assignmentReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
+const jobCostWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
+const jobCostReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 
 function assertAuthenticatedContext(
   authContext: RequestAuthContext,
@@ -137,5 +139,21 @@ export function assertCanReadAssignments(authContext: RequestAuthContext) {
     authContext,
     assignmentReadRoles,
     'Nur aktive Firmenmitglieder duerfen Zuweisungen lesen.',
+  );
+}
+
+export function assertCanWriteJobCosts(authContext: RequestAuthContext) {
+  assertRoleAllowed(
+    authContext,
+    jobCostWriteRoles,
+    'Nur OWNER oder OFFICE duerfen Auftragskosten aendern.',
+  );
+}
+
+export function assertCanReadJobCosts(authContext: RequestAuthContext) {
+  assertRoleAllowed(
+    authContext,
+    jobCostReadRoles,
+    'Nur aktive Firmenmitglieder duerfen Auftragskosten lesen.',
   );
 }

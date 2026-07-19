@@ -126,6 +126,29 @@ enum ItemStatus {
   ARCHIVED
 }
 
+enum JobCostKind {
+  MATERIAL_PURCHASE
+  MATERIAL_USED
+  LABOR
+  TRAVEL
+  EXTERNAL_SERVICE
+  FEE
+  OTHER
+}
+
+enum JobCostUnit {
+  PIECE
+  HOUR
+  KILOMETER
+  KG
+  LITER
+  METER
+  SQUARE_METER
+  CUBIC_METER
+  FLAT_RATE
+  OTHER
+}
+
 enum AssignmentEntityType {
   USER
   TEAM
@@ -172,6 +195,7 @@ model Company {
   itemCategories ItemCategory[]
   items          Item[]
   assignments    Assignment[]
+  jobCostLines   JobCostLine[]
 }
 
 model User {
@@ -188,6 +212,8 @@ model User {
   reviewedReports     JobReport[]     @relation("JobReportReviewer")
   uploadedAttachments JobAttachment[] @relation("JobAttachmentUploader")
   createdAssignments  Assignment[]    @relation("AssignmentCreatedBy")
+  createdJobCostLines JobCostLine[]   @relation("JobCostLineCreatedBy")
+  updatedJobCostLines JobCostLine[]   @relation("JobCostLineUpdatedBy")
 }
 
 model Membership {
@@ -268,6 +294,7 @@ model Job {
   activity       JobActivity[]
   reports        JobReport[]
   attachments    JobAttachment[]
+  costLines      JobCostLine[]
 
   @@index([companyId])
   @@index([teamId])
@@ -472,12 +499,47 @@ model Item {
   updatedAt    DateTime         @updatedAt
   company      Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
   category     ItemCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  jobCostLines JobCostLine[]
 
   @@unique([companyId, customId])
   @@index([companyId, name])
   @@index([companyId, categoryId])
   @@index([companyId, kind])
   @@index([companyId, status])
+}
+
+model JobCostLine {
+  id               String      @id @default(cuid())
+  companyId        String
+  jobId            String
+  itemId           String?
+  kind             JobCostKind
+  description      String
+  quantity         Decimal     @db.Decimal(14, 3)
+  unit             JobCostUnit
+  unitCost         Decimal?    @db.Decimal(14, 2)
+  totalCost        Decimal     @db.Decimal(14, 2)
+  currency         String      @default("EUR") @db.VarChar(3)
+  taxRate          Decimal?    @db.Decimal(5, 2)
+  costDate         DateTime    @default(now())
+  vendorName       String?
+  receiptReference String?
+  notes            String?
+  createdByUserId  String
+  updatedByUserId  String
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  company          Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job              Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  item             Item?       @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  createdBy        User        @relation("JobCostLineCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  updatedBy        User        @relation("JobCostLineUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, jobId, costDate])
+  @@index([companyId, kind])
+  @@index([itemId])
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
 }
 
 model Assignment {

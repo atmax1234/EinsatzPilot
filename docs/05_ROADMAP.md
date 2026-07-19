@@ -44,21 +44,23 @@ Phases are dependency order, not calendar promises. EinsatzPilot is job-centered
 
 ## Phase 6 — Job Cost Ledger
 
-**Status:** Next recommended implementation phase after the Phase 5 migration, typecheck, builds, smoke flow, and diff checks are clean.
+**Status:** Implemented and verified with an additive migration, shared contracts/schema helpers, tenant-safe API rules, backend-derived summaries, real-data job-detail UI, and expanded Phase 1-6 smoke coverage.
 
 **Goals:** Record job-grounded material purchases/use, labor time, travel costs, external/subcontractor costs, and custom cost lines. Define units, amounts, currency/tax boundaries, actor/review behavior, corrections, and invoice-ready summaries.
 
 **Dependencies:** Stable jobs and reviewed execution findings. Item references are optional supporting context, not mandatory inventory transactions.
 
-**Must not build yet:** Full accounting, stock control, payment processing, or mutable issued invoices.
+**Implemented boundary:** Cost lines are editable operational records with actor attribution. Material/labor/travel totals derive from quantity and unit cost; external/fee/other totals may be manual. One currency is enforced per job. No delete/correction history, approval lifecycle, invoice issuance, payment, tax calculation, accounting export, or item movement exists.
 
 ## Phase 7 — Customer/Object Report Generator
 
-**Goals:** Generate customer-facing damage, maintenance, service, proof-of-work, and object-history reports from reviewed findings, photos, work performed, costs, and follow-up notes. Make output reproducible and suitable for PDF/export.
+**Status:** Next recommended implementation phase after the Phase 6 migration, typecheck, builds, smoke flow, and diff checks are clean.
+
+**Goals:** Assemble clean customer-facing damage, maintenance, service, proof-of-work, and object-history report data from jobs, reviewed findings, photos, work performed, cost summaries, and follow-up notes. Define reproducible snapshots and explicit inclusion rules before adding presentation/export channels.
 
 **Dependencies:** Reviewed execution findings, durable attachments, object/customer context, and governed cost summaries where included.
 
-**Must not build yet:** Unreviewed automatic sending, invoice issuance, or mutable official records.
+**Must not build yet:** Automatic sending, invoice issuance, payment, or official output derived silently from unreviewed mutable state.
 
 ## Phase 8 — Recurring Service Contracts
 

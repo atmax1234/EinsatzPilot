@@ -8,6 +8,7 @@ import { DirectoryModule } from './directory/directory.module';
 import { FoundationModule } from './foundation/foundation.module';
 import { HealthModule } from './health/health.module';
 import { ItemsModule } from './items/items.module';
+import { JobCostsModule } from './job-costs/job-costs.module';
 import { OperationsModule } from './operations/operations.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReportsModule } from './reports/reports.module';
@@ -21,6 +22,7 @@ import { ReportsModule } from './reports/reports.module';
     OperationsModule,
     DirectoryModule,
     ItemsModule,
+    JobCostsModule,
     ReportsModule,
     AttachmentsModule,
     AssignmentsModule,

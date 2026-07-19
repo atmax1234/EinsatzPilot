@@ -2,62 +2,65 @@
 
 ## Completed gate
 
-Phase 5 — Job Execution Reports / Worker Findings is complete in the verified local setup.
+Phase 6 — Job Cost Ledger is complete in the verified local setup.
 
-- All nine migrations are applied to PostgreSQL.
-- Existing simple reports remain compatible as `GENERAL`/`SUBMITTED`.
-- Structured findings, performed and outstanding work, follow-up data, reviewer attribution, and linked evidence are implemented.
-- WORKER submission is limited to jobs reached through direct team membership, active user-to-job assignment, or active team-to-job assignment.
-- OWNER/OFFICE can submit for any company job and make explicit approve, needs-revision, or reject decisions.
-- Review decisions create readable `JobActivity`; WORKER review and cross-tenant report access are blocked.
-- The real-data job detail and Reports pages display structured execution and review context.
-- The expanded smoke flow preserves Phase 1/2/3/4 checks and covers Phase 5 compatibility, validation, roles, evidence, activity, and tenant isolation.
+- All ten migrations are applied to PostgreSQL.
+- Job cost lines cover material purchase/use, labor, travel, external service, fees, and other costs.
+- Cost lines are scoped to company and job; optional Item references are tenant-validated.
+- Quantity is positive, monetary values are nonnegative, tax metadata is bounded, and one currency is enforced per job.
+- Material, labor, and travel totals are derived by the backend from quantity times unit cost. External, fee, and other lines may use a validated manual total.
+- OWNER/OFFICE can create and update; WORKER can read but cannot write.
+- The job detail uses real API data for cost entry, editing, line review, and category/grand totals.
+- The expanded smoke flow preserves Phase 1/2/3/4/5 checks and covers Phase 6 calculations, updates, summaries, item validation, roles, wrong-job access, and tenant isolation.
 
 ## Recommended next implementation slice
 
-Begin `Phase 6 — Job Cost Ledger` only after confirming the Phase 5 migration, root typecheck, API/web builds, expanded smoke flow, and diff checks remain clean.
+Begin `Phase 7 — Customer/Object Report Generator` only after confirming the Phase 6 migration, Prisma validation/generation, root typecheck, API/web builds, expanded smoke flow, and diff checks remain clean.
 
-The purpose of Phase 6 is a tenant-safe, job-grounded money layer for actual operational costs. Cost lines should describe materials purchased or used, labor time, travel, external/subcontractor work, and custom expenses without turning items into a warehouse ledger or issuing invoices prematurely.
+Phase 7 should turn governed operational data into clean customer-facing report data. It should combine the job and customer/object context with reviewed findings, work performed, photos/evidence, follow-up state, and backend-derived cost summaries. The first slice should define reproducible report snapshots and inclusion rules; it must not issue invoices, take payments, or automatically send unreviewed documents.
 
 ## Required scope
 
-- Define additive company- and job-owned cost-line models with explicit cost kinds.
-- Decide quantity, unit, unit price, totals, currency, tax boundary, dates, notes, actor, and correction behavior.
-- Support optional Item references for material context without requiring catalog items for every expense.
-- Keep totals backend-derived from validated persisted lines.
-- Enforce OWNER/OFFICE write and company-member read rules in services.
-- Add minimal real-API job cost entry/list/edit behavior and an invoice-ready summary that is clearly not an invoice.
-- Expand smoke coverage without weakening Phase 1/2/3/4/5 assertions.
-- Update current-state, domain, dependency, roadmap, next-step, checklist, and README documentation.
+- Define a tenant-safe customer/object report record or snapshot owned by company and grounded in one job.
+- Include customer, address, object, and job context without removing legacy Job text fields.
+- Include only explicitly selected or approved reports/findings and durable attachment references.
+- Include work performed, outstanding work/follow-up notes, and the current governed job cost summary where selected.
+- Record who generated the snapshot, when it was generated, and which source records/versions were included.
+- Add OWNER/OFFICE generation/update controls and company-member read behavior in service logic.
+- Add minimal real-API job-detail visibility for generating and reviewing report data.
+- Expand smoke coverage without weakening Phase 1-6 assertions.
 
-## Guiding workflow
+## Still out of scope
 
-After an approved incident finding at `Musterstr. 1`, the office should record labor time, travel, purchased replacement material, and any external plumber cost against the same job. The resulting summary should be understandable and ready to support a later customer report, offer, or invoice workflow, but it must not issue commercial documents in Phase 6.
-
-## Still out of scope for Phase 6
-
-- Offers, invoices, payment, numbering, or accounting integration.
-- Customer PDF/report generation.
+- Invoice or offer issuance, payment handling, numbering, and accounting export.
+- Automatic customer sending or unreviewed AI-generated official content.
 - Recurring service contracts.
 - Item movement, stock, warehouse, delivery, or custody workflows.
 - Command-center dashboard, drag-and-drop, QR/barcodes, AI/automation, or mobile features.
 
-## Known report limitations
+## Known current limitations
 
-- Review decisions are terminal in Phase 5; worker editing/resubmission and review correction are not implemented.
-- Active generic assignment access is status-based and does not interpret assignment date windows.
+- Job cost lines are editable current state and have no delete/correction event history or approval workflow.
+- Tax rate is stored as metadata and does not calculate net/gross tax totals.
+- Cost summaries support one currency per job; currency conversion is absent.
+- Receipt references are text and cost lines do not directly own receipt attachments.
+- Report review decisions are terminal; worker editing/resubmission and review correction are not implemented.
 - Attachments remain in local filesystem storage without production retention or object storage.
-- The Reports overview hydrates job details rather than using a dedicated paginated company report endpoint.
-- Review output is operational state, not a customer-facing generated document.
 
 ## Exact recommended prompt
 
 ```text
-Implement `Phase 6 — Job Cost Ledger`.
+Read `/docs` first.
 
-First read `/docs` and verify that all Phase 5 migrations are applied and that Prisma validation/generation, root typecheck, API/web builds, the expanded smoke flow, and git diff checks are clean. Stop if existing Phase 1/2/3/4/5 smoke coverage breaks.
+Implement:
 
-Add an additive, tenant-safe job cost ledger for material purchases/use, labor time, travel costs, external/subcontractor costs, and custom cost lines. Define strict cost kinds, quantities/units, amounts, currency and tax boundaries, actor attribution, notes, dates, correction/update rules, and backend-derived invoice-ready summaries. Item references must be optional supporting context and must belong to the active company when provided.
+`Phase 7 — Customer/Object Report Generator`
 
-Enforce OWNER/OFFICE writes and company-member reads in service/business logic, preserve all existing Job, report/review, attachment, assignment, directory, item, role, lifecycle, and tenant behavior, add shared contracts/runtime validation, minimal real-API job cost UI, expanded smoke coverage, and documentation updates. Do not add invoice issuance, payment handling, PDF generation, recurring contracts, item movement, warehouse/logistics behavior, command-board drag-and-drop, QR/barcodes, AI/automation, or mobile features.
+Before coding, verify all ten migrations are applied and Prisma validate/generate, `pnpm typecheck`, `pnpm build`, `pnpm smoke:api`, and `git diff --check` pass. Stop if existing Phase 1/2/3/4/5/6 smoke coverage breaks.
+
+Add a tenant-safe, job-grounded customer/object report snapshot foundation that turns jobs, customer/address/object context, approved or explicitly selected findings, work performed, outstanding/follow-up notes, photo/file evidence references, and backend-derived job cost summaries into clean reproducible customer-facing report data.
+
+Keep source inclusion explicit and record generator, generation time, and source identities/versions. OWNER/OFFICE may generate or update report snapshots; company members may read according to existing job access rules. Add strict service validation, shared contracts/schema helpers, minimal real-API job-detail generation/review UI, expanded smoke coverage, and documentation updates.
+
+Preserve all existing tenant, role, Job lifecycle, directory, item, assignment, report/review, attachment, and cost-ledger behavior. Do not add invoice or offer issuance, payment handling, automatic sending, recurring contracts, item movement, warehouse/logistics behavior, command-board drag-and-drop, QR/barcodes, AI/automation, or mobile features.
 ```
