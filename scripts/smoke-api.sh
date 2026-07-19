@@ -172,6 +172,19 @@ invalid_assignment_time_status="$(curl -sS -o "${TMP_DIR}/invalid-assignment-tim
 
 worker_login="$(json_post "${API_BASE}/auth/development-login" '{"email":"worker@luetjens.example.de","displayName":"Worker Proof","companySlug":"luetjens","companyName":"Luetjens Service","membershipRole":"WORKER"}')"
 worker_token="$(printf '%s' "$worker_login" | jq -r '.token')"
+worker_user_id="$(printf '%s' "$worker_login" | jq -r '.session.user.id')"
+add_worker_member="$(json_post "${API_BASE}/teams/${team_id}/members" "{\"userId\":\"${worker_user_id}\",\"roleLabel\":\"Field Worker\"}" "$token")"
+worker_finding="$(json_post "${API_BASE}/jobs/${job_id}/reports" '{"type":"WORKER_FINDING","summary":"Worker finding proof","findingSummary":"Pipe connection is leaking","workPerformed":"Water supply isolated and area secured","workStillNeeded":"Replace damaged connector","followUpRequired":true,"followUpNotes":"Office should schedule repair","details":"Tenant informed"}' "$worker_token")"
+worker_finding_id="$(printf '%s' "$worker_finding" | jq -r '.reports[] | select(.summary == "Worker finding proof") | .id')"
+worker_review_status="$(curl -sS -o "${TMP_DIR}/worker-review.json" -w '%{http_code}' -X PATCH "${API_BASE}/jobs/${job_id}/reports/${worker_finding_id}/review" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"reviewStatus":"APPROVED"}')"
+approve_worker_finding="$(json_patch "${API_BASE}/jobs/${job_id}/reports/${worker_finding_id}/review" '{"reviewStatus":"APPROVED","reviewNotes":"Finding verified by office"}' "$token")"
+revision_report="$(json_post "${API_BASE}/jobs/${job_id}/reports" '{"type":"INCIDENT_REPORT","summary":"Incident revision proof","findingSummary":"Moisture visible near service shaft","followUpRequired":true,"followUpNotes":"Clarify affected floor"}' "$token")"
+revision_report_id="$(printf '%s' "$revision_report" | jq -r '.reports[] | select(.summary == "Incident revision proof") | .id')"
+needs_revision_report="$(json_patch "${API_BASE}/jobs/${job_id}/reports/${revision_report_id}/review" '{"reviewStatus":"NEEDS_REVISION","reviewNotes":"Add exact floor and another photo"}' "$token")"
+linked_job_id="$(printf '%s' "$linked_job" | jq -r '.job.id')"
+worker_inaccessible_report_status="$(curl -sS -o "${TMP_DIR}/worker-inaccessible-report.json" -w '%{http_code}' -X POST "${API_BASE}/jobs/${linked_job_id}/reports" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"type":"WORKER_FINDING","summary":"Forbidden unrelated finding","findingSummary":"Should not be accepted"}')"
+wrong_job_report_review_status="$(curl -sS -o "${TMP_DIR}/wrong-job-report-review.json" -w '%{http_code}' -X PATCH "${API_BASE}/jobs/${linked_job_id}/reports/${worker_finding_id}/review" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"reviewStatus":"REJECTED"}')"
+invalid_finding_status="$(curl -sS -o "${TMP_DIR}/invalid-finding.json" -w '%{http_code}' -X POST "${API_BASE}/jobs/${job_id}/reports" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"type":"WORKER_FINDING","summary":"Missing meaningful body"}')"
 worker_objects="$(json_get "${API_BASE}/objects" "$worker_token")"
 worker_relation_options="$(json_get "${API_BASE}/jobs/relation-options" "$worker_token")"
 worker_item_categories="$(json_get "${API_BASE}/item-categories" "$worker_token")"
@@ -189,6 +202,8 @@ worker_assignment_update_status="$(curl -sS -o "${TMP_DIR}/worker-assignment-upd
 
 other_login="$(json_post "${API_BASE}/auth/development-login" '{"email":"owner@otherco.example.de","displayName":"Other Owner","companySlug":"otherco","companyName":"Other Co","membershipRole":"OWNER"}')"
 other_token="$(printf '%s' "$other_login" | jq -r '.token')"
+cross_report_read_status="$(curl -sS -o "${TMP_DIR}/cross-report-read.json" -w '%{http_code}' "${API_BASE}/jobs/${job_id}/reports" -H "Authorization: Bearer ${other_token}")"
+cross_report_review_status="$(curl -sS -o "${TMP_DIR}/cross-report-review.json" -w '%{http_code}' -X PATCH "${API_BASE}/jobs/${job_id}/reports/${worker_finding_id}/review" -H "Authorization: Bearer ${other_token}" -H 'Content-Type: application/json' -d '{"reviewStatus":"REJECTED"}')"
 cross_status="$(curl -sS -o "${TMP_DIR}/cross-company.json" -w '%{http_code}' "${API_BASE}/jobs/${job_id}" -H "Authorization: Bearer ${other_token}")"
 cross_body="$(cat "${TMP_DIR}/cross-company.json")"
 cross_object_status="$(curl -sS -o "${TMP_DIR}/cross-object.json" -w '%{http_code}' "${API_BASE}/objects/${object_id}" -H "Authorization: Bearer ${other_token}")"
@@ -217,6 +232,7 @@ cross_item_relation_status="$(curl -sS -o "${TMP_DIR}/cross-item-relation.json" 
 cross_assignment_read_status="$(curl -sS -o "${TMP_DIR}/cross-assignment-read.json" -w '%{http_code}' "${API_BASE}/assignments/${other_assignment_id}" -H "Authorization: Bearer ${token}")"
 cross_assignment_source_status="$(curl -sS -o "${TMP_DIR}/cross-assignment-source.json" -w '%{http_code}' -X POST "${API_BASE}/assignments" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"sourceType\":\"ITEM\",\"sourceId\":\"${other_item_id}\",\"targetType\":\"JOB\",\"targetId\":\"${job_id}\",\"kind\":\"OTHER\"}")"
 cross_assignment_target_status="$(curl -sS -o "${TMP_DIR}/cross-assignment-target.json" -w '%{http_code}' -X POST "${API_BASE}/assignments" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"sourceType\":\"ITEM\",\"sourceId\":\"${quantity_item_id}\",\"targetType\":\"OBJECT\",\"targetId\":\"${other_object_id}\",\"kind\":\"OTHER\"}")"
+job_detail="$(json_get "${API_BASE}/jobs/${job_id}" "$token")"
 
 jq -n \
   --argjson health "$health" \
@@ -268,6 +284,10 @@ jq -n \
   --argjson workerAssignments "$worker_assignments" \
   --argjson workerAssignmentOptions "$worker_assignment_options" \
   --argjson workerAssignmentDetail "$worker_assignment_detail" \
+  --argjson addWorkerMember "$add_worker_member" \
+  --argjson workerFinding "$worker_finding" \
+  --argjson approveWorkerFinding "$approve_worker_finding" \
+  --argjson needsRevisionReport "$needs_revision_report" \
   --arg crossStatus "$cross_status" \
   --arg crossBody "$cross_body" \
   --arg crossObjectStatus "$cross_object_status" \
@@ -291,6 +311,12 @@ jq -n \
   --arg invalidAssignmentTimeStatus "$invalid_assignment_time_status" \
   --arg workerAssignmentWriteStatus "$worker_assignment_write_status" \
   --arg workerAssignmentUpdateStatus "$worker_assignment_update_status" \
+  --arg workerReviewStatus "$worker_review_status" \
+  --arg workerInaccessibleReportStatus "$worker_inaccessible_report_status" \
+  --arg wrongJobReportReviewStatus "$wrong_job_report_review_status" \
+  --arg invalidFindingStatus "$invalid_finding_status" \
+  --arg crossReportReadStatus "$cross_report_read_status" \
+  --arg crossReportReviewStatus "$cross_report_review_status" \
   --arg crossAssignmentReadStatus "$cross_assignment_read_status" \
   --arg crossAssignmentSourceStatus "$cross_assignment_source_status" \
   --arg crossAssignmentTargetStatus "$cross_assignment_target_status" \
@@ -309,6 +335,9 @@ jq -n \
   --arg teamJobAssignmentId "$team_job_assignment_id" \
   --arg itemJobAssignmentId "$item_job_assignment_id" \
   --arg itemObjectAssignmentId "$item_object_assignment_id" \
+  --arg reportId "$report_id" \
+  --arg workerFindingId "$worker_finding_id" \
+  --arg workerUserId "$worker_user_id" \
   '{
     healthOk: $health.ok,
     sessionAuthenticated: $session.authenticated,
@@ -326,6 +355,28 @@ jq -n \
     photoLibraryCount: ($photos.attachments | length),
     attachmentMetadataKind: $attachmentMeta.attachment.kind,
     attachmentFileFetch: $attachmentFileStatus,
+    legacyReportType: ($createReport.reports[] | select(.id == $reportId) | .type),
+    legacyReportReviewStatus: ($createReport.reports[] | select(.id == $reportId) | .reviewStatus),
+    reportAttachmentLinked: (
+      [$jobDetail.job.attachments[] | select(.id == $attachmentMeta.attachment.id) | .report.id] |
+      index($reportId) != null
+    ),
+    workerAddedToAssignedTeam: ([$addWorkerMember.members[].id] | index($workerUserId) != null),
+    workerFindingCreated: (
+      ($workerFinding.reports[] | select(.id == $workerFindingId) | .type) == "WORKER_FINDING" and
+      ($workerFinding.reports[] | select(.id == $workerFindingId) | .reviewStatus) == "PENDING_REVIEW"
+    ),
+    workerFindingFollowUpRequired: ($workerFinding.reports[] | select(.id == $workerFindingId) | .followUpRequired),
+    approvedReportStatus: $approveWorkerFinding.reviewStatus,
+    approvedReportReviewerPresent: ($approveWorkerFinding.reviewedBy.id != null),
+    needsRevisionReportStatus: $needsRevisionReport.reviewStatus,
+    workerReviewStatus: $workerReviewStatus,
+    workerInaccessibleReportStatus: $workerInaccessibleReportStatus,
+    wrongJobReportReviewStatus: $wrongJobReportReviewStatus,
+    invalidFindingStatus: $invalidFindingStatus,
+    crossReportReadStatus: $crossReportReadStatus,
+    crossReportReviewStatus: $crossReportReviewStatus,
+    reportReviewActivityLogged: ([$jobDetail.job.activity[].title] | map(startswith("Bericht freigegeben:") or startswith("Bericht zur Ueberarbeitung zurueckgegeben:")) | any),
     updatedCustomerPhone: $updateCustomer.phone,
     updatedAddressNotes: $updateAddress.notes,
     updatedObjectNotes: $updateObject.notes,
@@ -459,6 +510,22 @@ jq -e \
     .photoLibraryCount >= 1 and
     .attachmentMetadataKind == "PHOTO" and
     .attachmentFileFetch == "200 image/jpeg" and
+    .legacyReportType == "GENERAL" and
+    .legacyReportReviewStatus == "SUBMITTED" and
+    .reportAttachmentLinked == true and
+    .workerAddedToAssignedTeam == true and
+    .workerFindingCreated == true and
+    .workerFindingFollowUpRequired == true and
+    .approvedReportStatus == "APPROVED" and
+    .approvedReportReviewerPresent == true and
+    .needsRevisionReportStatus == "NEEDS_REVISION" and
+    .workerReviewStatus == "403" and
+    .workerInaccessibleReportStatus == "403" and
+    .wrongJobReportReviewStatus == "404" and
+    .invalidFindingStatus == "400" and
+    .crossReportReadStatus == "404" and
+    .crossReportReviewStatus == "404" and
+    .reportReviewActivityLogged == true and
     .updatedCustomerPhone == "0201 654321" and
     .updatedAddressNotes == "Address update proof" and
     .updatedObjectNotes == "Object update proof" and
