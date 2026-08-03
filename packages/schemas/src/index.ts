@@ -3,6 +3,8 @@ import type {
   AssignmentKind,
   AssignmentStatus,
   AttachmentKind,
+  CustomerReportStatus,
+  CustomerReportType,
   CustomerType,
   JobReportType,
   JobCostKind,
@@ -149,6 +151,21 @@ export const assignmentStatuses = [
   'ENDED',
   'CANCELED',
 ] as const satisfies readonly AssignmentStatus[];
+export const customerReportTypes = [
+  'JOB_COMPLETION',
+  'INCIDENT',
+  'DAMAGE_REPORT',
+  'MAINTENANCE',
+  'OBJECT_STATUS',
+  'COST_OVERVIEW',
+  'OTHER',
+] as const satisfies readonly CustomerReportType[];
+export const customerReportStatuses = [
+  'DRAFT',
+  'READY_FOR_REVIEW',
+  'APPROVED',
+  'ARCHIVED',
+] as const satisfies readonly CustomerReportStatus[];
 
 export function parseMembershipRole(rawRole: string | undefined): MembershipRole | undefined {
   if (!rawRole) {
@@ -336,4 +353,26 @@ export function parseAssignmentStatus(
 
   const normalized = rawStatus.toUpperCase() as AssignmentStatus;
   return assignmentStatuses.includes(normalized) ? normalized : undefined;
+}
+
+export function parseCustomerReportType(
+  rawType: string | undefined,
+): CustomerReportType | undefined {
+  if (!rawType) {
+    return undefined;
+  }
+
+  const normalized = rawType.toUpperCase() as CustomerReportType;
+  return customerReportTypes.includes(normalized) ? normalized : undefined;
+}
+
+export function parseCustomerReportStatus(
+  rawStatus: string | undefined,
+): CustomerReportStatus | undefined {
+  if (!rawStatus) {
+    return undefined;
+  }
+
+  const normalized = rawStatus.toUpperCase() as CustomerReportStatus;
+  return customerReportStatuses.includes(normalized) ? normalized : undefined;
 }

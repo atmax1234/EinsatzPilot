@@ -5,6 +5,7 @@ import type {
   JobStatus,
 } from '@einsatzpilot/types';
 
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import {
@@ -15,6 +16,12 @@ import {
   uploadJobAttachmentAction,
 } from '../../../../lib/admin-actions';
 import { getStatusTone } from '../../../../lib/admin-mvp';
+import {
+  getCustomerReportsData,
+  getCustomerReportStatusLabel,
+  getCustomerReportStatusTone,
+  getCustomerReportTypeLabel,
+} from '../../../../lib/customer-reports';
 import {
   createJobCostAction,
   updateJobCostAction,
@@ -100,6 +107,8 @@ export default async function JobDetailPage({
   searchParams?: Promise<{ notice?: string; error?: string }>;
 }) {
   const session = await requireServerSession();
+  const canAccessCustomerReports =
+    session.membershipRole === 'OWNER' || session.membershipRole === 'OFFICE';
 
   const { jobId } = await params;
   const [
@@ -108,6 +117,7 @@ export default async function JobDetailPage({
     relationOptionsResult,
     jobCostsResult,
     itemsResult,
+    customerReportsResult,
     resolvedSearchParams,
   ] = await Promise.all([
     getJobDetailData(jobId),
@@ -115,6 +125,7 @@ export default async function JobDetailPage({
     getJobRelationOptionsData(),
     getJobCostsData(jobId),
     getItemsData(),
+    canAccessCustomerReports ? getCustomerReportsData(jobId) : Promise.resolve(undefined),
     searchParams,
   ]);
 
@@ -138,6 +149,7 @@ export default async function JobDetailPage({
     session.membershipRole === 'OWNER' || session.membershipRole === 'OFFICE';
   const jobCosts = jobCostsResult.ok ? jobCostsResult.data : undefined;
   const itemOptions = itemsResult.ok ? itemsResult.data?.items ?? [] : [];
+  const customerReports = customerReportsResult?.data?.customerReports ?? [];
   const flashMessage = resolvedSearchParams?.error
     ? {
         tone: 'error' as const,
@@ -535,6 +547,60 @@ export default async function JobDetailPage({
           )}
         </article>
       </section>
+
+      {canAccessCustomerReports ? (
+        <section className="panel">
+          <div className="row-spread">
+            <div>
+              <p className="eyebrow">Kundenberichte</p>
+              <h2>Gespeicherte Snapshots zu diesem Auftrag</h2>
+            </div>
+            <div className="action-row">
+              <Link href={`/customer-reports/new?jobId=${job.id}`}>Kundenbericht anlegen</Link>
+              <Link href={`/customer-reports?jobId=${job.id}`}>Alle zum Auftrag</Link>
+            </div>
+          </div>
+          {!customerReportsResult?.ok ? (
+            <p>
+              Kundenberichte konnten nicht geladen werden:{' '}
+              {customerReportsResult?.error ?? 'Unbekannter Fehler'}
+            </p>
+          ) : customerReports.length > 0 ? (
+            <div className="stack-list">
+              {customerReports.map((customerReport) => (
+                <div className="stack-item" key={customerReport.id}>
+                  <div className="row-spread">
+                    <div>
+                      <strong>{customerReport.title}</strong>
+                      <p className="compact-text">
+                        {customerReport.reportNumber} ·{' '}
+                        {getCustomerReportTypeLabel(customerReport.type)}
+                      </p>
+                    </div>
+                    <span
+                      className={`status-pill ${getCustomerReportStatusTone(customerReport.status)}`}
+                    >
+                      {getCustomerReportStatusLabel(customerReport.status)}
+                    </span>
+                  </div>
+                  <div className="meta-inline">
+                    <span>{customerReport.recipientName}</span>
+                    <span>{customerReport.snapshotCustomerName}</span>
+                    <span>{formatDateTime(customerReport.updatedAt)}</span>
+                  </div>
+                  <div className="action-row">
+                    <Link href={`/customer-reports/${customerReport.id}`}>
+                      Kundenbericht oeffnen
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p>Noch kein Kundenbericht fuer diesen Auftrag vorhanden.</p>
+          )}
+        </section>
+      ) : null}
 
       <section className="panel">
         <p className="eyebrow">Kostenbuch</p>

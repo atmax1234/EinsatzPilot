@@ -9,7 +9,7 @@ It is designed for service companies coordinating recurring work, one-time jobs,
 The repository currently provides a narrower working foundation:
 
 - pnpm TypeScript monorepo with NestJS API, Prisma/PostgreSQL, and Next.js web app.
-- Company, user, membership, role, team, job, activity, report, attachment, job-cost, customer, address, object, object-area, item-category, item, and generic assignment models.
+- Company, user, membership, role, team, job, activity, report, attachment, job-cost, customer-report snapshot, customer, address, object, object-area, item-category, item, and generic assignment models.
 - Tenant-scoped operational reads/writes and role checks for implemented flows.
 - Optional, tenant-validated job links to customers, addresses, objects, and object areas while preserving legacy customer/location text.
 - Explicit job lifecycle transitions.
@@ -18,9 +18,10 @@ The repository currently provides a narrower working foundation:
 - Tenant-safe generic assignment APIs and a minimal `/assignments` page using grouped real-data entity options while preserving `Job.teamId`.
 - Backwards-compatible structured execution reports with worker findings, performed/outstanding work, follow-up data, linked evidence, assignment-aware WORKER submission, and explicit OWNER/OFFICE review.
 - Tenant-safe job cost APIs and job-detail UI for material, labor, travel, external, fee, and custom cost lines with optional item references and backend-derived summaries.
+- OWNER/OFFICE-only customer-report APIs and real web flows for job-grounded stable snapshots, explicit selection of approved execution reports and attachment metadata references, selected cost-line breakdowns, optional full backend-derived cost summaries, draft editing, review, approval, and archival.
 - PostgreSQL container helpers and an API smoke flow.
 
-This is not yet the full command center. Customer report generation, recurring service contracts, command-center metrics, invoice/offer preparation, and commercial document workflows remain planned. Authentication is development-only, file storage is local, report revision/resubmission and cost correction history are not implemented, automated tests/linting are not configured, and mobile is only a scaffold.
+This is not yet the full command center. Customer-report data generation is implemented, but customer-facing layout polish, print/PDF readiness, actual PDF generation/export, templates, customer delivery, recurring service contracts, command-center metrics, invoice/offer preparation, and commercial document workflows remain planned. Authentication is development-only, file storage is local, customer-report revision/supersession and source refresh are absent, job-report revision/resubmission and cost correction history are not implemented, automated tests/linting are not configured, and mobile is only a scaffold.
 
 ## Product direction
 
@@ -116,7 +117,7 @@ The smoke flow creates development data. Package `lint` and `test` scripts curre
 
 ## Development direction
 
-Directory Gate 1, backwards-compatible Job relation Phase 2, the supporting `ItemCategory`/`Item` Phase 3 foundation, generic Assignment Phase 4, Job Execution Reports / Worker Findings Phase 5, and Job Cost Ledger Phase 6 are implemented, migrated, and covered by the live smoke flow. The next recommended session is `Phase 7 Planning — Customer/Object Report Generator`; implementation should follow only after snapshot, lifecycle, source-selection, and review behavior are deliberately designed. Item movement remains optional later infrastructure. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
+Directory Gate 1, backwards-compatible Job relation Phase 2, the supporting `ItemCategory`/`Item` Phase 3 foundation, generic Assignment Phase 4, Job Execution Reports / Worker Findings Phase 5, Job Cost Ledger Phase 6, and Customer/Object Report Generator Foundation Phase 7 are implemented and migrated, with the expanded live smoke flow covering the implemented foundations. The next recommended phase is exactly `Phase 7B — Customer Report Polish and PDF Readiness`: improve layout, print/PDF-export preparation, templates, and source-selection UX without claiming that PDF export exists. Invoice issuance, payments, customer email sending, AI, recurrence, item movement/logistics, command board, drag-and-drop, QR, and mobile remain deferred. Invoice or email behavior requires later explicit approval. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
 
 ## License
 

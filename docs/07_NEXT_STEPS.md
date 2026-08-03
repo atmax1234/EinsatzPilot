@@ -2,87 +2,76 @@
 
 ## End-of-session checkpoint
 
-Phase 5 — Job Execution Reports / Worker Findings and Phase 6 — Job Cost Ledger are complete in the verified local setup.
+Phase 7 — Customer/Object Report Generator Foundation is implemented on top of the already verified Phase 5 execution-report and Phase 6 job-cost foundations.
 
-### Phase 5 proven behavior
+### Phase 7 implemented behavior
 
-- Existing simple reports remain compatible as `GENERAL`/`SUBMITTED`.
-- Structured findings capture work performed, work still needed, follow-up state/notes, actor, team context, and linked evidence.
-- WORKER creation requires direct-team membership or an active user/team assignment to the job.
-- OWNER/OFFICE can create reports for company jobs and make explicit terminal review decisions.
-- Review writes create readable `JobActivity`; worker review and cross-tenant report access are blocked.
-- Job detail and the Reports page use real API data.
+- `CustomerReportSnapshot` is a company-owned aggregate created from one tenant-validated Job. Optional Job, Customer, Address, Object, and ObjectArea identity links are retained alongside copied display/context values.
+- Types are `JOB_COMPLETION`, `INCIDENT`, `DAMAGE_REPORT`, `MAINTENANCE`, `OBJECT_STATUS`, `COST_OVERVIEW`, and `OTHER`.
+- Statuses are `DRAFT`, `READY_FOR_REVIEW`, `APPROVED`, and `ARCHIVED`. Allowed transitions are `DRAFT -> READY_FOR_REVIEW|ARCHIVED`, `READY_FOR_REVIEW -> DRAFT|APPROVED`, and `APPROVED -> ARCHIVED`; `ARCHIVED` is terminal.
+- Only `DRAFT` allows changes to report type, title, recipient, period, authored summaries, cost note, and internal notes. The source selection and copied context are immutable after creation.
+- Creation copies a schema-versioned, timestamped Job/directory snapshot and retains legacy `Job.customerName` and `Job.location` fallbacks when structured links are absent.
+- JobReport inclusion is explicit and limited to reports in `APPROVED` review state. Selected report order, structured work/finding/follow-up content, actor/reviewer/team context, review state, and timestamps are copied.
+- Attachment inclusion is explicit. The snapshot copies stable metadata/reference fields and order, including attachment ID, optional JobReport ID, kind, filename, MIME type, size, caption, and timestamps. It does not embed file bytes; the current UI opens the original locally stored attachment by ID.
+- Selected cost lines are copied with detailed values, optional Item/vendor/receipt/tax metadata, source timestamps, order, and a backend-derived selected-line summary. `includeFullCostSummary` can additionally copy the full Job's grouped backend summary without copying every unselected line.
+- Transitioning to `READY_FOR_REVIEW` requires authored content or at least one selected report, attachment, or nonempty cost source. Approval stores the actor and timestamp. Creation and status transitions create readable Job activity while the Job relation exists.
+- Customer-report reads, source-data reads, creates, draft updates, and status transitions are all backend-restricted to `OWNER` and `OFFICE`; `WORKER` is denied. Company scope comes from the authenticated membership.
 
-### Phase 6 proven behavior
+### Implemented API and web surface
 
-- All ten migrations are applied to PostgreSQL.
-- Job cost lines cover material purchase/use, labor, travel, external service, fees, and other costs.
-- Cost lines are company/job scoped; optional Item references are tenant-validated.
-- Material, labor, and travel totals derive in the backend from quantity times unit cost. External, fee, and other lines may use validated manual totals.
-- One currency is enforced per job, defaulting to EUR; OWNER/OFFICE can write and WORKER can read.
-- Job detail uses real API data for cost creation, editing, line review, and category/grand summaries.
-- The expanded smoke flow preserves Phase 1-5 assertions and proves Phase 6 calculations, updates, summaries, item validation, roles, wrong-job access, and tenant isolation.
+- `GET /api/jobs/:jobId/customer-report-source-data`
+- `GET /api/customer-reports` with optional `jobId` and `status` filters
+- `POST /api/customer-reports`
+- `GET /api/customer-reports/:reportId`
+- `PATCH /api/customer-reports/:reportId`
+- `PATCH /api/customer-reports/:reportId/status`
+- `/customer-reports` lists and filters real snapshots.
+- `/customer-reports/new?jobId=...` loads real eligible sources and creates a draft with explicit report, attachment, selected-cost, and full-cost-summary choices.
+- `/customer-reports/[reportId]` displays copied context, report content, evidence, cost breakdowns, approval attribution, draft editing, and allowed lifecycle actions.
+- OWNER/OFFICE navigation and Job detail link to the customer-report workflow; WORKER does not receive those entry points.
 
 ## Checkpoint validation
 
-On 2026-07-19, Prisma reported all ten migrations applied and current. `pnpm typecheck`, `pnpm build`, the full `pnpm smoke:api` Phase 1-6 flow, and `git diff --check` passed for this handoff. The smoke command creates additional development records in the local database by design.
+On 2026-08-03, all eleven migrations were applied and current on the local PostgreSQL database. Focused Prisma/schema/contracts/API checks, root `pnpm typecheck`, root `pnpm build`, and `pnpm smoke:api` passed. The smoke flow passed all 163 assertions: the 121 Phase 1-6 predicates remained intact and 42 new Phase 7 predicates cover source/context eligibility, snapshot contents and stability after live-source mutations, selected and full cost data, list/detail/draft updates, lifecycle/activity, OWNER/OFFICE behavior, WORKER denial, wrong-Job sources, and cross-tenant isolation. `git diff --check` also passed for this handoff. Lint/test scripts remain placeholders and were not counted as quality checks. The smoke command creates additional development records in the local database by design.
 
-## Next session: planning first
+## Next recommended phase
 
-The next recommended session is:
+The next recommended phase is exactly:
 
-`Phase 7 Planning — Customer/Object Report Generator`
+`Phase 7B — Customer Report Polish and PDF Readiness`
 
-Do not start implementation merely because Phase 5 and Phase 6 prerequisites are complete. Phase 7 is a serious customer-facing product surface. The first session should inspect the current job, directory, report/review, attachment, activity, and cost implementations and produce a coherent snapshot/data design before any Prisma model, migration, API, or UI code is added.
-
-The eventual goal is clean customer/object-facing report data that can later support PDFs, client reports, invoice preparation, and object history. Those later outputs must consume a stable governed report foundation; they must not define it backwards from a visual template.
-
-## Planning questions that must be resolved
-
-- What is the aggregate called, and does one job have one report snapshot, multiple revisions, or multiple report purposes?
-- Which company, job, customer, address, object, and object-area identities own or contextualize it?
-- Which `JobReport` types and review states are eligible, and is every inclusion explicit?
-- Which customer/object/job values are copied into the snapshot versus resolved live?
-- How are findings, work performed, outstanding work, follow-up notes, and office review represented?
-- How are evidence IDs, captions, ordering, and later file-storage changes preserved reproducibly?
-- Are individual cost lines, grouped summaries, tax metadata, and currency copied or referenced?
-- What are the draft, review, finalized, superseded, and correction/version rules?
-- Which actions may OWNER, OFFICE, and WORKER perform?
-- What is the minimum clean reviewable UI before PDF/export presentation work?
-- What activity/audit entries and smoke assertions prove the lifecycle and tenant boundaries?
-- How will legacy `Job.customerName` and `Job.location` remain compatible?
+This is an implementation phase on top of the existing persisted snapshot, not a redesign of Phase 7 and not a claim that PDF export already exists. A coherent slice can improve the customer-readable layout, add a browser print view, separate customer-visible output from office-only internal notes, prepare reusable rendering/template boundaries, and clarify source-selection and selected-versus-full-cost UX. Any preview or print surface must render persisted snapshot data rather than silently resolving current mutable source records.
 
 ## Known current limitations
 
-- There is no customer/object report snapshot model, API, or UI.
-- Report review decisions are terminal; worker editing/resubmission and review correction are absent.
-- Attachments use local filesystem storage without production retention or object storage.
-- Cost lines are editable current state and have no delete/correction history or approval workflow.
-- Tax rate is metadata only; net/gross tax calculations are absent.
-- Cost summaries support one currency per job; currency conversion is absent.
-- Receipt references are text and cost lines do not directly own receipt attachments.
-- Authentication is development-only, and lint/test scripts remain placeholders.
+- There is no generated PDF/file artifact, server-side PDF/export endpoint, print-specific route or stylesheet, template/version model, customer portal, download history, or email delivery.
+- There is no explicit customer-report revision, supersession, or correction chain. Different source selection requires a separate unlinked report.
+- Snapshot sources cannot be refreshed or reselected after creation, including while the report is a draft.
+- Attachment metadata is copied, but file bytes remain in local filesystem storage and still depend on the original attachment ID and retention.
+- Internal notes appear in the office detail UI; a later customer-facing view must deliberately exclude them.
+- Tax rates and receipt references are metadata. There is no net/gross tax calculation, invoice issuance, payment, or accounting behavior.
+- The optional full-cost snapshot contains grouped totals; detailed copies exist only for explicitly selected cost lines.
+- Customer reports are single-Job grounded. Multi-Job object-history reports and object-only generation are absent.
+- Authentication remains development-only, and lint/test scripts remain placeholders.
 
 ## Explicitly deferred
 
-Do not jump directly into fancy PDFs, invoice or offer issuance, payment handling, customer email sending, AI summaries, recurring contracts, item movement, warehouse/logistics behavior, command board, drag-and-drop, QR/barcodes, or mobile features.
+Do not add invoice or offer issuance, payments, customer email sending, AI summaries, recurring contracts, item movement or logistics, warehouse behavior, command board, drag-and-drop, QR/barcodes, or mobile features. Invoice and email behavior require separate later approval; Phase 7B does not authorize them.
 
 ## Exact recommended prompt
 
 ```text
 Read `/docs` first.
 
-`Phase 7 Planning — Customer/Object Report Generator`
+`Phase 7B — Customer Report Polish and PDF Readiness`
 
-This is a planning and domain-design session only. Do not implement Prisma models, migrations, API endpoints, or web product behavior yet.
+This is an implementation session. Preserve the implemented Phase 7 CustomerReportSnapshot ownership, source-snapshot invariants, lifecycle, tenant isolation, and OWNER/OFFICE-only access. First inspect the Prisma model/migration, shared contracts and schema helpers, customer-report API services/controllers, attachment access, the current `/customer-reports` pages and Job-detail integration, and Phase 1-7 smoke coverage. Verify the baseline before changing behavior.
 
-First verify the Phase 1-6 baseline remains clean: all migrations applied, `pnpm typecheck`, `pnpm build`, `pnpm smoke:api`, and `git diff --check` pass. Stop if existing coverage breaks.
+Implement a focused polish/readiness slice on the real persisted snapshot data. Improve the customer-readable report layout and information hierarchy; make office-only internal notes unmistakably separate and exclude them from any customer-facing or print presentation; add a practical browser print view or print stylesheet; extract reusable presentation/template boundaries where they reduce future PDF-export risk; and improve source-selection clarity, eligibility feedback, ordering, and selected-versus-full-cost explanation without weakening backend validation. A print-ready browser view is not a generated PDF. Do not implement or claim actual PDF generation/export in this slice; that requires separate later approval.
 
-Inspect the current Job, Customer, Address, Object, ObjectArea, JobReport/review, JobAttachment, JobActivity, and JobCostLine implementations. Design a tenant-safe, job-grounded customer/object report snapshot foundation that can assemble explicitly selected reviewed findings, work performed, outstanding/follow-up notes, evidence references, directory/job context, and governed job cost summaries into clean reproducible customer-facing report data.
+Render only stored CustomerReportSnapshot data in preview/print output. Do not silently reread mutable Job, Customer, Address, Object, ObjectArea, JobReport, attachment metadata, or JobCostLine values. Preserve attachment authorization and make any missing-original-file limitation honest. Keep lifecycle and source immutability unless a narrowly required change is explicitly justified, migrated, contracted, tenant-checked, and smoke-covered.
 
-Produce concrete decisions for aggregate ownership and cardinality, source eligibility and explicit inclusion, copied snapshots versus live references, evidence and cost boundaries, lifecycle/review/version/correction behavior, role permissions, activity/audit behavior, minimum reviewable UI, compatibility, migration strategy, and future smoke coverage. Record unresolved tradeoffs rather than hiding them.
+Run relevant Prisma checks if the schema changes, focused package/API/web typechecks, production builds, the full PostgreSQL smoke flow, and `git diff --check`. Update the affected docs and checklist with only verified behavior.
 
-Update the relevant planning docs with the agreed design and provide a separate exact implementation prompt for approval. Do not start implementation unless explicitly requested in a later session.
-
-Do not add PDF styling/generation, invoice or offer issuance, payments, email sending, AI summaries, recurring contracts, item movement, warehouse/logistics behavior, command-board drag-and-drop, QR/barcodes, or mobile features.
+Do not implement invoice or offer issuance, payments, customer email sending, AI summaries, recurring contracts, item movement/logistics, warehouse behavior, command-board drag-and-drop, QR/barcodes, or mobile features. Invoice and email behavior are forbidden unless separately approved in a later phase.
 ```

@@ -150,6 +150,19 @@ export type AssignmentKind =
   | 'SUPPORTING'
   | 'OTHER';
 export type AssignmentStatus = 'ACTIVE' | 'PLANNED' | 'ENDED' | 'CANCELED';
+export type CustomerReportType =
+  | 'JOB_COMPLETION'
+  | 'INCIDENT'
+  | 'DAMAGE_REPORT'
+  | 'MAINTENANCE'
+  | 'OBJECT_STATUS'
+  | 'COST_OVERVIEW'
+  | 'OTHER';
+export type CustomerReportStatus =
+  | 'DRAFT'
+  | 'READY_FOR_REVIEW'
+  | 'APPROVED'
+  | 'ARCHIVED';
 
 export type TeamMemberSummary = {
   id: string;
@@ -477,6 +490,266 @@ export type JobCostUpdateInput = {
   vendorName?: string | null;
   receiptReference?: string | null;
   notes?: string | null;
+};
+
+export type CustomerReportActorSummary = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+export type CustomerReportJobSourceSnapshot = {
+  id: string;
+  reference: string;
+  title: string;
+  description?: string;
+  customerName: string;
+  location: string;
+  scheduledStart: string;
+  scheduledEnd?: string;
+  status: JobStatus;
+  priority: JobPriority;
+  updatedAt: string;
+};
+
+export type CustomerReportCustomerSourceSnapshot = {
+  id: string;
+  name: string;
+  type: CustomerType;
+  email?: string;
+  phone?: string;
+  updatedAt: string;
+};
+
+export type CustomerReportAddressSourceSnapshot = {
+  id: string;
+  label: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  updatedAt: string;
+};
+
+export type CustomerReportObjectSourceSnapshot = {
+  id: string;
+  name: string;
+  type: ObjectType;
+  status: ObjectStatus;
+  updatedAt: string;
+};
+
+export type CustomerReportObjectAreaSourceSnapshot = {
+  id: string;
+  objectId: string;
+  name: string;
+  type: ObjectAreaType;
+  updatedAt: string;
+};
+
+export type CustomerReportJobReportSourceSnapshot = {
+  id: string;
+  position: number;
+  type: JobReportType;
+  summary: string;
+  details?: string;
+  findingSummary?: string;
+  workPerformed?: string;
+  workStillNeeded?: string;
+  followUpRequired: boolean;
+  followUpNotes?: string;
+  reviewStatus: ReportReviewStatus;
+  reviewedAt?: string;
+  author?: CustomerReportActorSummary;
+  reviewedBy?: CustomerReportActorSummary;
+  team?: {
+    id: string;
+    name: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CustomerReportAttachmentSourceSnapshot = {
+  id: string;
+  position: number;
+  reportId?: string;
+  kind: AttachmentKind;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  caption?: string;
+  uploadedAt: string;
+  updatedAt: string;
+};
+
+export type CustomerReportSourceDataV1 = {
+  schemaVersion: 1;
+  capturedAt: string;
+  job: CustomerReportJobSourceSnapshot;
+  customer?: CustomerReportCustomerSourceSnapshot;
+  address?: CustomerReportAddressSourceSnapshot;
+  object?: CustomerReportObjectSourceSnapshot;
+  objectArea?: CustomerReportObjectAreaSourceSnapshot;
+  selectedJobReportIds: string[];
+  selectedAttachmentIds: string[];
+  selectedCostLineIds: string[];
+  includeFullCostSummary: boolean;
+  jobReports: CustomerReportJobReportSourceSnapshot[];
+  attachments: CustomerReportAttachmentSourceSnapshot[];
+};
+
+export type CustomerReportSourceData = CustomerReportSourceDataV1;
+
+export type CustomerReportCostLineSnapshot = {
+  sourceCostLineId: string;
+  position: number;
+  kind: JobCostKind;
+  description: string;
+  quantity: number;
+  unit: JobCostUnit;
+  unitCost?: number;
+  totalCost: number;
+  currency: string;
+  taxRate?: number;
+  costDate: string;
+  vendorName?: string;
+  receiptReference?: string;
+  notes?: string;
+  item?: {
+    id: string;
+    customId: string;
+    name: string;
+  };
+  sourceUpdatedAt: string;
+};
+
+export type CustomerReportCostBreakdownV1 = {
+  schemaVersion: 1;
+  capturedAt: string;
+  includeFullCostSummary: boolean;
+  selectedLineSummary: JobCostSummary;
+  selectedLines: CustomerReportCostLineSnapshot[];
+  fullJobSummary?: JobCostSummary;
+};
+
+export type CustomerReportCostBreakdown = CustomerReportCostBreakdownV1;
+
+export type CustomerReportCreateInput = {
+  jobId: string;
+  type: CustomerReportType;
+  title: string;
+  recipientName: string;
+  periodStart?: string;
+  periodEnd?: string;
+  issueSummary?: string;
+  findingSummary?: string;
+  workPerformedSummary?: string;
+  workStillNeededSummary?: string;
+  followUpSummary?: string;
+  costSummaryText?: string;
+  internalNotes?: string;
+  selectedJobReportIds?: string[];
+  selectedAttachmentIds?: string[];
+  selectedCostLineIds?: string[];
+  includeFullCostSummary?: boolean;
+};
+
+export type CustomerReportUpdateInput = {
+  type?: CustomerReportType;
+  title?: string;
+  recipientName?: string;
+  periodStart?: string | null;
+  periodEnd?: string | null;
+  issueSummary?: string | null;
+  findingSummary?: string | null;
+  workPerformedSummary?: string | null;
+  workStillNeededSummary?: string | null;
+  followUpSummary?: string | null;
+  costSummaryText?: string | null;
+  internalNotes?: string | null;
+};
+
+export type CustomerReportStatusUpdateInput = {
+  status: CustomerReportStatus;
+};
+
+export type CustomerReportSnapshotListItem = {
+  id: string;
+  reportNumber: string;
+  jobId?: string;
+  customerId?: string;
+  addressId?: string;
+  objectId?: string;
+  objectAreaId?: string;
+  type: CustomerReportType;
+  status: CustomerReportStatus;
+  title: string;
+  recipientName: string;
+  periodStart?: string;
+  periodEnd?: string;
+  snapshotCustomerName: string;
+  snapshotAddressLabel?: string;
+  snapshotAddressText: string;
+  snapshotObjectName?: string;
+  snapshotObjectAreaName?: string;
+  snapshotJobReference: string;
+  snapshotJobTitle: string;
+  snapshotCostGrandTotal?: number;
+  snapshotCostCurrency?: string;
+  createdBy: CustomerReportActorSummary;
+  approvedBy?: CustomerReportActorSummary;
+  approvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CustomerReportSnapshotItem = CustomerReportSnapshotListItem & {
+  issueSummary?: string;
+  findingSummary?: string;
+  workPerformedSummary?: string;
+  workStillNeededSummary?: string;
+  followUpSummary?: string;
+  costSummaryText?: string;
+  internalNotes?: string;
+  snapshotCostBreakdown?: CustomerReportCostBreakdown;
+  snapshotSourceData: CustomerReportSourceData;
+};
+
+export type CustomerReportListResponse = {
+  customerReports: CustomerReportSnapshotListItem[];
+};
+
+export type CustomerReportDetailResponse = {
+  customerReport: CustomerReportSnapshotItem;
+};
+
+export type CustomerReportSourceJobReportOption = JobReportItem & {
+  selectable: boolean;
+};
+
+export type CustomerReportSourceAttachmentOption = {
+  id: string;
+  reportId?: string;
+  kind: AttachmentKind;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  caption?: string;
+  uploadedAt: string;
+  selectable: boolean;
+};
+
+export type CustomerReportSourceDataResponse = {
+  job: CustomerReportJobSourceSnapshot;
+  customer?: CustomerReportCustomerSourceSnapshot;
+  address?: CustomerReportAddressSourceSnapshot;
+  object?: CustomerReportObjectSourceSnapshot;
+  objectArea?: CustomerReportObjectAreaSourceSnapshot;
+  jobReports: CustomerReportSourceJobReportOption[];
+  attachments: CustomerReportSourceAttachmentOption[];
+  costLines: JobCostLineItem[];
+  costSummary: JobCostSummary;
 };
 
 export type JobAttachmentListResponse = {

@@ -18,7 +18,7 @@
 
 ## Current models
 
-- **Company:** tenant root owning memberships, teams, jobs, reports, attachments, job costs, directory records, item categories, items, and assignments. Future business entities should also be company-scoped.
+- **Company:** tenant root owning memberships, teams, jobs, reports, attachments, job costs, customer-report snapshots, directory records, item categories, items, and assignments. Future business entities should also be company-scoped.
 - **User / Membership:** a global user account and its company-specific active membership with `OWNER`, `OFFICE`, or `WORKER` role. A user may have multiple company memberships; the current session resolves one.
 - **Team / TeamMember:** a company group and its user members. `Team.currentAssignment` is only free text and must not become a second source of truth after structured assignments exist.
 - **Job:** a company-owned scheduled unit of work with reference, title, description, required free-text customer/location, schedule, lifecycle, priority, and optional direct team. It may independently link to a customer, address, object, and object area. All linked records must belong to the active company; an object area requires and must belong to the selected object. The free-text fields remain the compatibility and display baseline and are not inferred or backfilled from directory records.
@@ -26,32 +26,26 @@
 - **JobReport:** job- and company-owned execution proof with a closed type, legacy summary/details, structured findings/work/follow-up fields, optional team/author, explicit review lifecycle, reviewer attribution, review notes, timestamps, and linked attachments. Legacy simple reports remain `GENERAL`/`SUBMITTED`; structured reports start `PENDING_REVIEW`. OWNER/OFFICE may transition pending reports once to `APPROVED`, `NEEDS_REVISION`, or `REJECTED`. WORKER creation requires direct-team membership or an active user/team assignment to the job.
 - **JobAttachment:** photo/file metadata attached to a job and optionally a report, team, and uploader. It is evidence, not an inventory item or asset.
 - **Customer:** company-owned organization/person record typed as `PRIVATE`, `BUSINESS`, `PROPERTY_MANAGEMENT`, or `OTHER`. Names are deliberately not unique and there is no customer-number scheme yet. `isActive` provides non-destructive deactivation. Customers may own addresses and objects.
-- **Address:** company-owned structured address with label, street, postal code, city, country, and notes. It may belong directly to one customer and may be reused by multiple objects. Customer deletion would set the relation null, but no delete API exists. Address history/snapshots are deferred until jobs and billing link to it.
+- **Address:** company-owned structured address with label, street, postal code, city, country, and notes. It may belong directly to one customer and may be reused by multiple objects. Customer deletion would set the relation null, but no delete API exists. General address version history is absent; customer reports copy their selected address context at creation.
 - **Object:** industry-neutral managed site/entity with type and `ACTIVE`/`INACTIVE` status. Customer and address are optional. When both are present, service validation rejects an address owned by a different customer. Names are not unique. Jobs may optionally reference objects.
 - **ObjectArea:** one-level, company-owned subdivision that must belong to an object. The API validates both company and parent object. Nested areas and delete endpoints are not implemented.
 - **ItemCategory:** company-owned classification for materials, tools, assets, consumables, packages, or other things referenced by operational work. It has a company-unique name, optional description, kind, and non-destructive active flag. Categories support job documentation and cost context; they are not warehouse taxonomy.
 - **Item:** company-owned supporting identity with a company-unique custom ID, name, optional category, kind, unit, tracking mode, decimal quantity, lifecycle status, description, and notes. A missing custom ID is generated automatically. `QUANTITY` items accept nonnegative values with up to three decimal places; `SERIALIZED` items always have quantity `1`. Category references must belong to the same active company. Items can later support material purchases/use, tool references, job proof, and cost lines. The current model is not a stock ledger, warehouse balance, delivery workflow, or logistics system.
 - **Assignment:** company-owned link in which `sourceType/sourceId` is the assigned entity and `targetType/targetId` is its context. Types are closed to `USER`, `TEAM`, `JOB`, `CUSTOMER`, `ADDRESS`, `OBJECT`, `OBJECT_AREA`, and `ITEM`; both endpoints are tenant-validated by the service. USER identity means an active company membership. Assignment kind is `RESPONSIBLE`, `SCHEDULED`, `ALLOCATED`, `RESERVED`, `SUPPORTING`, or `OTHER`. Status has explicit planned/active/terminal transitions. Timing is optional, but an end must follow a start. Exact duplicate active links are prohibited. Source, target, and kind are immutable; status, timing, and notes may change. The creator is retained through a real User relation. `Job.teamId` remains an independent compatibility path and is neither created nor changed by generic assignments.
 - **JobCostLine:** company- and job-owned money-layer record for material purchase/use, labor, travel, external service, fee, or other cost. It stores a positive quantity, closed unit, optional unit cost, backend-governed total, one job currency, optional tax metadata, cost date, vendor/receipt context, notes, and creator/updater attribution. Material/labor/travel totals are derived from quantity times unit cost. External/fee/other lines may instead use a manual nonnegative total. An optional Item relation is supporting context and must remain in the same company. Cost lines do not change item quantity and are not invoices, payments, or accounting entries.
+- **CustomerReportSnapshot:** company-owned, job-grounded customer-facing report data created only by `OWNER` or `OFFICE`. Creation requires a same-company Job and copies a stable schema-versioned (`schemaVersion: 1`) source set in a repeatable-read transaction. The record retains optional live identity links to the job's customer, address, object, and object area with `onDelete: SetNull`, while copied job/directory labels and structured JSON remain readable independently of later source edits. Legacy `Job.customerName` and `Job.location` supply customer/address fallback values when structured links are absent. Report numbers use a company-unique `CR-YYYYMMDD-...` form.
+
+  Customer-report types are `JOB_COMPLETION`, `INCIDENT`, `DAMAGE_REPORT`, `MAINTENANCE`, `OBJECT_STATUS`, `COST_OVERVIEW`, and `OTHER`. Status is `DRAFT`, `READY_FOR_REVIEW`, `APPROVED`, or `ARCHIVED`. Allowed transitions are `DRAFT -> READY_FOR_REVIEW|ARCHIVED`, `READY_FOR_REVIEW -> DRAFT|APPROVED`, and `APPROVED -> ARCHIVED`; `ARCHIVED` is terminal. Authored title, recipient, period, type, summaries, cost note, and internal notes are editable only in `DRAFT`. Approval records actor and time. Moving to review requires authored content or at least one selected report/evidence/cost source. Creation and status transitions create readable `JobActivity` entries while the Job relation exists.
+
+  Source inclusion is explicit and fixed at creation. Only `APPROVED` JobReports may be selected; their findings, performed/outstanding work, follow-up fields, author/reviewer/team context, review state, order, and timestamps are copied. Selected attachments copy metadata/reference data—ID, optional report ID, kind, filename, MIME type, size, caption, order, and timestamps—but not file bytes. Any attachment on the same company Job is currently eligible. Selected cost lines copy ordered line details, optional Item/vendor/receipt/tax metadata, and their source update time, with a backend-derived selected-line summary. `includeFullCostSummary` optionally copies the entire Job's grouped summary in addition to selected lines; it does not copy every unselected line. The top-level total prefers that full summary, otherwise the selected-line summary when present. Source selection and snapshot context cannot be edited or refreshed; a different selection creates a separate unlinked snapshot.
 
 ## Planned models
 
-### Customer/Object Report Output
+### Customer Report Presentation / PDF Readiness (Phase 7B)
 
-Planned tenant-owned, job-grounded report snapshots that assemble customer/address/object/object-area context, reviewed findings, work performed, outstanding work and follow-up notes, photo/file evidence references, and governed job cost summaries into reviewable customer-facing data.
+The next recommended phase may improve the existing customer-report layout, introduce a deliberate print view, prepare a PDF-export boundary, add template behavior, and make source selection easier to understand. Those changes must consume the stable `CustomerReportSnapshot` contract and preserve the difference between customer-visible content and office-only internal notes.
 
-Phase 7 must begin with domain planning, not rendering. Before implementation, decide and document:
-
-- whether source values are copied into a stable snapshot or resolved live;
-- which report states and report types may be included, and how explicit selection works;
-- how attachment identities, captions, ordering, and later storage changes remain reproducible;
-- whether cost lines, grouped totals, tax metadata, and currency are copied or referenced;
-- draft, review, finalized, superseded, and correction/version semantics;
-- who may generate, review, finalize, read, or revise a report snapshot;
-- how legacy `Job.customerName` and `Job.location` coexist with structured directory context;
-- what belongs to report data versus later PDF templates, email delivery, invoice support, or object-history projections.
-
-The first implementation should create a strong snapshot/data foundation and a clean reviewable UI. It must not begin with PDF layout, invoice issuance, or automatic delivery.
+No PDF artifact, PDF generator/export endpoint, template/version model, customer portal, or delivery record exists. Phase 7B must not describe preparation as working PDF export, and it must not add invoice issuance or customer email sending unless a later session explicitly approves those separate domains.
 
 ### Recurring Service Contract
 
@@ -80,7 +74,7 @@ Company
 │   ├── JobReport / Finding ── JobAttachment
 │   ├── JobCostLine ── Item reference (optional)
 │   └── Assignment ── Team / User / Item
-├── Customer/Object Report Output (planned)
+├── CustomerReportSnapshot
 └── ItemCategory ── Item ── ItemMovement (optional later)
 ```
 
@@ -96,3 +90,5 @@ Company
 - Assignment currently records current state and creator attribution, not append-only assignment change history or scheduling-conflict decisions.
 - Report review decisions are terminal in Phase 5; report editing, worker resubmission, and review correction require a later explicit lifecycle extension.
 - Job cost summaries group persisted cost lines into material, labor, travel, external-service, other, and grand totals. They are backend-derived preparatory data, not immutable issued-document snapshots.
+- CustomerReportSnapshot copies selected approved operational proof, selected attachment metadata references, and selected/full cost data at creation. It is stable customer-report data, not a rendered file, invoice, payment record, email, or object-history projection.
+- The customer-report lifecycle has approval and archival but no linked revisions, supersession/correction chain, snapshot refresh, delete behavior, or separate reviewer comment history.

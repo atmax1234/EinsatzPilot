@@ -54,15 +54,25 @@ Phases are dependency order, not calendar promises. EinsatzPilot is job-centered
 
 ## Phase 7 — Customer/Object Report Generator
 
-**Status:** Next recommended planning phase. Phase 5 and Phase 6 prerequisites are implemented and verified, but Phase 7 implementation must not start until the snapshot/data design is reviewed and the next session explicitly requests implementation.
+**Status:** Implemented and migrated with shared contracts/schema helpers, tenant-safe OWNER/OFFICE-only API rules, stable job-grounded source snapshots, a real reviewable web UI, job activity, and expanded Phase 1-7 smoke coverage.
 
 **Goals:** Assemble clean customer-facing damage, maintenance, service, proof-of-work, and object-history report data from jobs, reviewed findings, photos, work performed, cost summaries, and follow-up notes. Define reproducible snapshots and explicit inclusion rules before adding presentation/export channels.
 
-**Dependencies:** Reviewed execution findings, durable attachments, object/customer context, and governed cost summaries where included.
+**Dependencies:** Reviewed execution findings, stable attachment IDs/metadata with the local-storage limitation documented, object/customer context, and governed cost summaries where included.
 
-**Planning deliverable first:** Define report ownership, eligible source data, explicit selection, snapshot boundaries, lifecycle/review/version rules, permissions, and a clean reviewable UI contract.
+**Implemented boundary:** Creation requires one tenant-owned Job and copies versioned job/directory context, explicitly selected `APPROVED` JobReports, explicitly selected attachment metadata references, selected cost-line details/summaries, and optionally the full backend-derived Job cost summary. Authored fields are editable only in `DRAFT`; copied sources are immutable. Lifecycle is `DRAFT -> READY_FOR_REVIEW -> APPROVED -> ARCHIVED`, with the allowed return from `READY_FOR_REVIEW` to `DRAFT`, direct draft archival, and terminal archival. OWNER/OFFICE alone can read or manage customer reports. The UI supports list/filter/create/review/edit/status flows against the real API.
 
-**Must not build yet:** Fancy PDF templates, automatic sending, invoice issuance, payment, AI summaries, recurring contracts, command-board interactions, QR codes, mobile flows, or official output derived silently from unreviewed mutable state.
+**Known boundary:** There is no linked revision/supersession/correction chain, source refresh/reselection, multi-job object-history aggregation, production attachment retention, rendered file, PDF export, print template, customer portal, invoice, payment, or email delivery.
+
+## Phase 7B — Customer Report Polish and PDF Readiness
+
+**Status:** Next recommended phase. PDF generation/export is not implemented.
+
+**Goals:** Improve the existing customer-report presentation and information hierarchy, make selected-source review clearer, define customer-visible versus internal-only fields, add a deliberate print view if justified, prepare the PDF-export boundary, and establish practical template behavior without weakening snapshot reproducibility.
+
+**Dependencies:** The implemented Phase 7 snapshot contract, stable attachment access, explicit permissions, and a documented rendering/template strategy. Any eventual PDF artifact must be generated from persisted snapshot data rather than silently rereading current Job, directory, report, attachment metadata, or cost state.
+
+**Must not build without separate later approval:** Actual PDF generation/export, invoice or offer issuance, payments, customer email sending, AI summaries, recurring contracts, item movement/logistics, command-board interactions, drag-and-drop, QR codes, or mobile flows. Phase 7B preparation must not be presented as working PDF export.
 
 ## Phase 8 — Recurring Service Contracts
 

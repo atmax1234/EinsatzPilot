@@ -4,10 +4,19 @@ set -euo pipefail
 
 API_BASE="${API_BASE_URL:-http://localhost:3001/api}"
 TMP_DIR="$(mktemp -d)"
+SUMMARY_INPUT="${TMP_DIR}/summary-input.ndjson"
 SMOKE_SUFFIX="$(date +%s)"
 TEAM_NAME="DB Proof Team ${SMOKE_SUFFIX}"
 JOB_TITLE="DB Foundation Flow ${SMOKE_SUFFIX}"
 UPDATED_JOB_TITLE="${JOB_TITLE} Updated"
+CUSTOMER_REPORT_TITLE="Phase 7 Customer Report ${SMOKE_SUFFIX}"
+UPDATED_CUSTOMER_REPORT_TITLE="${CUSTOMER_REPORT_TITLE} Updated"
+PHASE7_ATTACHMENT_CAPTION="Phase 7 snapshot evidence ${SMOKE_SUFFIX}"
+OTHER_PHASE7_ATTACHMENT_CAPTION="Other company Phase 7 evidence ${SMOKE_SUFFIX}"
+PHASE7_MUTATED_JOB_TITLE="Phase 7 Mutated Job ${SMOKE_SUFFIX}"
+PHASE7_MUTATED_CUSTOMER_NAME="Phase 7 Mutated Customer ${SMOKE_SUFFIX}"
+PHASE7_MUTATED_OBJECT_NAME="Phase 7 Mutated Object ${SMOKE_SUFFIX}"
+PHASE7_MUTATED_AREA_NAME="Phase 7 Mutated Area ${SMOKE_SUFFIX}"
 
 cleanup() {
   rm -rf "$TMP_DIR"
@@ -59,6 +68,21 @@ json_get() {
   fi
 
   curl -fsS "$url"
+}
+
+append_summary_json() {
+  local key="$1"
+  local value="$2"
+
+  printf '%s\n' "$value" |
+    jq -c --arg key "$key" '{key: $key, value: .}' >> "$SUMMARY_INPUT"
+}
+
+append_summary_string() {
+  local key="$1"
+  local value="$2"
+
+  jq -cn --arg key "$key" --arg value "$value" '{key: $key, value: $value}' >> "$SUMMARY_INPUT"
 }
 
 trap cleanup EXIT
@@ -215,6 +239,57 @@ worker_assignment_update_status="$(curl -sS -o "${TMP_DIR}/worker-assignment-upd
 worker_cost_write_status="$(curl -sS -o "${TMP_DIR}/worker-cost-write.json" -w '%{http_code}' -X POST "${API_BASE}/jobs/${job_id}/costs" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"kind":"OTHER","description":"Forbidden worker cost","quantity":1,"unit":"FLAT_RATE","totalCost":1}')"
 worker_cost_update_status="$(curl -sS -o "${TMP_DIR}/worker-cost-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/jobs/${job_id}/costs/${labor_cost_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"notes":"Forbidden worker cost update"}')"
 
+phase7_attachment_upload="$(curl -fsS -X POST "${API_BASE}/jobs/${job_id}/attachments" \
+  -H "Authorization: Bearer ${token}" \
+  -F "kind=PHOTO" \
+  -F "caption=${PHASE7_ATTACHMENT_CAPTION}" \
+  -F "reportId=${worker_finding_id}" \
+  -F "teamId=${team_id}" \
+  -F "file=@${TMP_DIR}/proof.jpg;type=image/jpeg")"
+phase7_attachment_id="$(printf '%s' "$phase7_attachment_upload" | jq -r --arg caption "$PHASE7_ATTACHMENT_CAPTION" '.attachments[] | select(.caption == $caption) | .id')"
+customer_report_source="$(json_get "${API_BASE}/jobs/${job_id}/customer-report-source-data" "$token")"
+
+create_customer_report="$(json_post "${API_BASE}/customer-reports" "{\"jobId\":\"${job_id}\",\"type\":\"INCIDENT\",\"title\":\"${CUSTOMER_REPORT_TITLE}\",\"recipientName\":\"Phase 7 Recipient ${SMOKE_SUFFIX}\",\"periodStart\":\"2026-04-18T08:00:00.000Z\",\"periodEnd\":\"2026-04-18T12:00:00.000Z\",\"issueSummary\":\"Customer-visible leak summary\",\"findingSummary\":\"Approved worker finding copied into customer proof\",\"workPerformedSummary\":\"Water supply isolated and area secured\",\"workStillNeededSummary\":\"Damaged connector still needs replacement\",\"followUpSummary\":\"Office will schedule the repair\",\"costSummaryText\":\"Selected lines and the complete job summary are attached\",\"internalNotes\":\"Phase 7 draft proof\",\"selectedJobReportIds\":[\"${worker_finding_id}\"],\"selectedAttachmentIds\":[\"${phase7_attachment_id}\"],\"selectedCostLineIds\":[\"${material_cost_id}\",\"${labor_cost_id}\"],\"includeFullCostSummary\":true}" "$token")"
+customer_report_id="$(printf '%s' "$create_customer_report" | jq -r '.customerReport.id')"
+customer_report_list="$(json_get "${API_BASE}/customer-reports?jobId=${job_id}" "$token")"
+customer_report_detail="$(json_get "${API_BASE}/customer-reports/${customer_report_id}" "$token")"
+update_customer_report="$(json_patch "${API_BASE}/customer-reports/${customer_report_id}" "{\"title\":\"${UPDATED_CUSTOMER_REPORT_TITLE}\",\"internalNotes\":\"Updated Phase 7 draft proof\"}" "$token")"
+
+ineligible_customer_report_source_status="$(curl -sS -o "${TMP_DIR}/ineligible-customer-report-source.json" -w '%{http_code}' -X POST "${API_BASE}/customer-reports" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"jobId\":\"${job_id}\",\"type\":\"INCIDENT\",\"title\":\"Invalid unapproved source\",\"recipientName\":\"Validation\",\"selectedJobReportIds\":[\"${revision_report_id}\"]}")"
+duplicate_customer_report_source_status="$(curl -sS -o "${TMP_DIR}/duplicate-customer-report-source.json" -w '%{http_code}' -X POST "${API_BASE}/customer-reports" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"jobId\":\"${job_id}\",\"type\":\"INCIDENT\",\"title\":\"Invalid duplicate source\",\"recipientName\":\"Validation\",\"selectedJobReportIds\":[\"${worker_finding_id}\",\"${worker_finding_id}\"]}")"
+wrong_job_customer_report_report_status="$(curl -sS -o "${TMP_DIR}/wrong-job-customer-report-report.json" -w '%{http_code}' -X POST "${API_BASE}/customer-reports" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"jobId\":\"${linked_job_id}\",\"type\":\"OTHER\",\"title\":\"Invalid wrong-job report source\",\"recipientName\":\"Validation\",\"selectedJobReportIds\":[\"${worker_finding_id}\"]}")"
+wrong_job_customer_report_attachment_status="$(curl -sS -o "${TMP_DIR}/wrong-job-customer-report-attachment.json" -w '%{http_code}' -X POST "${API_BASE}/customer-reports" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"jobId\":\"${linked_job_id}\",\"type\":\"OTHER\",\"title\":\"Invalid wrong-job attachment source\",\"recipientName\":\"Validation\",\"selectedAttachmentIds\":[\"${phase7_attachment_id}\"]}")"
+wrong_job_customer_report_cost_status="$(curl -sS -o "${TMP_DIR}/wrong-job-customer-report-cost.json" -w '%{http_code}' -X POST "${API_BASE}/customer-reports" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"jobId\":\"${linked_job_id}\",\"type\":\"OTHER\",\"title\":\"Invalid wrong-job cost source\",\"recipientName\":\"Validation\",\"selectedCostLineIds\":[\"${material_cost_id}\"]}")"
+
+invalid_draft_approval_status="$(curl -sS -o "${TMP_DIR}/invalid-draft-approval.json" -w '%{http_code}' -X PATCH "${API_BASE}/customer-reports/${customer_report_id}/status" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"status":"APPROVED"}')"
+ready_customer_report="$(json_patch "${API_BASE}/customer-reports/${customer_report_id}/status" '{"status":"READY_FOR_REVIEW"}' "$token")"
+ready_customer_report_update_status="$(curl -sS -o "${TMP_DIR}/ready-customer-report-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/customer-reports/${customer_report_id}" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"internalNotes":"Forbidden ready update"}')"
+draft_again_customer_report="$(json_patch "${API_BASE}/customer-reports/${customer_report_id}/status" '{"status":"DRAFT"}' "$token")"
+ready_again_customer_report="$(json_patch "${API_BASE}/customer-reports/${customer_report_id}/status" '{"status":"READY_FOR_REVIEW"}' "$token")"
+approved_customer_report="$(json_patch "${API_BASE}/customer-reports/${customer_report_id}/status" '{"status":"APPROVED"}' "$token")"
+invalid_approved_draft_status="$(curl -sS -o "${TMP_DIR}/invalid-approved-draft.json" -w '%{http_code}' -X PATCH "${API_BASE}/customer-reports/${customer_report_id}/status" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"status":"DRAFT"}')"
+
+worker_customer_report_source_status="$(curl -sS -o "${TMP_DIR}/worker-customer-report-source.json" -w '%{http_code}' "${API_BASE}/jobs/${job_id}/customer-report-source-data" -H "Authorization: Bearer ${worker_token}")"
+worker_customer_report_list_status="$(curl -sS -o "${TMP_DIR}/worker-customer-report-list.json" -w '%{http_code}' "${API_BASE}/customer-reports?jobId=${job_id}" -H "Authorization: Bearer ${worker_token}")"
+worker_customer_report_detail_status="$(curl -sS -o "${TMP_DIR}/worker-customer-report-detail.json" -w '%{http_code}' "${API_BASE}/customer-reports/${customer_report_id}" -H "Authorization: Bearer ${worker_token}")"
+worker_customer_report_create_status="$(curl -sS -o "${TMP_DIR}/worker-customer-report-create.json" -w '%{http_code}' -X POST "${API_BASE}/customer-reports" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d "{\"jobId\":\"${job_id}\",\"type\":\"OTHER\",\"title\":\"Forbidden worker customer report\",\"recipientName\":\"Validation\"}")"
+worker_customer_report_update_status="$(curl -sS -o "${TMP_DIR}/worker-customer-report-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/customer-reports/${customer_report_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"title":"Forbidden worker update"}')"
+worker_customer_report_status_status="$(curl -sS -o "${TMP_DIR}/worker-customer-report-status.json" -w '%{http_code}' -X PATCH "${API_BASE}/customer-reports/${customer_report_id}/status" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"status":"ARCHIVED"}')"
+
+phase7_mutated_job="$(json_patch "${API_BASE}/jobs/${job_id}" "{\"title\":\"${PHASE7_MUTATED_JOB_TITLE}\",\"customerName\":\"Phase 7 Mutated Legacy Customer\",\"location\":\"Phase 7 Mutated Location\"}" "$token")"
+phase7_mutated_customer="$(json_patch "${API_BASE}/customers/${customer_id}" "{\"name\":\"${PHASE7_MUTATED_CUSTOMER_NAME}\"}" "$token")"
+phase7_mutated_address="$(json_patch "${API_BASE}/addresses/${address_id}" '{"street":"Changed Street 99"}' "$token")"
+phase7_mutated_object="$(json_patch "${API_BASE}/objects/${object_id}" "{\"name\":\"${PHASE7_MUTATED_OBJECT_NAME}\"}" "$token")"
+phase7_mutated_area="$(json_patch "${API_BASE}/objects/${object_id}/areas/${area_id}" "{\"name\":\"${PHASE7_MUTATED_AREA_NAME}\"}" "$token")"
+phase7_mutated_material_cost="$(json_patch "${API_BASE}/jobs/${job_id}/costs/${material_cost_id}" '{"quantity":4,"notes":"Phase 7 live-source mutation"}' "$token")"
+customer_report_source_after_mutation="$(json_get "${API_BASE}/jobs/${job_id}/customer-report-source-data" "$token")"
+customer_report_after_mutation="$(json_get "${API_BASE}/customer-reports/${customer_report_id}" "$token")"
+archived_customer_report="$(json_patch "${API_BASE}/customer-reports/${customer_report_id}/status" '{"status":"ARCHIVED"}' "$token")"
+
+create_archived_draft_report="$(json_post "${API_BASE}/customer-reports" "{\"jobId\":\"${job_id}\",\"type\":\"OTHER\",\"title\":\"Phase 7 direct archive ${SMOKE_SUFFIX}\",\"recipientName\":\"Phase 7 Recipient ${SMOKE_SUFFIX}\",\"issueSummary\":\"Direct draft archive proof\"}" "$token")"
+archived_draft_report_id="$(printf '%s' "$create_archived_draft_report" | jq -r '.customerReport.id')"
+archived_draft_report="$(json_patch "${API_BASE}/customer-reports/${archived_draft_report_id}/status" '{"status":"ARCHIVED"}' "$token")"
+
 other_login="$(json_post "${API_BASE}/auth/development-login" '{"email":"owner@otherco.example.de","displayName":"Other Owner","companySlug":"otherco","companyName":"Other Co","membershipRole":"OWNER"}')"
 other_token="$(printf '%s' "$other_login" | jq -r '.token')"
 cross_report_read_status="$(curl -sS -o "${TMP_DIR}/cross-report-read.json" -w '%{http_code}' "${API_BASE}/jobs/${job_id}/reports" -H "Authorization: Bearer ${other_token}")"
@@ -236,6 +311,25 @@ other_item="$(json_post "${API_BASE}/items" "{\"categoryId\":\"${other_item_cate
 other_item_id="$(printf '%s' "$other_item" | jq -r '.id')"
 other_assignment="$(json_post "${API_BASE}/assignments" "{\"sourceType\":\"ITEM\",\"sourceId\":\"${other_item_id}\",\"targetType\":\"OBJECT\",\"targetId\":\"${other_object_id}\",\"kind\":\"ALLOCATED\"}" "$other_token")"
 other_assignment_id="$(printf '%s' "$other_assignment" | jq -r '.id')"
+other_phase7_job="$(json_post "${API_BASE}/jobs" "{\"title\":\"Other Phase 7 Job ${SMOKE_SUFFIX}\",\"description\":\"Foreign source validation fixture\",\"customerName\":\"Other Legacy Customer\",\"location\":\"Other Street 1, Berlin\",\"scheduledStart\":\"2026-04-21T08:00:00.000Z\",\"priority\":\"NORMAL\",\"customerId\":\"${other_customer_id}\",\"addressId\":\"${other_address_id}\",\"objectId\":\"${other_object_id}\",\"objectAreaId\":\"${other_area_id}\"}" "$other_token")"
+other_phase7_job_id="$(printf '%s' "$other_phase7_job" | jq -r '.job.id')"
+other_phase7_report="$(json_post "${API_BASE}/jobs/${other_phase7_job_id}/reports" '{"type":"INCIDENT_REPORT","summary":"Other company approved finding","findingSummary":"Foreign tenant finding proof","followUpRequired":false}' "$other_token")"
+other_phase7_report_id="$(printf '%s' "$other_phase7_report" | jq -r '.reports[] | select(.summary == "Other company approved finding") | .id')"
+other_phase7_approved_report="$(json_patch "${API_BASE}/jobs/${other_phase7_job_id}/reports/${other_phase7_report_id}/review" '{"reviewStatus":"APPROVED","reviewNotes":"Foreign source fixture approved"}' "$other_token")"
+other_phase7_attachment_upload="$(curl -fsS -X POST "${API_BASE}/jobs/${other_phase7_job_id}/attachments" \
+  -H "Authorization: Bearer ${other_token}" \
+  -F "kind=PHOTO" \
+  -F "caption=${OTHER_PHASE7_ATTACHMENT_CAPTION}" \
+  -F "reportId=${other_phase7_report_id}" \
+  -F "file=@${TMP_DIR}/proof.jpg;type=image/jpeg")"
+other_phase7_attachment_id="$(printf '%s' "$other_phase7_attachment_upload" | jq -r --arg caption "$OTHER_PHASE7_ATTACHMENT_CAPTION" '.attachments[] | select(.caption == $caption) | .id')"
+other_phase7_cost="$(json_post "${API_BASE}/jobs/${other_phase7_job_id}/costs" '{"kind":"OTHER","description":"Foreign tenant cost source","quantity":1,"unit":"FLAT_RATE","totalCost":9,"currency":"EUR","costDate":"2026-04-21T10:00:00.000Z"}' "$other_token")"
+other_phase7_cost_id="$(printf '%s' "$other_phase7_cost" | jq -r '.id')"
+cross_customer_report_source_status="$(curl -sS -o "${TMP_DIR}/cross-customer-report-source.json" -w '%{http_code}' "${API_BASE}/jobs/${job_id}/customer-report-source-data" -H "Authorization: Bearer ${other_token}")"
+cross_customer_report_read_status="$(curl -sS -o "${TMP_DIR}/cross-customer-report-read.json" -w '%{http_code}' "${API_BASE}/customer-reports/${customer_report_id}" -H "Authorization: Bearer ${other_token}")"
+cross_customer_report_selected_report_status="$(curl -sS -o "${TMP_DIR}/cross-customer-report-selected-report.json" -w '%{http_code}' -X POST "${API_BASE}/customer-reports" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"jobId\":\"${job_id}\",\"type\":\"OTHER\",\"title\":\"Invalid foreign report source\",\"recipientName\":\"Validation\",\"selectedJobReportIds\":[\"${other_phase7_report_id}\"]}")"
+cross_customer_report_selected_attachment_status="$(curl -sS -o "${TMP_DIR}/cross-customer-report-selected-attachment.json" -w '%{http_code}' -X POST "${API_BASE}/customer-reports" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"jobId\":\"${job_id}\",\"type\":\"OTHER\",\"title\":\"Invalid foreign attachment source\",\"recipientName\":\"Validation\",\"selectedAttachmentIds\":[\"${other_phase7_attachment_id}\"]}")"
+cross_customer_report_selected_cost_status="$(curl -sS -o "${TMP_DIR}/cross-customer-report-selected-cost.json" -w '%{http_code}' -X POST "${API_BASE}/customer-reports" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"jobId\":\"${job_id}\",\"type\":\"OTHER\",\"title\":\"Invalid foreign cost source\",\"recipientName\":\"Validation\",\"selectedCostLineIds\":[\"${other_phase7_cost_id}\"]}")"
 cross_relation_status="$(curl -sS -o "${TMP_DIR}/cross-relation.json" -w '%{http_code}' -X POST "${API_BASE}/objects" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"addressId\":\"${other_address_id}\",\"name\":\"Invalid Cross Tenant Object\",\"type\":\"OTHER\"}")"
 cross_job_relation_status="$(curl -sS -o "${TMP_DIR}/cross-job-relation.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Cross Tenant Job\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T10:00:00.000Z\",\"priority\":\"NORMAL\",\"addressId\":\"${other_address_id}\"}")"
 cross_job_customer_status="$(curl -sS -o "${TMP_DIR}/cross-job-customer.json" -w '%{http_code}' -X POST "${API_BASE}/jobs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Invalid Cross Tenant Customer\",\"customerName\":\"Validation\",\"location\":\"Validation\",\"scheduledStart\":\"2026-04-20T12:00:00.000Z\",\"priority\":\"NORMAL\",\"customerId\":\"${other_customer_id}\"}")"
@@ -252,125 +346,343 @@ cross_cost_update_status="$(curl -sS -o "${TMP_DIR}/cross-cost-update.json" -w '
 cross_cost_item_status="$(curl -sS -o "${TMP_DIR}/cross-cost-item.json" -w '%{http_code}' -X POST "${API_BASE}/jobs/${job_id}/costs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"itemId\":\"${other_item_id}\",\"kind\":\"MATERIAL_USED\",\"description\":\"Forbidden cross-company item\",\"quantity\":1,\"unit\":\"PIECE\",\"unitCost\":1}")"
 job_detail="$(json_get "${API_BASE}/jobs/${job_id}" "$token")"
 
-jq -n \
-  --argjson health "$health" \
-  --argjson session "$session" \
-  --argjson dashboard "$dashboard" \
-  --argjson teams "$teams" \
-  --argjson addMember "$add_member" \
-  --argjson createJob "$create_job" \
-  --argjson assignTeam "$assign_team" \
-  --argjson changeStatus "$change_status" \
-  --argjson editJob "$edit_job" \
-  --argjson createReport "$create_report" \
-  --argjson uploadAttachment "$upload_attachment" \
-  --argjson photos "$photos" \
-  --argjson attachmentMeta "$attachment_meta" \
-  --argjson jobDetail "$job_detail" \
-  --argjson updateCustomer "$update_customer" \
-  --argjson updateAddress "$update_address" \
-  --argjson updateObject "$update_object" \
-  --argjson updateArea "$update_area" \
-  --argjson customers "$customers" \
-  --argjson addresses "$addresses" \
-  --argjson objects "$objects" \
-  --argjson objectDetail "$object_detail" \
-  --argjson relationOptions "$relation_options" \
-  --argjson linkJob "$link_job" \
-  --argjson linkedJob "$linked_job" \
-  --argjson workerObjects "$worker_objects" \
-  --argjson workerRelationOptions "$worker_relation_options" \
-  --argjson createItemCategory "$create_item_category" \
-  --argjson updateItemCategory "$update_item_category" \
-  --argjson itemCategories "$item_categories" \
-  --argjson createQuantityItem "$create_quantity_item" \
-  --argjson quantityItemDetail "$quantity_item_detail" \
-  --argjson updateQuantityItem "$update_quantity_item" \
-  --argjson items "$items" \
-  --argjson createSerializedItem "$create_serialized_item" \
-  --argjson workerItemCategories "$worker_item_categories" \
-  --argjson workerItems "$worker_items" \
-  --argjson workerItemDetail "$worker_item_detail" \
-  --argjson teamJobAssignment "$team_job_assignment" \
-  --argjson itemJobAssignment "$item_job_assignment" \
-  --argjson itemObjectAssignment "$item_object_assignment" \
-  --argjson updateItemObjectAssignment "$update_item_object_assignment" \
-  --argjson assignmentDetail "$assignment_detail" \
-  --argjson assignments "$assignments" \
-  --argjson assignmentOptions "$assignment_options" \
-  --argjson jobAfterAssignments "$job_after_assignments" \
-  --argjson materialCost "$material_cost" \
-  --argjson laborCost "$labor_cost" \
-  --argjson externalCost "$external_cost" \
-  --argjson updateMaterialCost "$update_material_cost" \
-  --argjson jobCosts "$job_costs" \
-  --argjson jobCostSummary "$job_cost_summary" \
-  --argjson workerAssignments "$worker_assignments" \
-  --argjson workerAssignmentOptions "$worker_assignment_options" \
-  --argjson workerAssignmentDetail "$worker_assignment_detail" \
-  --argjson workerJobCosts "$worker_job_costs" \
-  --argjson workerJobCostSummary "$worker_job_cost_summary" \
-  --argjson addWorkerMember "$add_worker_member" \
-  --argjson workerFinding "$worker_finding" \
-  --argjson approveWorkerFinding "$approve_worker_finding" \
-  --argjson needsRevisionReport "$needs_revision_report" \
-  --arg crossStatus "$cross_status" \
-  --arg crossBody "$cross_body" \
-  --arg crossObjectStatus "$cross_object_status" \
-  --arg crossRelationStatus "$cross_relation_status" \
-  --arg crossJobRelationStatus "$cross_job_relation_status" \
-  --arg crossJobCustomerStatus "$cross_job_customer_status" \
-  --arg crossJobObjectStatus "$cross_job_object_status" \
-  --arg crossJobAreaStatus "$cross_job_area_status" \
-  --arg missingObjectStatus "$missing_object_status" \
-  --arg mismatchedAreaStatus "$mismatched_area_status" \
-  --arg workerWriteStatus "$worker_write_status" \
-  --arg workerJobWriteStatus "$worker_job_write_status" \
-  --arg workerCategoryWriteStatus "$worker_category_write_status" \
-  --arg workerItemWriteStatus "$worker_item_write_status" \
-  --arg duplicateCustomIdStatus "$duplicate_custom_id_status" \
-  --arg invalidSerializedStatus "$invalid_serialized_status" \
-  --arg crossItemStatus "$cross_item_status" \
-  --arg crossItemCategoryStatus "$cross_item_category_status" \
-  --arg crossItemRelationStatus "$cross_item_relation_status" \
-  --arg duplicateActiveAssignmentStatus "$duplicate_active_assignment_status" \
-  --arg invalidAssignmentTimeStatus "$invalid_assignment_time_status" \
-  --arg workerAssignmentWriteStatus "$worker_assignment_write_status" \
-  --arg workerAssignmentUpdateStatus "$worker_assignment_update_status" \
-  --arg workerReviewStatus "$worker_review_status" \
-  --arg workerInaccessibleReportStatus "$worker_inaccessible_report_status" \
-  --arg wrongJobReportReviewStatus "$wrong_job_report_review_status" \
-  --arg invalidFindingStatus "$invalid_finding_status" \
-  --arg crossReportReadStatus "$cross_report_read_status" \
-  --arg crossReportReviewStatus "$cross_report_review_status" \
-  --arg crossAssignmentReadStatus "$cross_assignment_read_status" \
-  --arg crossAssignmentSourceStatus "$cross_assignment_source_status" \
-  --arg crossAssignmentTargetStatus "$cross_assignment_target_status" \
-  --arg wrongJobCostStatus "$wrong_job_cost_status" \
-  --arg workerCostWriteStatus "$worker_cost_write_status" \
-  --arg workerCostUpdateStatus "$worker_cost_update_status" \
-  --arg crossCostJobStatus "$cross_cost_job_status" \
-  --arg crossCostUpdateStatus "$cross_cost_update_status" \
-  --arg crossCostItemStatus "$cross_cost_item_status" \
-  --arg attachmentFileStatus "$attachment_file_status" \
-  --arg firstJobId "$first_job_id" \
-  --arg teamName "$TEAM_NAME" \
-  --arg updatedJobTitle "$UPDATED_JOB_TITLE" \
-  --arg customerId "$customer_id" \
-  --arg addressId "$address_id" \
-  --arg objectId "$object_id" \
-  --arg areaId "$area_id" \
-  --arg itemCategoryId "$item_category_id" \
-  --arg quantityItemId "$quantity_item_id" \
-  --arg serializedItemId "$serialized_item_id" \
-  --arg teamId "$team_id" \
-  --arg teamJobAssignmentId "$team_job_assignment_id" \
-  --arg itemJobAssignmentId "$item_job_assignment_id" \
-  --arg itemObjectAssignmentId "$item_object_assignment_id" \
-  --arg reportId "$report_id" \
-  --arg workerFindingId "$worker_finding_id" \
-  --arg workerUserId "$worker_user_id" \
-  '{
+: > "$SUMMARY_INPUT"
+
+append_summary_json health "$health"
+append_summary_json session "$session"
+append_summary_json dashboard "$dashboard"
+append_summary_json teams "$teams"
+append_summary_json addMember "$add_member"
+append_summary_json createJob "$create_job"
+append_summary_json assignTeam "$assign_team"
+append_summary_json changeStatus "$change_status"
+append_summary_json editJob "$edit_job"
+append_summary_json createReport "$create_report"
+append_summary_json uploadAttachment "$upload_attachment"
+append_summary_json photos "$photos"
+append_summary_json attachmentMeta "$attachment_meta"
+append_summary_json jobDetail "$job_detail"
+append_summary_json updateCustomer "$update_customer"
+append_summary_json updateAddress "$update_address"
+append_summary_json updateObject "$update_object"
+append_summary_json updateArea "$update_area"
+append_summary_json customers "$customers"
+append_summary_json addresses "$addresses"
+append_summary_json objects "$objects"
+append_summary_json objectDetail "$object_detail"
+append_summary_json relationOptions "$relation_options"
+append_summary_json linkJob "$link_job"
+append_summary_json linkedJob "$linked_job"
+append_summary_json workerObjects "$worker_objects"
+append_summary_json workerRelationOptions "$worker_relation_options"
+append_summary_json createItemCategory "$create_item_category"
+append_summary_json updateItemCategory "$update_item_category"
+append_summary_json itemCategories "$item_categories"
+append_summary_json createQuantityItem "$create_quantity_item"
+append_summary_json quantityItemDetail "$quantity_item_detail"
+append_summary_json updateQuantityItem "$update_quantity_item"
+append_summary_json items "$items"
+append_summary_json createSerializedItem "$create_serialized_item"
+append_summary_json workerItemCategories "$worker_item_categories"
+append_summary_json workerItems "$worker_items"
+append_summary_json workerItemDetail "$worker_item_detail"
+append_summary_json teamJobAssignment "$team_job_assignment"
+append_summary_json itemJobAssignment "$item_job_assignment"
+append_summary_json itemObjectAssignment "$item_object_assignment"
+append_summary_json updateItemObjectAssignment "$update_item_object_assignment"
+append_summary_json assignmentDetail "$assignment_detail"
+append_summary_json assignments "$assignments"
+append_summary_json assignmentOptions "$assignment_options"
+append_summary_json jobAfterAssignments "$job_after_assignments"
+append_summary_json materialCost "$material_cost"
+append_summary_json laborCost "$labor_cost"
+append_summary_json externalCost "$external_cost"
+append_summary_json updateMaterialCost "$update_material_cost"
+append_summary_json jobCosts "$job_costs"
+append_summary_json jobCostSummary "$job_cost_summary"
+append_summary_json workerAssignments "$worker_assignments"
+append_summary_json workerAssignmentOptions "$worker_assignment_options"
+append_summary_json workerAssignmentDetail "$worker_assignment_detail"
+append_summary_json workerJobCosts "$worker_job_costs"
+append_summary_json workerJobCostSummary "$worker_job_cost_summary"
+append_summary_json addWorkerMember "$add_worker_member"
+append_summary_json workerFinding "$worker_finding"
+append_summary_json approveWorkerFinding "$approve_worker_finding"
+append_summary_json needsRevisionReport "$needs_revision_report"
+append_summary_json customerReportSource "$customer_report_source"
+append_summary_json createCustomerReport "$create_customer_report"
+append_summary_json customerReportList "$customer_report_list"
+append_summary_json customerReportDetail "$customer_report_detail"
+append_summary_json updateCustomerReport "$update_customer_report"
+append_summary_json readyCustomerReport "$ready_customer_report"
+append_summary_json draftAgainCustomerReport "$draft_again_customer_report"
+append_summary_json readyAgainCustomerReport "$ready_again_customer_report"
+append_summary_json approvedCustomerReport "$approved_customer_report"
+append_summary_json phase7MutatedMaterialCost "$phase7_mutated_material_cost"
+append_summary_json customerReportSourceAfterMutation "$customer_report_source_after_mutation"
+append_summary_json customerReportAfterMutation "$customer_report_after_mutation"
+append_summary_json archivedCustomerReport "$archived_customer_report"
+append_summary_json createArchivedDraftReport "$create_archived_draft_report"
+append_summary_json archivedDraftReport "$archived_draft_report"
+
+append_summary_string crossStatus "$cross_status"
+append_summary_string crossBody "$cross_body"
+append_summary_string crossObjectStatus "$cross_object_status"
+append_summary_string crossRelationStatus "$cross_relation_status"
+append_summary_string crossJobRelationStatus "$cross_job_relation_status"
+append_summary_string crossJobCustomerStatus "$cross_job_customer_status"
+append_summary_string crossJobObjectStatus "$cross_job_object_status"
+append_summary_string crossJobAreaStatus "$cross_job_area_status"
+append_summary_string missingObjectStatus "$missing_object_status"
+append_summary_string mismatchedAreaStatus "$mismatched_area_status"
+append_summary_string workerWriteStatus "$worker_write_status"
+append_summary_string workerJobWriteStatus "$worker_job_write_status"
+append_summary_string workerCategoryWriteStatus "$worker_category_write_status"
+append_summary_string workerItemWriteStatus "$worker_item_write_status"
+append_summary_string duplicateCustomIdStatus "$duplicate_custom_id_status"
+append_summary_string invalidSerializedStatus "$invalid_serialized_status"
+append_summary_string crossItemStatus "$cross_item_status"
+append_summary_string crossItemCategoryStatus "$cross_item_category_status"
+append_summary_string crossItemRelationStatus "$cross_item_relation_status"
+append_summary_string duplicateActiveAssignmentStatus "$duplicate_active_assignment_status"
+append_summary_string invalidAssignmentTimeStatus "$invalid_assignment_time_status"
+append_summary_string workerAssignmentWriteStatus "$worker_assignment_write_status"
+append_summary_string workerAssignmentUpdateStatus "$worker_assignment_update_status"
+append_summary_string workerReviewStatus "$worker_review_status"
+append_summary_string workerInaccessibleReportStatus "$worker_inaccessible_report_status"
+append_summary_string wrongJobReportReviewStatus "$wrong_job_report_review_status"
+append_summary_string invalidFindingStatus "$invalid_finding_status"
+append_summary_string crossReportReadStatus "$cross_report_read_status"
+append_summary_string crossReportReviewStatus "$cross_report_review_status"
+append_summary_string crossAssignmentReadStatus "$cross_assignment_read_status"
+append_summary_string crossAssignmentSourceStatus "$cross_assignment_source_status"
+append_summary_string crossAssignmentTargetStatus "$cross_assignment_target_status"
+append_summary_string wrongJobCostStatus "$wrong_job_cost_status"
+append_summary_string workerCostWriteStatus "$worker_cost_write_status"
+append_summary_string workerCostUpdateStatus "$worker_cost_update_status"
+append_summary_string crossCostJobStatus "$cross_cost_job_status"
+append_summary_string crossCostUpdateStatus "$cross_cost_update_status"
+append_summary_string crossCostItemStatus "$cross_cost_item_status"
+append_summary_string attachmentFileStatus "$attachment_file_status"
+append_summary_string firstJobId "$first_job_id"
+append_summary_string teamName "$TEAM_NAME"
+append_summary_string updatedJobTitle "$UPDATED_JOB_TITLE"
+append_summary_string jobId "$job_id"
+append_summary_string userId "$user_id"
+append_summary_string customerId "$customer_id"
+append_summary_string addressId "$address_id"
+append_summary_string objectId "$object_id"
+append_summary_string areaId "$area_id"
+append_summary_string itemCategoryId "$item_category_id"
+append_summary_string quantityItemId "$quantity_item_id"
+append_summary_string serializedItemId "$serialized_item_id"
+append_summary_string teamId "$team_id"
+append_summary_string teamJobAssignmentId "$team_job_assignment_id"
+append_summary_string itemJobAssignmentId "$item_job_assignment_id"
+append_summary_string itemObjectAssignmentId "$item_object_assignment_id"
+append_summary_string reportId "$report_id"
+append_summary_string workerFindingId "$worker_finding_id"
+append_summary_string workerUserId "$worker_user_id"
+append_summary_string revisionReportId "$revision_report_id"
+append_summary_string materialCostId "$material_cost_id"
+append_summary_string laborCostId "$labor_cost_id"
+append_summary_string externalCostId "$external_cost_id"
+append_summary_string phase7AttachmentId "$phase7_attachment_id"
+append_summary_string customerReportId "$customer_report_id"
+append_summary_string customerReportTitle "$CUSTOMER_REPORT_TITLE"
+append_summary_string updatedCustomerReportTitle "$UPDATED_CUSTOMER_REPORT_TITLE"
+append_summary_string phase7MutatedJobTitle "$PHASE7_MUTATED_JOB_TITLE"
+append_summary_string phase7MutatedCustomerName "$PHASE7_MUTATED_CUSTOMER_NAME"
+append_summary_string phase7MutatedObjectName "$PHASE7_MUTATED_OBJECT_NAME"
+append_summary_string phase7MutatedAreaName "$PHASE7_MUTATED_AREA_NAME"
+append_summary_string ineligibleCustomerReportSourceStatus "$ineligible_customer_report_source_status"
+append_summary_string duplicateCustomerReportSourceStatus "$duplicate_customer_report_source_status"
+append_summary_string wrongJobCustomerReportReportStatus "$wrong_job_customer_report_report_status"
+append_summary_string wrongJobCustomerReportAttachmentStatus "$wrong_job_customer_report_attachment_status"
+append_summary_string wrongJobCustomerReportCostStatus "$wrong_job_customer_report_cost_status"
+append_summary_string invalidDraftApprovalStatus "$invalid_draft_approval_status"
+append_summary_string readyCustomerReportUpdateStatus "$ready_customer_report_update_status"
+append_summary_string invalidApprovedDraftStatus "$invalid_approved_draft_status"
+append_summary_string workerCustomerReportSourceStatus "$worker_customer_report_source_status"
+append_summary_string workerCustomerReportListStatus "$worker_customer_report_list_status"
+append_summary_string workerCustomerReportDetailStatus "$worker_customer_report_detail_status"
+append_summary_string workerCustomerReportCreateStatus "$worker_customer_report_create_status"
+append_summary_string workerCustomerReportUpdateStatus "$worker_customer_report_update_status"
+append_summary_string workerCustomerReportStatusStatus "$worker_customer_report_status_status"
+append_summary_string crossCustomerReportSourceStatus "$cross_customer_report_source_status"
+append_summary_string crossCustomerReportReadStatus "$cross_customer_report_read_status"
+append_summary_string crossCustomerReportSelectedReportStatus "$cross_customer_report_selected_report_status"
+append_summary_string crossCustomerReportSelectedAttachmentStatus "$cross_customer_report_selected_attachment_status"
+append_summary_string crossCustomerReportSelectedCostStatus "$cross_customer_report_selected_cost_status"
+
+jq -s '
+  from_entries |
+  .health as $health |
+  .session as $session |
+  .dashboard as $dashboard |
+  .teams as $teams |
+  .addMember as $addMember |
+  .createJob as $createJob |
+  .assignTeam as $assignTeam |
+  .changeStatus as $changeStatus |
+  .editJob as $editJob |
+  .createReport as $createReport |
+  .uploadAttachment as $uploadAttachment |
+  .photos as $photos |
+  .attachmentMeta as $attachmentMeta |
+  .jobDetail as $jobDetail |
+  .updateCustomer as $updateCustomer |
+  .updateAddress as $updateAddress |
+  .updateObject as $updateObject |
+  .updateArea as $updateArea |
+  .customers as $customers |
+  .addresses as $addresses |
+  .objects as $objects |
+  .objectDetail as $objectDetail |
+  .relationOptions as $relationOptions |
+  .linkJob as $linkJob |
+  .linkedJob as $linkedJob |
+  .workerObjects as $workerObjects |
+  .workerRelationOptions as $workerRelationOptions |
+  .createItemCategory as $createItemCategory |
+  .updateItemCategory as $updateItemCategory |
+  .itemCategories as $itemCategories |
+  .createQuantityItem as $createQuantityItem |
+  .quantityItemDetail as $quantityItemDetail |
+  .updateQuantityItem as $updateQuantityItem |
+  .items as $items |
+  .createSerializedItem as $createSerializedItem |
+  .workerItemCategories as $workerItemCategories |
+  .workerItems as $workerItems |
+  .workerItemDetail as $workerItemDetail |
+  .teamJobAssignment as $teamJobAssignment |
+  .itemJobAssignment as $itemJobAssignment |
+  .itemObjectAssignment as $itemObjectAssignment |
+  .updateItemObjectAssignment as $updateItemObjectAssignment |
+  .assignmentDetail as $assignmentDetail |
+  .assignments as $assignments |
+  .assignmentOptions as $assignmentOptions |
+  .jobAfterAssignments as $jobAfterAssignments |
+  .materialCost as $materialCost |
+  .laborCost as $laborCost |
+  .externalCost as $externalCost |
+  .updateMaterialCost as $updateMaterialCost |
+  .jobCosts as $jobCosts |
+  .jobCostSummary as $jobCostSummary |
+  .workerAssignments as $workerAssignments |
+  .workerAssignmentOptions as $workerAssignmentOptions |
+  .workerAssignmentDetail as $workerAssignmentDetail |
+  .workerJobCosts as $workerJobCosts |
+  .workerJobCostSummary as $workerJobCostSummary |
+  .addWorkerMember as $addWorkerMember |
+  .workerFinding as $workerFinding |
+  .approveWorkerFinding as $approveWorkerFinding |
+  .needsRevisionReport as $needsRevisionReport |
+  .customerReportSource as $customerReportSource |
+  .createCustomerReport as $createCustomerReport |
+  .customerReportList as $customerReportList |
+  .customerReportDetail as $customerReportDetail |
+  .updateCustomerReport as $updateCustomerReport |
+  .readyCustomerReport as $readyCustomerReport |
+  .draftAgainCustomerReport as $draftAgainCustomerReport |
+  .readyAgainCustomerReport as $readyAgainCustomerReport |
+  .approvedCustomerReport as $approvedCustomerReport |
+  .phase7MutatedMaterialCost as $phase7MutatedMaterialCost |
+  .customerReportSourceAfterMutation as $customerReportSourceAfterMutation |
+  .customerReportAfterMutation as $customerReportAfterMutation |
+  .archivedCustomerReport as $archivedCustomerReport |
+  .createArchivedDraftReport as $createArchivedDraftReport |
+  .archivedDraftReport as $archivedDraftReport |
+  .crossStatus as $crossStatus |
+  .crossBody as $crossBody |
+  .crossObjectStatus as $crossObjectStatus |
+  .crossRelationStatus as $crossRelationStatus |
+  .crossJobRelationStatus as $crossJobRelationStatus |
+  .crossJobCustomerStatus as $crossJobCustomerStatus |
+  .crossJobObjectStatus as $crossJobObjectStatus |
+  .crossJobAreaStatus as $crossJobAreaStatus |
+  .missingObjectStatus as $missingObjectStatus |
+  .mismatchedAreaStatus as $mismatchedAreaStatus |
+  .workerWriteStatus as $workerWriteStatus |
+  .workerJobWriteStatus as $workerJobWriteStatus |
+  .workerCategoryWriteStatus as $workerCategoryWriteStatus |
+  .workerItemWriteStatus as $workerItemWriteStatus |
+  .duplicateCustomIdStatus as $duplicateCustomIdStatus |
+  .invalidSerializedStatus as $invalidSerializedStatus |
+  .crossItemStatus as $crossItemStatus |
+  .crossItemCategoryStatus as $crossItemCategoryStatus |
+  .crossItemRelationStatus as $crossItemRelationStatus |
+  .duplicateActiveAssignmentStatus as $duplicateActiveAssignmentStatus |
+  .invalidAssignmentTimeStatus as $invalidAssignmentTimeStatus |
+  .workerAssignmentWriteStatus as $workerAssignmentWriteStatus |
+  .workerAssignmentUpdateStatus as $workerAssignmentUpdateStatus |
+  .workerReviewStatus as $workerReviewStatus |
+  .workerInaccessibleReportStatus as $workerInaccessibleReportStatus |
+  .wrongJobReportReviewStatus as $wrongJobReportReviewStatus |
+  .invalidFindingStatus as $invalidFindingStatus |
+  .crossReportReadStatus as $crossReportReadStatus |
+  .crossReportReviewStatus as $crossReportReviewStatus |
+  .crossAssignmentReadStatus as $crossAssignmentReadStatus |
+  .crossAssignmentSourceStatus as $crossAssignmentSourceStatus |
+  .crossAssignmentTargetStatus as $crossAssignmentTargetStatus |
+  .wrongJobCostStatus as $wrongJobCostStatus |
+  .workerCostWriteStatus as $workerCostWriteStatus |
+  .workerCostUpdateStatus as $workerCostUpdateStatus |
+  .crossCostJobStatus as $crossCostJobStatus |
+  .crossCostUpdateStatus as $crossCostUpdateStatus |
+  .crossCostItemStatus as $crossCostItemStatus |
+  .attachmentFileStatus as $attachmentFileStatus |
+  .firstJobId as $firstJobId |
+  .teamName as $teamName |
+  .updatedJobTitle as $updatedJobTitle |
+  .jobId as $jobId |
+  .userId as $userId |
+  .customerId as $customerId |
+  .addressId as $addressId |
+  .objectId as $objectId |
+  .areaId as $areaId |
+  .itemCategoryId as $itemCategoryId |
+  .quantityItemId as $quantityItemId |
+  .serializedItemId as $serializedItemId |
+  .teamId as $teamId |
+  .teamJobAssignmentId as $teamJobAssignmentId |
+  .itemJobAssignmentId as $itemJobAssignmentId |
+  .itemObjectAssignmentId as $itemObjectAssignmentId |
+  .reportId as $reportId |
+  .workerFindingId as $workerFindingId |
+  .workerUserId as $workerUserId |
+  .revisionReportId as $revisionReportId |
+  .materialCostId as $materialCostId |
+  .laborCostId as $laborCostId |
+  .externalCostId as $externalCostId |
+  .phase7AttachmentId as $phase7AttachmentId |
+  .customerReportId as $customerReportId |
+  .customerReportTitle as $customerReportTitle |
+  .updatedCustomerReportTitle as $updatedCustomerReportTitle |
+  .phase7MutatedJobTitle as $phase7MutatedJobTitle |
+  .phase7MutatedCustomerName as $phase7MutatedCustomerName |
+  .phase7MutatedObjectName as $phase7MutatedObjectName |
+  .phase7MutatedAreaName as $phase7MutatedAreaName |
+  .ineligibleCustomerReportSourceStatus as $ineligibleCustomerReportSourceStatus |
+  .duplicateCustomerReportSourceStatus as $duplicateCustomerReportSourceStatus |
+  .wrongJobCustomerReportReportStatus as $wrongJobCustomerReportReportStatus |
+  .wrongJobCustomerReportAttachmentStatus as $wrongJobCustomerReportAttachmentStatus |
+  .wrongJobCustomerReportCostStatus as $wrongJobCustomerReportCostStatus |
+  .invalidDraftApprovalStatus as $invalidDraftApprovalStatus |
+  .readyCustomerReportUpdateStatus as $readyCustomerReportUpdateStatus |
+  .invalidApprovedDraftStatus as $invalidApprovedDraftStatus |
+  .workerCustomerReportSourceStatus as $workerCustomerReportSourceStatus |
+  .workerCustomerReportListStatus as $workerCustomerReportListStatus |
+  .workerCustomerReportDetailStatus as $workerCustomerReportDetailStatus |
+  .workerCustomerReportCreateStatus as $workerCustomerReportCreateStatus |
+  .workerCustomerReportUpdateStatus as $workerCustomerReportUpdateStatus |
+  .workerCustomerReportStatusStatus as $workerCustomerReportStatusStatus |
+  .crossCustomerReportSourceStatus as $crossCustomerReportSourceStatus |
+  .crossCustomerReportReadStatus as $crossCustomerReportReadStatus |
+  .crossCustomerReportSelectedReportStatus as $crossCustomerReportSelectedReportStatus |
+  .crossCustomerReportSelectedAttachmentStatus as $crossCustomerReportSelectedAttachmentStatus |
+  .crossCustomerReportSelectedCostStatus as $crossCustomerReportSelectedCostStatus |
+  {
     healthOk: $health.ok,
     sessionAuthenticated: $session.authenticated,
     dashboardTotalJobs: $dashboard.summary.totalJobs,
@@ -550,8 +862,163 @@ jq -n \
     workerCostUpdateStatus: $workerCostUpdateStatus,
     crossCostJobStatus: $crossCostJobStatus,
     crossCostUpdateStatus: $crossCostUpdateStatus,
-    crossCostItemStatus: $crossCostItemStatus
-  }' > "${TMP_DIR}/summary.json"
+    crossCostItemStatus: $crossCostItemStatus,
+    customerReportSourceContextMatches: (
+      ($customerReportSource.job.id == $jobId) and
+      ($customerReportSource.customer.id == $customerId) and
+      ($customerReportSource.address.id == $addressId) and
+      ($customerReportSource.object.id == $objectId) and
+      ($customerReportSource.objectArea.id == $areaId)
+    ),
+    customerReportSourceEligibilityMatches: (
+      ([$customerReportSource.jobReports[] | select(.id == $workerFindingId and .reviewStatus == "APPROVED" and .selectable == true)] | length) == 1 and
+      ([$customerReportSource.jobReports[] | select(.id == $revisionReportId and .reviewStatus == "NEEDS_REVISION" and .selectable == false)] | length) == 1 and
+      ([$customerReportSource.jobReports[] | select(.id == $reportId and .reviewStatus == "SUBMITTED" and .selectable == false)] | length) == 1
+    ),
+    customerReportSourceAttachmentMatches: (
+      ([$customerReportSource.attachments[] | select(.id == $phase7AttachmentId and .reportId == $workerFindingId and .selectable == true)] | length) == 1
+    ),
+    customerReportSourceCostsMatch: (
+      ([$customerReportSource.costLines[].id] | index($materialCostId) != null) and
+      ([$customerReportSource.costLines[].id] | index($laborCostId) != null) and
+      ([$customerReportSource.costLines[].id] | index($externalCostId) != null) and
+      ($customerReportSource.costSummary.lineCount == 3) and
+      ($customerReportSource.costSummary.grandTotal == 422.2) and
+      ($customerReportSource.costSummary.currency == "EUR")
+    ),
+    customerReportCreated: (
+      ($createCustomerReport.customerReport.id == $customerReportId) and
+      ($createCustomerReport.customerReport.type == "INCIDENT") and
+      ($createCustomerReport.customerReport.status == "DRAFT") and
+      ($createCustomerReport.customerReport.title == $customerReportTitle) and
+      ($createCustomerReport.customerReport.createdBy.id == $userId)
+    ),
+    customerReportScalarSnapshotMatches: (
+      ($createCustomerReport.customerReport.jobId == $jobId) and
+      ($createCustomerReport.customerReport.customerId == $customerId) and
+      ($createCustomerReport.customerReport.addressId == $addressId) and
+      ($createCustomerReport.customerReport.objectId == $objectId) and
+      ($createCustomerReport.customerReport.objectAreaId == $areaId) and
+      ($createCustomerReport.customerReport.snapshotCustomerName == $customerReportSource.customer.name) and
+      ($createCustomerReport.customerReport.snapshotAddressLabel == $customerReportSource.address.label) and
+      ($createCustomerReport.customerReport.snapshotObjectName == $customerReportSource.object.name) and
+      ($createCustomerReport.customerReport.snapshotObjectAreaName == $customerReportSource.objectArea.name) and
+      ($createCustomerReport.customerReport.snapshotJobReference == $customerReportSource.job.reference) and
+      ($createCustomerReport.customerReport.snapshotJobTitle == $customerReportSource.job.title)
+    ),
+    customerReportStructuredSnapshotMatches: (
+      ($createCustomerReport.customerReport.snapshotSourceData.schemaVersion == 1) and
+      ($createCustomerReport.customerReport.snapshotSourceData.job == $customerReportSource.job) and
+      ($createCustomerReport.customerReport.snapshotSourceData.customer == $customerReportSource.customer) and
+      ($createCustomerReport.customerReport.snapshotSourceData.address == $customerReportSource.address) and
+      ($createCustomerReport.customerReport.snapshotSourceData.object == $customerReportSource.object) and
+      ($createCustomerReport.customerReport.snapshotSourceData.objectArea == $customerReportSource.objectArea)
+    ),
+    customerReportSelectedSourcesMatch: (
+      ($createCustomerReport.customerReport.snapshotSourceData.selectedJobReportIds == [$workerFindingId]) and
+      ($createCustomerReport.customerReport.snapshotSourceData.selectedAttachmentIds == [$phase7AttachmentId]) and
+      ($createCustomerReport.customerReport.snapshotSourceData.selectedCostLineIds == [$materialCostId, $laborCostId]) and
+      ($createCustomerReport.customerReport.snapshotSourceData.includeFullCostSummary == true) and
+      (($createCustomerReport.customerReport.snapshotSourceData.jobReports | length) == 1) and
+      ($createCustomerReport.customerReport.snapshotSourceData.jobReports[0].id == $workerFindingId) and
+      ($createCustomerReport.customerReport.snapshotSourceData.jobReports[0].reviewStatus == "APPROVED") and
+      ($createCustomerReport.customerReport.snapshotSourceData.jobReports[0].findingSummary == "Pipe connection is leaking") and
+      (($createCustomerReport.customerReport.snapshotSourceData.attachments | length) == 1) and
+      ($createCustomerReport.customerReport.snapshotSourceData.attachments[0].id == $phase7AttachmentId) and
+      ($createCustomerReport.customerReport.snapshotSourceData.attachments[0].reportId == $workerFindingId)
+    ),
+    customerReportSelectedCostsMatch: (
+      ($createCustomerReport.customerReport.snapshotCostBreakdown.schemaVersion == 1) and
+      ($createCustomerReport.customerReport.snapshotCostBreakdown.includeFullCostSummary == true) and
+      ([$createCustomerReport.customerReport.snapshotCostBreakdown.selectedLines[].sourceCostLineId] == [$materialCostId, $laborCostId]) and
+      ($createCustomerReport.customerReport.snapshotCostBreakdown.selectedLines[0].quantity == 3) and
+      ($createCustomerReport.customerReport.snapshotCostBreakdown.selectedLines[0].totalCost == 37.2) and
+      ($createCustomerReport.customerReport.snapshotCostBreakdown.selectedLines[0].taxRate == 19) and
+      ($createCustomerReport.customerReport.snapshotCostBreakdown.selectedLines[1].totalCost == 135) and
+      ($createCustomerReport.customerReport.snapshotCostBreakdown.selectedLineSummary.lineCount == 2) and
+      ($createCustomerReport.customerReport.snapshotCostBreakdown.selectedLineSummary.grandTotal == 172.2)
+    ),
+    customerReportFullCostSummaryMatches: (
+      ($createCustomerReport.customerReport.snapshotCostBreakdown.fullJobSummary.lineCount == 3) and
+      ($createCustomerReport.customerReport.snapshotCostBreakdown.fullJobSummary.materialTotal == 37.2) and
+      ($createCustomerReport.customerReport.snapshotCostBreakdown.fullJobSummary.laborTotal == 135) and
+      ($createCustomerReport.customerReport.snapshotCostBreakdown.fullJobSummary.externalServiceTotal == 250) and
+      ($createCustomerReport.customerReport.snapshotCostBreakdown.fullJobSummary.grandTotal == 422.2) and
+      ($createCustomerReport.customerReport.snapshotCostGrandTotal == 422.2) and
+      ($createCustomerReport.customerReport.snapshotCostCurrency == "EUR")
+    ),
+    customerReportListContainsCreated: ([$customerReportList.customerReports[].id] | index($customerReportId) != null),
+    customerReportDetailMatches: (
+      ($customerReportDetail.customerReport.id == $customerReportId) and
+      ($customerReportDetail.customerReport.snapshotSourceData == $createCustomerReport.customerReport.snapshotSourceData)
+    ),
+    customerReportDraftUpdated: (
+      ($updateCustomerReport.customerReport.title == $updatedCustomerReportTitle) and
+      ($updateCustomerReport.customerReport.internalNotes == "Updated Phase 7 draft proof") and
+      ($updateCustomerReport.customerReport.status == "DRAFT")
+    ),
+    invalidDraftApprovalStatus: $invalidDraftApprovalStatus,
+    readyCustomerReportStatus: $readyCustomerReport.customerReport.status,
+    readyCustomerReportUpdateStatus: $readyCustomerReportUpdateStatus,
+    draftAgainCustomerReportStatus: $draftAgainCustomerReport.customerReport.status,
+    readyAgainCustomerReportStatus: $readyAgainCustomerReport.customerReport.status,
+    approvedCustomerReportStatus: $approvedCustomerReport.customerReport.status,
+    approvedCustomerReportActorMatches: (
+      ($approvedCustomerReport.customerReport.approvedBy.id == $userId) and
+      ($approvedCustomerReport.customerReport.approvedAt != null)
+    ),
+    invalidApprovedDraftStatus: $invalidApprovedDraftStatus,
+    customerReportLiveMutationVisible: (
+      ($phase7MutatedMaterialCost.totalCost == 49.6) and
+      ($customerReportSourceAfterMutation.job.title == $phase7MutatedJobTitle) and
+      ($customerReportSourceAfterMutation.customer.name == $phase7MutatedCustomerName) and
+      ($customerReportSourceAfterMutation.address.street == "Changed Street 99") and
+      ($customerReportSourceAfterMutation.object.name == $phase7MutatedObjectName) and
+      ($customerReportSourceAfterMutation.objectArea.name == $phase7MutatedAreaName) and
+      ($customerReportSourceAfterMutation.costSummary.materialTotal == 49.6) and
+      ($customerReportSourceAfterMutation.costSummary.grandTotal == 434.6)
+    ),
+    customerReportSnapshotRemainsImmutable: (
+      ($customerReportAfterMutation.customerReport.title == $updatedCustomerReportTitle) and
+      ($customerReportAfterMutation.customerReport.snapshotSourceData == $createCustomerReport.customerReport.snapshotSourceData) and
+      ($customerReportAfterMutation.customerReport.snapshotCostBreakdown == $createCustomerReport.customerReport.snapshotCostBreakdown) and
+      ($customerReportAfterMutation.customerReport.snapshotCustomerName == $createCustomerReport.customerReport.snapshotCustomerName) and
+      ($customerReportAfterMutation.customerReport.snapshotAddressText == $createCustomerReport.customerReport.snapshotAddressText) and
+      ($customerReportAfterMutation.customerReport.snapshotObjectName == $createCustomerReport.customerReport.snapshotObjectName) and
+      ($customerReportAfterMutation.customerReport.snapshotObjectAreaName == $createCustomerReport.customerReport.snapshotObjectAreaName) and
+      ($customerReportAfterMutation.customerReport.snapshotJobTitle == $createCustomerReport.customerReport.snapshotJobTitle) and
+      ($customerReportAfterMutation.customerReport.snapshotCostGrandTotal == 422.2)
+    ),
+    archivedCustomerReportStatus: $archivedCustomerReport.customerReport.status,
+    directArchivedDraftValid: (
+      ($createArchivedDraftReport.customerReport.status == "DRAFT") and
+      ($archivedDraftReport.customerReport.status == "ARCHIVED") and
+      ($archivedDraftReport.customerReport.approvedBy == null) and
+      ($archivedDraftReport.customerReport.approvedAt == null)
+    ),
+    customerReportActivityLogged: (
+      ([$jobDetail.job.activity[].title] | map(startswith("Kundenbericht erstellt:")) | any) and
+      ([$jobDetail.job.activity[].title] | map(startswith("Kundenbericht zur Pruefung bereitgestellt:")) | any) and
+      ([$jobDetail.job.activity[].title] | map(startswith("Kundenbericht freigegeben:")) | any) and
+      ([$jobDetail.job.activity[].title] | map(startswith("Kundenbericht archiviert:")) | any)
+    ),
+    ineligibleCustomerReportSourceStatus: $ineligibleCustomerReportSourceStatus,
+    duplicateCustomerReportSourceStatus: $duplicateCustomerReportSourceStatus,
+    wrongJobCustomerReportReportStatus: $wrongJobCustomerReportReportStatus,
+    wrongJobCustomerReportAttachmentStatus: $wrongJobCustomerReportAttachmentStatus,
+    wrongJobCustomerReportCostStatus: $wrongJobCustomerReportCostStatus,
+    workerCustomerReportSourceStatus: $workerCustomerReportSourceStatus,
+    workerCustomerReportListStatus: $workerCustomerReportListStatus,
+    workerCustomerReportDetailStatus: $workerCustomerReportDetailStatus,
+    workerCustomerReportCreateStatus: $workerCustomerReportCreateStatus,
+    workerCustomerReportUpdateStatus: $workerCustomerReportUpdateStatus,
+    workerCustomerReportStatusStatus: $workerCustomerReportStatusStatus,
+    crossCustomerReportSourceStatus: $crossCustomerReportSourceStatus,
+    crossCustomerReportReadStatus: $crossCustomerReportReadStatus,
+    crossCustomerReportSelectedReportStatus: $crossCustomerReportSelectedReportStatus,
+    crossCustomerReportSelectedAttachmentStatus: $crossCustomerReportSelectedAttachmentStatus,
+    crossCustomerReportSelectedCostStatus: $crossCustomerReportSelectedCostStatus
+  }' "$SUMMARY_INPUT" > "${TMP_DIR}/summary.json"
 
 jq -e \
   --arg teamName "$TEAM_NAME" \
@@ -677,7 +1144,49 @@ jq -e \
     .workerCostUpdateStatus == "403" and
     .crossCostJobStatus == "404" and
     .crossCostUpdateStatus == "404" and
-    .crossCostItemStatus == "404"
+    .crossCostItemStatus == "404" and
+    .customerReportSourceContextMatches == true and
+    .customerReportSourceEligibilityMatches == true and
+    .customerReportSourceAttachmentMatches == true and
+    .customerReportSourceCostsMatch == true and
+    .customerReportCreated == true and
+    .customerReportScalarSnapshotMatches == true and
+    .customerReportStructuredSnapshotMatches == true and
+    .customerReportSelectedSourcesMatch == true and
+    .customerReportSelectedCostsMatch == true and
+    .customerReportFullCostSummaryMatches == true and
+    .customerReportListContainsCreated == true and
+    .customerReportDetailMatches == true and
+    .customerReportDraftUpdated == true and
+    .invalidDraftApprovalStatus == "400" and
+    .readyCustomerReportStatus == "READY_FOR_REVIEW" and
+    .readyCustomerReportUpdateStatus == "400" and
+    .draftAgainCustomerReportStatus == "DRAFT" and
+    .readyAgainCustomerReportStatus == "READY_FOR_REVIEW" and
+    .approvedCustomerReportStatus == "APPROVED" and
+    .approvedCustomerReportActorMatches == true and
+    .invalidApprovedDraftStatus == "400" and
+    .customerReportLiveMutationVisible == true and
+    .customerReportSnapshotRemainsImmutable == true and
+    .archivedCustomerReportStatus == "ARCHIVED" and
+    .directArchivedDraftValid == true and
+    .customerReportActivityLogged == true and
+    .ineligibleCustomerReportSourceStatus == "400" and
+    .duplicateCustomerReportSourceStatus == "400" and
+    .wrongJobCustomerReportReportStatus == "404" and
+    .wrongJobCustomerReportAttachmentStatus == "404" and
+    .wrongJobCustomerReportCostStatus == "404" and
+    .workerCustomerReportSourceStatus == "403" and
+    .workerCustomerReportListStatus == "403" and
+    .workerCustomerReportDetailStatus == "403" and
+    .workerCustomerReportCreateStatus == "403" and
+    .workerCustomerReportUpdateStatus == "403" and
+    .workerCustomerReportStatusStatus == "403" and
+    .crossCustomerReportSourceStatus == "404" and
+    .crossCustomerReportReadStatus == "404" and
+    .crossCustomerReportSelectedReportStatus == "404" and
+    .crossCustomerReportSelectedAttachmentStatus == "404" and
+    .crossCustomerReportSelectedCostStatus == "404"
   ' "${TMP_DIR}/summary.json" >/dev/null
 
 cat "${TMP_DIR}/summary.json"

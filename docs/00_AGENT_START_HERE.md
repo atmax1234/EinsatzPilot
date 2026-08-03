@@ -30,8 +30,8 @@ A meaningful change includes a new or changed model, migration, relationship, pe
 
 ## Current instruction
 
-The directory, backwards-compatible Job relation, item/category, generic Assignment, Job Execution Reports / Worker Findings, and Job Cost Ledger foundations are implemented, migrated, and covered by the expanded PostgreSQL smoke flow.
+The directory, backwards-compatible Job relation, item/category, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, and Phase 7 Customer/Object Report Generator foundations are implemented and migrated. Phase 7 adds OWNER/OFFICE-only, job-grounded customer report snapshots with explicit approved-report, attachment, and cost selection; copied directory/job context; an explicit review lifecycle; real API-backed web administration; and expanded PostgreSQL smoke coverage.
 
-The next session must begin with `Phase 7 Planning — Customer/Object Report Generator`, following `07_NEXT_STEPS.md`. Treat this as a serious product surface: design tenant ownership, source selection, snapshots, lifecycle, reviewability, evidence references, cost-summary treatment, and correction/version behavior before requesting implementation. Do not implement Phase 7 unless the next session explicitly asks for implementation after that planning work.
+The next recommended session is exactly `Phase 7B — Customer Report Polish and PDF Readiness`, following `07_NEXT_STEPS.md`. Improve the existing report presentation and source-selection experience and prepare a deliberate print/PDF boundary without claiming that PDF generation or export already exists. Preserve the stable snapshot contract and current permissions while inspecting the implementation before changing it.
 
-Do not skip directly to styled PDFs, invoice issuance, email sending, AI summaries, recurring contracts, command-board polish, drag-and-drop, QR codes, or mobile work. Items support job documentation and costs; they are not the center of an inventory or logistics product.
+Do not skip into invoice issuance, payments, customer email sending, AI summaries, recurring contracts, item movement/logistics, command-board work, drag-and-drop, QR codes, or mobile work. Invoice or email behavior requires later explicit approval. Items support job documentation and costs; they are not the center of an inventory or logistics product.

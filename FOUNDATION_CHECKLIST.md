@@ -3,7 +3,7 @@
 Use this to track when the system is actually ready to move out of foundation work.
 Be strict. “Kinda works” = not done.
 
-Assessment snapshot: checked items below were verified on 2026-04-18 against the live local setup where applicable.
+Assessment snapshot: checked items below were verified through 2026-08-03 against the live local setup where applicable.
 Verification now includes real PostgreSQL migrations, the API smoke flow, and web pages rendering live updated data from the database.
 
 Directory and Job relation snapshot: Customer, Address, Object, and ObjectArea foundation plus backwards-compatible Job relations were migrated and verified through the expanded live PostgreSQL smoke flow on 2026-07-19.
@@ -15,6 +15,8 @@ Assignment foundation snapshot: typed tenant-safe source/target links, lifecycle
 Job execution report snapshot: backwards-compatible structured findings, follow-up data, worker assignment access, linked evidence, explicit OWNER/OFFICE review, migration, UI, and expanded smoke coverage were verified on 2026-07-19.
 
 Job cost ledger snapshot: tenant-safe job cost lines, strict amount rules, optional item references, actor attribution, backend-derived summaries, real-API job-detail UI, migration, and expanded smoke coverage were verified on 2026-07-19.
+
+Customer report foundation snapshot: OWNER/OFFICE-only, job-grounded stable snapshots; explicit approved-report, attachment, and cost selection; copied directory/job context; lifecycle/activity rules; real-API web review; additive migration; and expanded smoke coverage were verified on 2026-08-03. PDF generation/export and delivery do not exist.
 
 ---
 
@@ -133,7 +135,7 @@ Job cost ledger snapshot: tenant-safe job cost lines, strict amount rules, optio
 * [x] structured worker findings exist
 * [x] work performed / still needed / follow-up fields exist
 * [x] OWNER/OFFICE report review lifecycle exists
-* [ ] customer-facing report output exists
+* [x] customer-facing report data and review UI exist (no PDF/export artifact)
 * [x] job cost ledger exists
 
 ---
@@ -273,20 +275,39 @@ You can do ALL of this without hacks:
 
 ---
 
-## 21. Phase 7 Customer/Object Report Planning Gate
+## 21. Phase 7 Customer/Object Report Generator Foundation
 
 * [x] Phase 5 reviewed findings, work, follow-up, and evidence prerequisites are implemented and smoke-proven
 * [x] Phase 6 job costs and backend-derived summary prerequisites are implemented and smoke-proven
-* [ ] report snapshot aggregate and tenant/job ownership are designed
-* [ ] eligible report states and explicit source-selection rules are designed
-* [ ] customer/address/object/object-area snapshot boundaries are designed
-* [ ] evidence reference, caption, ordering, and storage assumptions are designed
-* [ ] cost-line/summary, tax metadata, and currency snapshot boundaries are designed
-* [ ] draft/review/finalize/supersede/correction lifecycle is designed
-* [ ] OWNER/OFFICE/WORKER generation, review, and read permissions are designed
-* [ ] minimum clean reviewable UI is specified before PDF/export styling
-* [ ] a separate Phase 7 implementation prompt is explicitly approved
-* [x] PDFs, invoices, email sending, AI summaries, recurrence, command board, drag/drop, QR, and mobile remain deferred during planning
+* [x] CustomerReportSnapshot schema, closed type/status enums, and additive migration exist
+* [x] every created snapshot is company-owned and grounded in a tenant-validated Job
+* [x] copied Job/directory context remains stable and preserves free-text customer/location fallbacks
+* [x] source data and cost breakdown use explicit schema version and capture timestamp
+* [x] only explicitly selected APPROVED JobReports are copied, with stable requested ordering
+* [x] selected attachment IDs and metadata/captions/order are copied without pretending file bytes are embedded
+* [x] selected cost lines and backend-derived selected summary are copied with item/tax/vendor/receipt metadata
+* [x] optional full Job cost summary is distinct from selected detailed lines
+* [x] source selection and copied context are immutable after creation
+* [x] draft-authored fields and period validation are service-enforced
+* [x] DRAFT/READY_FOR_REVIEW/APPROVED/ARCHIVED transitions and terminal archival are service-enforced
+* [x] approval actor/time and report creation/status JobActivity are retained
+* [x] OWNER/OFFICE-only read/write/source permissions and WORKER denial are backend-enforced
+* [x] customer-report list, source, detail, create, draft-update, and status endpoints exist
+* [x] `/customer-reports` list/create/detail flows and Job-detail integration use real API data
+* [x] expanded smoke passes all 163 assertions: 121 preserved Phase 1-6 predicates plus 42 Phase 7 source, snapshot, lifecycle, role, validation, and tenant-isolation predicates
+* [x] next recommended phase is Phase 7B — Customer Report Polish and PDF Readiness
+* [x] actual PDF export, invoices, payments, email sending, AI, recurrence, movement/logistics, command board, drag/drop, QR, and mobile remain unimplemented
+
+## 22. Phase 7B Customer Report Polish and PDF Readiness
+
+* [ ] customer-visible output and office-only internal fields are separated in presentation
+* [ ] report layout and information hierarchy are polished for customer reading
+* [ ] print-specific view or styling is implemented and verified
+* [ ] reusable template/rendering boundary is defined where needed
+* [ ] source-selection eligibility, ordering, and cost-scope UX are polished
+* [ ] missing attachment/file-retention behavior is represented honestly
+* [ ] PDF export is described as preparation only until a real artifact/export flow exists
+* [x] invoice and email behavior require separate later approval
 
 ---
 

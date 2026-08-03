@@ -176,6 +176,23 @@ enum AssignmentStatus {
   CANCELED
 }
 
+enum CustomerReportType {
+  JOB_COMPLETION
+  INCIDENT
+  DAMAGE_REPORT
+  MAINTENANCE
+  OBJECT_STATUS
+  COST_OVERVIEW
+  OTHER
+}
+
+enum CustomerReportStatus {
+  DRAFT
+  READY_FOR_REVIEW
+  APPROVED
+  ARCHIVED
+}
+
 model Company {
   id             String          @id @default(cuid())
   name           String
@@ -196,6 +213,7 @@ model Company {
   items          Item[]
   assignments    Assignment[]
   jobCostLines   JobCostLine[]
+  customerReportSnapshots CustomerReportSnapshot[]
 }
 
 model User {
@@ -214,6 +232,8 @@ model User {
   createdAssignments  Assignment[]    @relation("AssignmentCreatedBy")
   createdJobCostLines JobCostLine[]   @relation("JobCostLineCreatedBy")
   updatedJobCostLines JobCostLine[]   @relation("JobCostLineUpdatedBy")
+  createdCustomerReports  CustomerReportSnapshot[] @relation("CustomerReportCreatedBy")
+  approvedCustomerReports CustomerReportSnapshot[] @relation("CustomerReportApprovedBy")
 }
 
 model Membership {
@@ -295,6 +315,7 @@ model Job {
   reports        JobReport[]
   attachments    JobAttachment[]
   costLines      JobCostLine[]
+  customerReportSnapshots CustomerReportSnapshot[]
 
   @@index([companyId])
   @@index([teamId])
@@ -399,6 +420,7 @@ model Customer {
   addresses Address[]
   objects   Object[]
   jobs      Job[]
+  customerReportSnapshots CustomerReportSnapshot[]
 
   @@index([companyId, name])
   @@index([companyId, isActive])
@@ -420,6 +442,7 @@ model Address {
   customer   Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   objects    Object[]
   jobs       Job[]
+  customerReportSnapshots CustomerReportSnapshot[]
 
   @@index([companyId, label])
   @@index([companyId, customerId])
@@ -441,6 +464,7 @@ model Object {
   address    Address?     @relation(fields: [addressId], references: [id], onDelete: SetNull)
   areas      ObjectArea[]
   jobs       Job[]
+  customerReportSnapshots CustomerReportSnapshot[]
 
   @@index([companyId, name])
   @@index([companyId, status])
@@ -460,6 +484,7 @@ model ObjectArea {
   company   Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   object    Object         @relation(fields: [objectId], references: [id], onDelete: Cascade)
   jobs      Job[]
+  customerReportSnapshots CustomerReportSnapshot[]
 
   @@index([companyId, objectId, name])
   @@index([companyId, type])
@@ -566,4 +591,63 @@ model Assignment {
   @@index([companyId, kind])
   @@index([companyId, startsAt])
   @@index([createdByUserId])
+}
+
+model CustomerReportSnapshot {
+  id                         String               @id @default(cuid())
+  companyId                  String
+  reportNumber               String
+  jobId                      String?
+  customerId                 String?
+  addressId                  String?
+  objectId                   String?
+  objectAreaId               String?
+  type                       CustomerReportType
+  status                     CustomerReportStatus @default(DRAFT)
+  title                      String
+  recipientName              String
+  periodStart                DateTime?
+  periodEnd                  DateTime?
+  issueSummary               String?
+  findingSummary             String?
+  workPerformedSummary       String?
+  workStillNeededSummary     String?
+  followUpSummary            String?
+  costSummaryText            String?
+  internalNotes              String?
+  snapshotCustomerName       String
+  snapshotAddressLabel       String?
+  snapshotAddressText        String
+  snapshotObjectName         String?
+  snapshotObjectAreaName     String?
+  snapshotJobReference       String
+  snapshotJobTitle           String
+  snapshotCostGrandTotal     Decimal?             @db.Decimal(14, 2)
+  snapshotCostCurrency       String?               @db.VarChar(3)
+  snapshotCostBreakdown      Json?
+  snapshotSourceData         Json
+  createdByUserId            String
+  approvedByUserId           String?
+  approvedAt                 DateTime?
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+  company                    Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job                        Job?                  @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  customer                   Customer?             @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  address                    Address?              @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  object                     Object?               @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  objectArea                 ObjectArea?           @relation(fields: [objectAreaId], references: [id], onDelete: SetNull)
+  createdBy                  User                  @relation("CustomerReportCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  approvedBy                 User?                 @relation("CustomerReportApprovedBy", fields: [approvedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, reportNumber])
+  @@index([companyId, status, createdAt])
+  @@index([companyId, type, createdAt])
+  @@index([companyId, jobId, createdAt])
+  @@index([companyId, customerId])
+  @@index([companyId, addressId])
+  @@index([companyId, objectId])
+  @@index([companyId, objectAreaId])
+  @@index([createdByUserId])
+  @@index([approvedByUserId])
 }
