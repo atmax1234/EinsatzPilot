@@ -7,20 +7,8 @@ import {
   getCustomerReportTypeLabel,
   toCustomerReportDateInput,
 } from '../../../../lib/customer-reports';
-import {
-  formatJobCostDate,
-  formatJobCostMoney,
-  getJobCostKindLabel,
-  getJobCostUnitLabel,
-} from '../../../../lib/job-costs';
-import { formatDateTime } from '../../../../lib/operations';
-import {
-  formatFileSize,
-  getAttachmentProxyUrl,
-  getJobReportTypeLabel,
-  getReportReviewStatusLabel,
-} from '../../../../lib/reports';
 import { requireServerSession } from '../../../../lib/server-auth';
+import { CustomerReportSourcePicker } from '../customer-report-source-picker';
 
 export default async function NewCustomerReportPage({
   searchParams,
@@ -66,14 +54,11 @@ export default async function NewCustomerReportPage({
     );
   }
 
-  const selectableReports = source.jobReports.filter((report) => report.selectable);
-  const selectableAttachments = source.attachments.filter((attachment) => attachment.selectable);
-
   return (
     <main className="content-page">
       <section className="hero-card">
         <p className="eyebrow">Neuer Kundenbericht</p>
-        <h1>Snapshot fuer {source.job.reference} anlegen</h1>
+        <h1>Bericht fuer {source.job.reference} vorbereiten</h1>
         <p>
           {source.job.title} · {source.customer?.name ?? source.job.customerName} ·{' '}
           {source.address
@@ -83,6 +68,24 @@ export default async function NewCustomerReportPage({
         <div className="action-row">
           <Link href={`/jobs/${jobId}`}>Zum Auftrag</Link>
           <Link href="/customer-reports">Zu den Kundenberichten</Link>
+        </div>
+      </section>
+
+      <section className="creation-steps" aria-label="Ablauf der Berichtserstellung">
+        <div>
+          <span>1</span>
+          <strong>Kontext pruefen</strong>
+          <small>Auftrag, Empfaenger und Objekt</small>
+        </div>
+        <div>
+          <span>2</span>
+          <strong>Quellen auswaehlen</strong>
+          <small>Berichte, Nachweise und Kosten</small>
+        </div>
+        <div>
+          <span>3</span>
+          <strong>Snapshot anlegen</strong>
+          <small>Danach bleiben Quellen unveraenderlich</small>
         </div>
       </section>
 
@@ -216,137 +219,17 @@ export default async function NewCustomerReportPage({
                 <span>Kostenhinweis</span>
                 <textarea name="costSummaryText" rows={3} />
               </label>
-              <label className="form-field full-span">
-                <span>Interne Notizen</span>
+              <label className="form-field full-span internal-note-field">
+                <span>Interne Notizen · nur Buero</span>
                 <textarea name="internalNotes" rows={3} />
+                <small>
+                  Diese Notizen erscheinen weder in der Kundenansicht noch im Browserdruck.
+                </small>
               </label>
             </div>
           </section>
 
-          <section className="content-grid">
-            <article className="panel">
-              <p className="eyebrow">Ausgewaehlte Einsatzberichte</p>
-              <h2>Nur freigegebene Berichte kopieren</h2>
-              {source.jobReports.length > 0 ? (
-                <div className="stack-list">
-                  {source.jobReports.map((report) => (
-                    <div className="stack-item" key={report.id}>
-                      <label className="checkbox-field">
-                        <input
-                          disabled={!report.selectable}
-                          name="selectedJobReportIds"
-                          type="checkbox"
-                          value={report.id}
-                        />
-                        <div>
-                          <strong>{report.summary}</strong>
-                          <p className="compact-text">
-                            {getJobReportTypeLabel(report.type)} ·{' '}
-                            {getReportReviewStatusLabel(report.reviewStatus)} ·{' '}
-                            {formatDateTime(report.createdAt)}
-                          </p>
-                          {!report.selectable ? (
-                            <p className="compact-text">Nicht zur Snapshot-Auswahl freigegeben.</p>
-                          ) : null}
-                        </div>
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p>Zu diesem Auftrag gibt es noch keine Einsatzberichte.</p>
-              )}
-              <p className="muted-note">
-                {selectableReports.length} Bericht(e) sind durch das Backend auswaehlbar.
-              </p>
-            </article>
-
-            <article className="panel">
-              <p className="eyebrow">Ausgewaehlte Nachweise</p>
-              <h2>Fotos und Dateien kopieren</h2>
-              {source.attachments.length > 0 ? (
-                <div className="stack-list">
-                  {source.attachments.map((attachment) => (
-                    <div className="stack-item" key={attachment.id}>
-                      <label className="checkbox-field">
-                        <input
-                          disabled={!attachment.selectable}
-                          name="selectedAttachmentIds"
-                          type="checkbox"
-                          value={attachment.id}
-                        />
-                        <div>
-                          <strong>{attachment.caption ?? attachment.fileName}</strong>
-                          <p className="compact-text">
-                            {attachment.kind === 'PHOTO' ? 'Foto' : 'Datei'} ·{' '}
-                            {formatFileSize(attachment.sizeBytes)} ·{' '}
-                            {formatDateTime(attachment.uploadedAt)}
-                          </p>
-                        </div>
-                      </label>
-                      <div className="action-row">
-                        <a href={getAttachmentProxyUrl(attachment.id)} target="_blank" rel="noreferrer">
-                          Nachweis oeffnen
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p>Zu diesem Auftrag wurden noch keine Nachweise hochgeladen.</p>
-              )}
-              <p className="muted-note">
-                {selectableAttachments.length} Nachweis(e) sind durch das Backend auswaehlbar.
-              </p>
-            </article>
-          </section>
-
-          <section className="panel">
-            <p className="eyebrow">Kosten</p>
-            <h2>Kostenzeilen explizit auswaehlen</h2>
-            <p>
-              Aktuelle Gesamtsumme:{' '}
-              <strong>
-                {formatJobCostMoney(source.costSummary.grandTotal, source.costSummary.currency)}
-              </strong>
-            </p>
-            {source.costLines.length > 0 ? (
-              <div className="stack-list">
-                {source.costLines.map((costLine) => (
-                  <div className="stack-item" key={costLine.id}>
-                    <label className="checkbox-field">
-                      <input
-                        name="selectedCostLineIds"
-                        type="checkbox"
-                        value={costLine.id}
-                      />
-                      <div>
-                        <strong>
-                          {costLine.description} ·{' '}
-                          {formatJobCostMoney(costLine.totalCost, costLine.currency)}
-                        </strong>
-                        <p className="compact-text">
-                          {getJobCostKindLabel(costLine.kind)} · {costLine.quantity}{' '}
-                          {getJobCostUnitLabel(costLine.unit)} ·{' '}
-                          {formatJobCostDate(costLine.costDate)}
-                        </p>
-                      </div>
-                    </label>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p>Zu diesem Auftrag gibt es noch keine Kostenzeilen.</p>
-            )}
-            <label className="form-field checkbox-field nested-stack">
-              <input name="includeFullCostSummary" type="checkbox" />
-              <span>Zusatzlich die vollstaendige backend-berechnete Auftragssumme kopieren</span>
-            </label>
-            <p className="muted-note">
-              Die Auswahl erzeugt Kostensnapshot-Daten, aber keine Rechnung oder
-              Steuerberechnung.
-            </p>
-          </section>
+          <CustomerReportSourcePicker source={source} />
 
           <section className="panel">
             <div className="form-actions">

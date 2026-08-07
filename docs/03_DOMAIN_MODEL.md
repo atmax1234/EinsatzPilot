@@ -39,13 +39,17 @@
 
   Source inclusion is explicit and fixed at creation. Only `APPROVED` JobReports may be selected; their findings, performed/outstanding work, follow-up fields, author/reviewer/team context, review state, order, and timestamps are copied. Selected attachments copy metadata/reference data—ID, optional report ID, kind, filename, MIME type, size, caption, order, and timestamps—but not file bytes. Any attachment on the same company Job is currently eligible. Selected cost lines copy ordered line details, optional Item/vendor/receipt/tax metadata, and their source update time, with a backend-derived selected-line summary. `includeFullCostSummary` optionally copies the entire Job's grouped summary in addition to selected lines; it does not copy every unselected line. The top-level total prefers that full summary, otherwise the selected-line summary when present. Source selection and snapshot context cannot be edited or refreshed; a different selection creates a separate unlinked snapshot.
 
-## Planned models
+## Implemented presentation boundary
 
 ### Customer Report Presentation / PDF Readiness (Phase 7B)
 
-The next recommended phase may improve the existing customer-report layout, introduce a deliberate print view, prepare a PDF-export boundary, add template behavior, and make source selection easier to understand. Those changes must consume the stable `CustomerReportSnapshot` contract and preserve the difference between customer-visible content and office-only internal notes.
+Phase 7B adds no database model and does not change the `CustomerReportSnapshot` contract. A reusable web presentation component accepts a snapshot detail with internal notes and live creator/approver projections removed from its input. It renders only stored report scalars plus the versioned copied source/cost payload: recipient and context, customer-authored issue/findings/work/follow-up text, approved copied execution reports, evidence metadata references, selected cost details, optional full grouped costs, status, and stored approval time.
 
-No PDF artifact, PDF generator/export endpoint, template/version model, customer portal, or delivery record exists. Phase 7B must not describe preparation as working PDF export, and it must not add invoice issuance or customer email sending unless a later session explicitly approves those separate domains.
+The office wrapper owns draft editing, lifecycle actions, current actor attribution, original attachment-file links, source diagnostics, and internal notes. Internal notes are structurally absent from the customer component and hidden again by print CSS. The A4-oriented browser-print mode hides the admin shell and office wrapper. Attachment bytes are neither copied nor fetched for the customer document; only the office-only original-file action uses the existing attachment route and local storage.
+
+No PDF artifact, PDF generator/export endpoint, template/version model, customer portal, or delivery record exists. Browser print is readiness, not export.
+
+## Planned models
 
 ### Recurring Service Contract
 

@@ -16,7 +16,7 @@ Job execution report snapshot: backwards-compatible structured findings, follow-
 
 Job cost ledger snapshot: tenant-safe job cost lines, strict amount rules, optional item references, actor attribution, backend-derived summaries, real-API job-detail UI, migration, and expanded smoke coverage were verified on 2026-07-19.
 
-Customer report foundation snapshot: OWNER/OFFICE-only, job-grounded stable snapshots; explicit approved-report, attachment, and cost selection; copied directory/job context; lifecycle/activity rules; real-API web review; additive migration; and expanded smoke coverage were verified on 2026-08-03. PDF generation/export and delivery do not exist.
+Customer report foundation snapshot: OWNER/OFFICE-only, job-grounded stable snapshots; explicit approved-report, attachment, and cost selection; copied directory/job context; lifecycle/activity rules; real-API web review; additive migration; and expanded smoke coverage were verified on 2026-08-03. Phase 7B customer-readable presentation, internal-only separation, source-scope UX, and browser print were added and verified through code inspection, typecheck, production build, and the unchanged 163-assertion smoke flow on 2026-08-07. PDF generation/export and delivery do not exist.
 
 ---
 
@@ -295,18 +295,18 @@ You can do ALL of this without hacks:
 * [x] customer-report list, source, detail, create, draft-update, and status endpoints exist
 * [x] `/customer-reports` list/create/detail flows and Job-detail integration use real API data
 * [x] expanded smoke passes all 163 assertions: 121 preserved Phase 1-6 predicates plus 42 Phase 7 source, snapshot, lifecycle, role, validation, and tenant-isolation predicates
-* [x] next recommended phase is Phase 7B — Customer Report Polish and PDF Readiness
+* [x] next recommended phase is Phase 8 — Recurring Service Contracts Foundation
 * [x] actual PDF export, invoices, payments, email sending, AI, recurrence, movement/logistics, command board, drag/drop, QR, and mobile remain unimplemented
 
 ## 22. Phase 7B Customer Report Polish and PDF Readiness
 
-* [ ] customer-visible output and office-only internal fields are separated in presentation
-* [ ] report layout and information hierarchy are polished for customer reading
-* [ ] print-specific view or styling is implemented and verified
-* [ ] reusable template/rendering boundary is defined where needed
-* [ ] source-selection eligibility, ordering, and cost-scope UX are polished
-* [ ] missing attachment/file-retention behavior is represented honestly
-* [ ] PDF export is described as preparation only until a real artifact/export flow exists
+* [x] customer-visible output and office-only internal fields are separated in presentation
+* [x] report layout and information hierarchy are polished for customer reading
+* [x] print-specific view or styling is implemented and verified through code inspection and production build
+* [x] reusable snapshot-only presentation boundary is defined without a template engine
+* [x] source-selection eligibility, ordering, and cost-scope UX are polished
+* [x] missing attachment/file-retention behavior is represented honestly in office context
+* [x] PDF export is described as preparation only until a real artifact/export flow exists
 * [x] invoice and email behavior require separate later approval
 
 ---

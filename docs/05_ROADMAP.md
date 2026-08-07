@@ -66,15 +66,19 @@ Phases are dependency order, not calendar promises. EinsatzPilot is job-centered
 
 ## Phase 7B — Customer Report Polish and PDF Readiness
 
-**Status:** Next recommended phase. PDF generation/export is not implemented.
+**Status:** Implemented and verified as a web-only presentation slice. PDF generation/export is not implemented.
 
 **Goals:** Improve the existing customer-report presentation and information hierarchy, make selected-source review clearer, define customer-visible versus internal-only fields, add a deliberate print view if justified, prepare the PDF-export boundary, and establish practical template behavior without weakening snapshot reproducibility.
 
 **Dependencies:** The implemented Phase 7 snapshot contract, stable attachment access, explicit permissions, and a documented rendering/template strategy. Any eventual PDF artifact must be generated from persisted snapshot data rather than silently rereading current Job, directory, report, attachment metadata, or cost state.
 
+**Implemented boundary:** The list is easier to scan; creation explains source eligibility, attachment-reference limitations, selected cost details versus the optional full grouped summary, and the exact selected counts. Detail uses a reusable customer-visible component that receives stored snapshot data without internal notes or live actor projections. A browser-print button and A4 print stylesheet hide the admin shell, controls, diagnostics, original-file actions, and internal notes. Evidence is printed as stored metadata references. No Prisma, API, lifecycle, permission, or shared-contract change was required.
+
 **Must not build without separate later approval:** Actual PDF generation/export, invoice or offer issuance, payments, customer email sending, AI summaries, recurring contracts, item movement/logistics, command-board interactions, drag-and-drop, QR codes, or mobile flows. Phase 7B preparation must not be presented as working PDF export.
 
 ## Phase 8 — Recurring Service Contracts
+
+**Status:** Next recommended phase.
 
 **Goals:** Model object-based recurring cleaning, caretaking, window, garden, winter-service, inspection, and maintenance definitions; add service templates, schedules, idempotent job generation, exceptions, and lifecycle.
 

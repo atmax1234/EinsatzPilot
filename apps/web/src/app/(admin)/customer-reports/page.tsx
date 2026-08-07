@@ -32,8 +32,9 @@ export default async function CustomerReportsPage({
         <h1>Freigabefaehige Auftragsnachweise</h1>
         <p>
           Kundenberichte kopieren bewusst ausgewaehlte Auftrags-, Berichts-, Nachweis-
-          und Kostendaten in einen stabilen Stand. Diese Ansicht verwaltet nur die
-          Berichtsdaten; PDF, Versand und Rechnungen sind nicht Teil dieses Bereichs.
+          und Kostendaten in einen stabilen Stand. Die Detailansicht ist fuer den sauberen
+          Browserdruck vorbereitet; PDF-Export, Versand und Rechnungen sind nicht Teil
+          dieses Bereichs.
         </p>
       </section>
 
@@ -108,10 +109,11 @@ export default async function CustomerReportsPage({
               <thead>
                 <tr>
                   <th>Bericht</th>
+                  <th>Art / Status</th>
+                  <th>Empfaenger / Kunde</th>
+                  <th>Objekt / Adresse</th>
                   <th>Auftrag</th>
-                  <th>Empfaenger / Kontext</th>
-                  <th>Status</th>
-                  <th>Aktualisiert</th>
+                  <th>Erstellt / Freigabe</th>
                   <th>Aktion</th>
                 </tr>
               </thead>
@@ -119,9 +121,27 @@ export default async function CustomerReportsPage({
                 {customerReports.map((report) => (
                   <tr key={report.id}>
                     <td>
-                      <Link href={`/customer-reports/${report.id}`}>{report.title}</Link>
+                      <Link href={`/customer-reports/${report.id}`}>{report.reportNumber}</Link>
+                      <strong>{report.title}</strong>
+                    </td>
+                    <td>
+                      <strong>{getCustomerReportTypeLabel(report.type)}</strong>
+                      <span className={`status-pill ${getCustomerReportStatusTone(report.status)}`}>
+                        {getCustomerReportStatusLabel(report.status)}
+                      </span>
+                    </td>
+                    <td>
+                      <strong>{report.recipientName}</strong>
+                      <span>{report.snapshotCustomerName}</span>
+                    </td>
+                    <td>
+                      <strong>{report.snapshotObjectName ?? 'Ohne Objektbezug'}</strong>
+                      {report.snapshotObjectAreaName ? (
+                        <span>{report.snapshotObjectAreaName}</span>
+                      ) : null}
                       <span>
-                        {report.reportNumber} · {getCustomerReportTypeLabel(report.type)}
+                        {report.snapshotAddressLabel ? `${report.snapshotAddressLabel}: ` : ''}
+                        {report.snapshotAddressText}
                       </span>
                     </td>
                     <td>
@@ -133,18 +153,13 @@ export default async function CustomerReportsPage({
                       <span>{report.snapshotJobReference}</span>
                     </td>
                     <td>
-                      <strong>{report.recipientName}</strong>
+                      <strong>{formatDateTime(report.createdAt)}</strong>
                       <span>
-                        {report.snapshotObjectName ?? report.snapshotCustomerName} ·{' '}
-                        {report.snapshotAddressText}
+                        {report.approvedAt
+                          ? `Freigegeben ${formatDateTime(report.approvedAt)}`
+                          : 'Noch nicht freigegeben'}
                       </span>
                     </td>
-                    <td>
-                      <span className={`status-pill ${getCustomerReportStatusTone(report.status)}`}>
-                        {getCustomerReportStatusLabel(report.status)}
-                      </span>
-                    </td>
-                    <td>{formatDateTime(report.updatedAt)}</td>
                     <td>
                       <Link className="table-action" href={`/customer-reports/${report.id}`}>
                         Oeffnen

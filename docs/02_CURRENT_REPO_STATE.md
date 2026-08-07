@@ -2,14 +2,15 @@
 
 ## Snapshot
 
-This reflects the repository inspected on 2026-08-03. Checked-in code is the source of truth if it later differs.
+This reflects the repository inspected on 2026-08-07. Checked-in code is the source of truth if it later differs.
 
 ## Session handoff
 
 - Phase 5 — Job Execution Reports / Worker Findings and Phase 6 — Job Cost Ledger remain implemented and smoke-proven.
-- Phase 7 — Customer/Object Report Generator Foundation is implemented with an additive migration, shared contracts, tenant-safe API rules, job-grounded stable snapshots, a real reviewable web UI, and expanded smoke coverage.
-- The next recommended phase is exactly `Phase 7B — Customer Report Polish and PDF Readiness`.
-- Phase 7B may improve the report layout, print view, PDF-export preparation, templates, and source-selection UX. No PDF generation/export, invoice issuance, payment, or email delivery exists today.
+- Phase 7 — Customer/Object Report Generator Foundation remains implemented with an additive migration, shared contracts, tenant-safe API rules, job-grounded stable snapshots, a real reviewable web UI, and expanded smoke coverage.
+- Phase 7B — Customer Report Polish and PDF Readiness is implemented as a web-only presentation slice with no Prisma, API, lifecycle, permission, or shared-contract change.
+- The next recommended phase is exactly `Phase 8 — Recurring Service Contracts Foundation`.
+- Browser print exists. No generated PDF/export artifact, invoice issuance, payment, or email delivery exists today.
 
 EinsatzPilot is a pnpm TypeScript monorepo:
 
@@ -72,13 +73,15 @@ Shared types cover auth/session/company context; memberships; teams and members;
 
 The Next.js app has `/login`, `/dashboard`, `/jobs`, `/jobs/[jobId]`, `/teams`, `/reports`, `/customer-reports`, `/customer-reports/new`, `/customer-reports/[reportId]`, `/customers`, `/objects`, `/objects/[objectId]`, `/items`, and `/assignments`. It stores the development token in an HTTP-only cookie and uses the real API for implemented flows. Job detail supports legacy/general and structured report submission, displays findings/work/follow-up/review data, keeps report-linked evidence visible, and shows review controls only to OWNER/OFFICE. It also displays backend-derived cost summaries and cost lines to all company roles, with minimal create/edit forms only for OWNER/OFFICE and optional item choices from the real API. Job create/edit forms expose optional live directory selectors while retaining required free-text customer and location fields.
 
-The customer-report web surface is visible only to OWNER/OFFICE in navigation and job detail. It lists and filters real snapshots, opens job-grounded creation, shows current tenant-safe source options, explicitly selects approved job reports, attachments, and cost lines, optionally includes the full job-cost summary, and creates a stable draft through the API. Detail displays copied context, authored summaries, ordered reports and evidence, selected cost lines, optional grouped full costs, approval attribution, and lifecycle controls. Only draft-authored fields can be edited; the copied source selection is read-only. Evidence links still resolve the original attachment by ID. This is a reviewable data UI, not a print view, generated PDF, customer portal, or delivery flow.
+The customer-report web surface is visible only to OWNER/OFFICE in navigation and job detail. The list exposes report number/title/type, status, recipient/customer, object/address, Job reference, creation time, approval time, and a direct action. Creation makes the selected Job and copied context explicit, explains status-specific report eligibility, distinguishes attachment metadata references from file bytes, separates selected cost details from the optional full grouped Job summary, and provides a live selection-count summary before creation. The backend remains authoritative for every submitted source ID.
+
+Detail now has a reusable customer-document boundary built only from stored `CustomerReportSnapshot` scalar/source/cost data. It presents recipient, customer, object/address/Job context, authored issue/findings/work/follow-up text, approved copied reports, evidence metadata references, cost detail/group summaries, report status, and stored approval time in a white A4-oriented layout. Browser print hides navigation, actions, forms, lifecycle controls, live actor projections, original-file controls, source diagnostics, and internal notes. Internal notes are structurally excluded from the presentation prop and displayed in a separate, clearly marked office-only panel. Original evidence links remain available only in office context and still depend on the locally stored attachment file.
 
 The customer page supports customer/address listing, creation, and update. Object pages support listing, creation, detail/update, and object-area creation/update. The item page supports category and item listing, creation, and basic inline update. The assignment page uses grouped real-API entity options to create links and update status, notes, and timing.
 
 Some copy in `admin-mvp.ts` is stale and describes already-connected areas as future work; verify pages and API calls rather than trusting that helper copy.
 
-There are no PDF/export, print-template, customer delivery/email, invoice/payment, command board, drag-and-drop, movement, custody, bundle, QR, recurrence, mobile-workflow, or AI screens.
+There is no generated PDF/export artifact, customer delivery/email, invoice/payment, command board, drag-and-drop, movement, custody, bundle, QR, recurrence, mobile workflow, AI screen, or template/version model. Browser print is a presentation feature, not PDF export.
 
 ## Mobile readiness
 
@@ -88,7 +91,7 @@ There are no PDF/export, print-template, customer delivery/email, invoice/paymen
 
 - PostgreSQL 16 is managed through the Podman helper in the verified local setup. The expanded smoke script covers directory CRUD, legacy and linked Job creation, Job relation updates/options/activity, item-category and item behavior, assignment create/list/detail/update/options, supported assignment shapes, duplicate/time validation, unchanged `Job.teamId`, legacy and structured reports, linked evidence, follow-up, office review, job-cost create/list/update/summary behavior, and the Phase 7 customer-report source, snapshot, lifecycle, permission, and tenant-isolation paths.
 - Build/typecheck scripts exist. Lint/test scripts are placeholders and run no real checks.
-- On 2026-08-03, all eleven migrations were applied/current on the local PostgreSQL database; focused Prisma/schema/contracts/API verification, root typecheck, root production build, and `pnpm smoke:api` passed. The smoke flow passed all 163 assertions: all 121 Phase 1-6 predicates remained intact and 42 Phase 7 predicates proved source/context eligibility, snapshot contents and stability, selected/full costs, lifecycle/activity, role denial, wrong-job rejection, and tenant isolation. `git diff --check` also passed for the final handoff. The reserved mobile scaffold includes only an inert source marker so the root typecheck remains usable without adding mobile behavior.
+- On 2026-08-07, all eleven migrations were applied/current on PostgreSQL 16; Prisma validation/generation, root typecheck, root production build, the unchanged `pnpm smoke:api` flow, and `git diff --check` passed. The smoke flow still passes all 163 assertions: all 121 Phase 1-6 predicates and 42 Phase 7 predicates remain intact. Phase 7B is presentation-only, so no API smoke assertions were added; source eligibility, internal-note persistence, lifecycle, immutable detail snapshots after live-source mutation, OWNER/OFFICE access, WORKER denial, and tenant isolation were already covered. The print stylesheet and structural internal-field exclusion were inspected through code and the production build; there is no automated browser-print regression suite.
 - Production auth, token revocation/refresh, hardened cookie configuration, production object storage, structured logging, and formal API docs are missing.
 - Movement, custody, bundle, specialized asset/vehicle, billing, notification, automation, and enterprise domains are missing.
 - Assignment source/target IDs are typed polymorphic references and therefore do not have direct database foreign keys. The service validates them on create/update; future delete/archive policies must preserve assignment readability.
@@ -97,7 +100,7 @@ There are no PDF/export, print-template, customer delivery/email, invoice/paymen
 - Cost lines have no delete/correction event history or approval lifecycle. Tax rate is stored as cost metadata but is not used to calculate tax-inclusive/exclusive totals. Each job currently uses one currency, and receipt files are not linked directly to cost lines.
 - Customer-report snapshots have no explicit revision, supersession, correction linkage, deletion, source reselection, or snapshot-refresh operation. A new selection produces a separate report without a version-family relation. Draft authored-field edits do not create their own audit events.
 - Attachment metadata is copied, but file bytes remain in local attachment storage and are opened through the original attachment ID. A later storage/retention design must preserve those references.
-- There is no customer-facing PDF or export artifact, print-specific layout, template system, customer portal, download history, or email delivery. Internal notes are visible in the current office detail UI and must be deliberately excluded from any later customer output.
+- There is no customer-facing PDF/export artifact, server-side generator, template/version model, customer portal, download history, or email delivery. The browser-print layout exists, but browser pagination can vary and requires normal print-preview review for especially long reports. Internal notes are deliberately office-only and excluded from the customer document and print CSS.
 - Customer-report tax values are copied metadata only; no net/gross/tax calculation exists. The optional full cost snapshot contains grouped backend totals, not detailed copies of every unselected cost line.
 - Customer reports are job-grounded; there is no multi-job object-history aggregation or object-only generation.
 - Local boot is not yet documented as confusion-free in the foundation checklist.

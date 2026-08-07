@@ -22,7 +22,10 @@ Tenant-safe identity and roles
 
 Reviewed job execution + object memory + job costs
 └── Customer/Object report snapshot foundation (implemented)
-    └── Customer report polish and PDF readiness (next; PDF not implemented)
+    └── Customer report polish and browser-print readiness (implemented; PDF not implemented)
+
+Customer/object foundation + jobs + timezone/scheduling rules
+└── Recurring service contracts (next)
 
 Recurring services + jobs + assignments + reports + costs
 └── Company command-center dashboard
@@ -43,7 +46,7 @@ ItemCategory + Item
 | Worker findings | **Implemented foundation:** compatible report types/fields, actor, worker job access, tenant rules, linked evidence, explicit office review | Free-form UI that loses existing reports or evidence |
 | Job cost ledger | **Implemented foundation:** tenant-owned cost lines, strict kinds/units/amounts, optional item validation, actor attribution, backend summaries | Frontend-only totals or treating item quantity as job cost |
 | Customer report generator | **Implemented foundation:** job-grounded stable source snapshots, approved-report eligibility, explicit attachment/cost selection, lifecycle, tenant rules, shared contracts, API, real UI, and smoke coverage | Resolving mutable sources live or presenting a styled view as an issued/exported document |
-| Customer report polish / PDF readiness | Existing persisted snapshot data and approval lifecycle, customer-visible/internal field boundary, reproducible attachment access, print/export contract, template decisions | Claiming PDF export exists because the review UI renders, or coupling invoice/email behavior into presentation work |
+| Customer report polish / PDF readiness | **Implemented:** stored-snapshot presentation boundary, explicit customer/internal separation, source-scope UX, A4 browser print, honest attachment limitation | Claiming PDF export exists because browser print renders, or coupling invoice/email behavior into presentation work |
 | Recurring service contracts | Stable customers/objects/jobs, schedule/timezone rules, templates, generation idempotency | Repeating browser reminders without durable definitions |
 | Command-center dashboard | Trusted jobs, assignments, findings, costs, object issues, server-backed metrics | Decorative cards, fake counts, or premature drag-and-drop |
 | Offer/invoice preparation | Reviewed job costs, customer/object context, immutable line snapshots, numbering/tax rules | Mutable issued documents or unsupported totals |
@@ -54,10 +57,10 @@ ItemCategory + Item
 
 A model or route alone is not a completed dependency. Before dependent UI begins, require reviewed ownership and lifecycle, shared contracts, runtime validation, tenant-safe references, service-level roles, useful errors, representative denial/cross-tenant verification, and updated documentation.
 
-The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, and Phase 7 Customer/Object Report Generator foundations meet this gate. The next default slice is exactly `Phase 7B — Customer Report Polish and PDF Readiness`, using the existing immutable source snapshot rather than rereading mutable operational data. Item movement is not a prerequisite and should remain optional until a concrete traceability workflow justifies it.
+The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator, and Phase 7B presentation/print foundations meet this gate. The next default slice is exactly `Phase 8 — Recurring Service Contracts Foundation`. Item movement is not a prerequisite and should remain optional until a concrete traceability workflow justifies it.
 
 ## Phase 7 snapshot gate
 
 Phase 7 now supplies a company-owned, job-grounded aggregate; explicit selected source IDs; copied job/directory, approved-report, attachment-metadata, and cost data; fixed source ordering; OWNER/OFFICE-only access; a draft/review/approve/archive lifecycle; job activity; and a minimum real-API review UI. Source selection is immutable after creation and there is no linked revision/supersession model yet.
 
-Phase 7B may improve layout, print behavior, PDF-export preparation, templates, and source-selection UX. A real export must later define artifact generation, reproducible file access, internal-field exclusion, template/version identity, authorization, and failure/audit behavior. Invoice issuance, payments, email delivery, AI, recurrence, movement/logistics, command board, drag-and-drop, QR, and mobile remain outside this dependency slice.
+Phase 7B now supplies clearer source eligibility/cost-scope UX, a snapshot-only customer presentation, structural internal-note exclusion, office-only original-file diagnostics, and browser-print styling. A real export must later define artifact generation, reproducible file access, template/version identity, authorization, and failure/audit behavior; browser print alone does not satisfy that gate. Invoice issuance, payments, email delivery, AI, movement/logistics, command board, drag-and-drop, QR, and mobile remain outside this dependency slice.
