@@ -2,67 +2,79 @@
 
 ## End-of-session checkpoint
 
-Phase 7B — Customer Report Polish and PDF Readiness is implemented on the Phase 7 immutable `CustomerReportSnapshot` foundation.
+Phase 8 — Daily Worksheets / Team Protocols Foundation is implemented on the existing tenant, team, directory, Job, report, cost, and customer-report foundations.
 
-### Phase 7B implemented behavior
+### Phase 8 implemented behavior
 
-- `/customer-reports` now exposes report number, title, type, status, recipient/customer, object/area/address, linked Job reference/title, creation time, approval time, and a direct open action in a scan-friendly table.
-- `/customer-reports/new?jobId=...` makes the selected Job and copied customer/address/object context explicit. Every execution report shows its review status and a precise eligibility explanation; only backend-approved options are enabled.
-- Attachment selection now states that the snapshot copies metadata and a reference, not file bytes. The office receives an explicit warning that the original currently depends on local attachment storage.
-- Cost selection distinguishes individual copied detail lines from the optional full backend-derived Job summary. A live pre-submit summary shows selected report, evidence, and cost-line counts plus the full-summary choice. The client does not invent a selected monetary summary; the backend creates the governed snapshot totals.
-- Internal notes are labelled as office-only during creation and draft editing. Detail renders them once in a separate internal panel marked as excluded from customer output.
-- Detail has a reusable customer-document component with a stronger header, recipient/customer context, object/address/Job context, authored issue/findings/work/follow-up sections, copied approved reports, evidence metadata references, selected cost details, optional grouped costs, status, and stored approval time.
-- The customer component receives the detail object only after `internalNotes`, `createdBy`, and `approvedBy` projections are removed. It performs no API calls and does not resolve original attachment files.
-- A `Browserdruck oeffnen` control calls the browser print dialog. A4-oriented print CSS hides the sidebar, links/actions, forms, lifecycle controls, flash messages, internal notes, live actor attribution, source diagnostics, and original attachment controls while keeping the customer document readable.
+- `WorkdaySheet` is a company-owned dated execution paper with an optional title, team and/or direct WORKER assignment, office-only internal notes, review notes, and actor/timestamp attribution for creation, send, submission, review, and archival.
+- `WorkdaySheetRow` is an ordered planned/actual pair. `plannedText` is required; `actualText`, notes, `HH:mm` times, and links to a customer, address, object, object area, or existing Job are optional. Rows may remain pure free text.
+- All optional links are validated against the active company. An object-area link requires and must match the selected object. Cross-tenant IDs receive safe not-found behavior.
+- The forward-only lifecycle is `DRAFT -> SENT -> SUBMITTED -> REVIEWED -> ARCHIVED`. Sending requires an assignment and at least one planned row. Submission requires actual text on every row.
+- OWNER/OFFICE can list/read all company sheets, create and plan drafts, send, review submitted sheets, and archive reviewed sheets. Planned fields/rows cannot change after send.
+- WORKER can list/read only non-draft sheets assigned directly or through current team membership. In `SENT`, a worker can update only row `actualText` and submit. Workers cannot see `internalNotes` and cannot create, plan, send, review, or archive.
+- `/workday-sheets` provides a real role-aware web workflow. Office users can create and edit drafts with live tenant-owned relation options, send sheets, review submissions, and archive. Workers see their authorized sheets, enter actual work per row, and submit.
+- A worksheet remains distinct from a Job. No Job, cost, report, billable item, or customer communication is created automatically.
 
-## Snapshot and permission boundary
+## API and persistence boundary
 
-The customer/print presentation renders only persisted `CustomerReportSnapshot` scalar fields plus its versioned `snapshotSourceData` and `snapshotCostBreakdown`. It does not reread mutable `Job`, `Customer`, `Address`, `Object`, `ObjectArea`, `JobReport`, `JobCostLine`, or attachment metadata records. Evidence is printed as the copied caption/filename/type/size/date reference only.
+The additive migration introduces the `WorkdaySheetStatus` enum plus `WorkdaySheet` and `WorkdaySheetRow`, including indexes, relation foreign keys, nonblank/time/order checks, and lifecycle actor/timestamp consistency checks.
 
-Original attachment files remain separately available to the office through the existing authorized attachment route. The file bytes are not part of the snapshot and may be missing from local storage; the UI says so rather than claiming embedded or durable availability.
+The API surface is:
 
-Phase 7B changed no Prisma schema, migration, shared contract, API route/service, permission, lifecycle rule, source immutability rule, concurrency check, or JobActivity behavior. OWNER/OFFICE-only customer-report access and WORKER denial remain backend-enforced.
+- `GET /api/workday-sheets`
+- `GET /api/workday-sheets/options`
+- `POST /api/workday-sheets`
+- `GET /api/workday-sheets/:sheetId`
+- `PATCH /api/workday-sheets/:sheetId`
+- `POST /api/workday-sheets/:sheetId/rows`
+- `PATCH /api/workday-sheets/:sheetId/rows/:rowId`
+- `DELETE /api/workday-sheets/:sheetId/rows/:rowId`
+- `PATCH /api/workday-sheets/:sheetId/status`
 
 ## Checkpoint validation
 
-On 2026-08-07, all eleven migrations were applied/current on a local PostgreSQL 16 instance. Prisma validate/generate, root `pnpm typecheck`, root `pnpm build`, the full `pnpm smoke:api` flow, and `git diff --check` passed. The unchanged smoke flow still passes all 163 assertions: 121 Phase 1–6 predicates plus 42 Phase 7 predicates covering source eligibility, copied snapshot content, internal-note persistence, detail stability after live-source mutations, lifecycle/activity, OWNER/OFFICE behavior, WORKER denial, wrong-Job rejection, and tenant isolation.
-
-No API smoke assertions were added because Phase 7B is presentation-only and its relevant backend invariants were already covered. The print boundary, print selectors, internal-note exclusion, and evidence-reference behavior were inspected in code and compiled in the production Next.js build. There is no automated browser-print or pagination regression suite; long reports should still be reviewed in Chromium/Edge A4 print preview during normal acceptance.
+On 2026-08-31, all twelve migrations were applied/current on PostgreSQL 16. Prisma validate/generate, root `pnpm typecheck`, root `pnpm build`, the full API smoke flow, and `git diff --check` passed. The smoke result contains 196 passing checks: the existing Phase 1–7 coverage remains green, and Phase 8 proves office creation/planning, valid optional relations, safe cross-tenant relation rejection, send, assigned and unrelated worker visibility, actual-only worker editing, completed-row submission, office review, archival, invalid transitions, and reviewed/archived locking.
 
 ## Known current limitations
 
-- Browser print exists, but there is no generated PDF/file artifact, server-side PDF generator, export/download endpoint, template/version model, customer portal, download history, or email delivery.
-- Browser pagination, user-selected print margins, and optional browser headers/footers can vary.
-- Attachment metadata is copied, but file bytes remain in local filesystem storage and depend on the original attachment ID and retention.
-- There is no customer-report revision, supersession, correction chain, source reselection, or snapshot refresh. A different source set requires a separate unlinked report.
-- Customer reports remain grounded in one Job. Multi-Job object-history aggregation and object-only generation are absent.
-- Tax rates, vendor data, and receipt references remain copied metadata. No tax calculation, invoice, offer, payment, accounting, or commercial issuance behavior exists.
-- Authentication remains development-only, and lint/test scripts remain placeholders.
+- There is no worksheet conversion/action aggregate yet. Reviewed rows do not create follow-up Jobs, costs, reports, billable-work candidates, or customer messages.
+- Rows cannot be reordered, copied, bulk imported, templated, or split after creation. Position is stable insertion order.
+- There is no dedicated today endpoint, date/status filtering, calendar board, print/export view, or worksheet PDF.
+- Team-based authorization follows current `TeamMember` state; assignment recipients are not frozen as a historical member snapshot.
+- Row actual work has no separate per-edit actor/timestamp event history; the sheet retains submission actor/time and normal row update timestamps.
+- The lifecycle has no recall, rejection, correction, or resubmission branch. Reviewed and archived sheets are locked.
+- Worksheet dates are stored as date-only values and row times as local `HH:mm` strings. Company timezone semantics are not yet modeled because Phase 8 performs no recurrence or automatic scheduling.
+- Authentication remains development-only, attachments use local storage, automated lint/test scripts remain placeholders, and mobile remains a scaffold.
 
-## Next recommended phase
+## Correct roadmap order
 
-The next recommended phase is exactly:
+1. `Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports`
+2. `Phase 10 — Service Agreements / Recurring Object Duties`
+3. `Phase 11 — Command Center Dashboard`
+4. `Phase 12 — Smart Planning / AI / Automation`
 
-`Phase 8 — Recurring Service Contracts Foundation`
-
-Phase 7B now has a complete enough snapshot presentation and browser-print boundary that a separate Phase 7C is not the default. Phase 8 should add the smallest durable object/customer-grounded recurring-service model with explicit schedule/timezone and idempotent Job-generation semantics. Generated Jobs must remain normal governed operational records.
-
-## Explicitly deferred
-
-Do not add actual PDF generation/export, invoice or offer issuance, payments, customer email sending, AI summaries, item movement/logistics, warehouse behavior, command board, drag-and-drop, QR/barcodes, or mobile features. Those require separate later approval and prerequisites.
+Recurring agreements should later supply flexible worksheet planning inputs. They must not generate rigid Jobs far ahead or become a second Job system.
 
 ## Exact recommended prompt
 
 ```text
 Read `/docs` first.
 
-`Phase 8 — Recurring Service Contracts Foundation`
+Use long-session. This is an IMPLEMENTATION session.
 
-This is an implementation session. Preserve the verified Phase 1–7B tenant isolation, role enforcement, Job lifecycle, assignments, worker findings, Job costs, immutable CustomerReportSnapshot behavior, and browser-print/customer-visible presentation boundary. Inspect the current Customer, Object, Job, Assignment, report, cost, Prisma migration, shared-contract, API, web, and smoke implementations before changing behavior; verify the baseline first.
+Implement:
 
-Implement the smallest durable recurring-service foundation for object- and customer-grounded service definitions. Define explicit company ownership, lifecycle, service/template content, recurrence schedule and timezone rules, start/end behavior, exception handling, and idempotent Job-generation semantics before adding convenience UI. Generated Jobs must remain normal governed operational records and repeated generation must not create duplicates. Add shared contracts, strict runtime validation, tenant-safe OWNER/OFFICE write rules and deliberate WORKER read behavior, additive migration(s), focused real-API administration, Job/Object integration where useful, JobActivity or an explicit audit decision where generation changes work, and representative happy-path, validation, role, idempotency, and cross-tenant smoke coverage.
+`Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports`
 
-Do not implement browser-only reminders, hidden timezone assumptions, automatic commercial commitments, invoice or offer issuance, payments, customer email sending, AI summaries, item movement/logistics, warehouse behavior, command-board drag-and-drop, QR/barcodes, mobile workflows, or actual PDF generation/export. Preserve browser print as print-only readiness, not a generated artifact.
+Preserve the verified Phase 1–8 behavior, especially tenant isolation, role enforcement, the existing Job/report/cost lifecycles, worksheet assignment and field-locking rules, immutable customer-report snapshots, and the distinction between a worksheet and a Job.
 
-Run Prisma validate/generate and migration status, focused checks, root `pnpm typecheck`, root `pnpm build`, full `pnpm smoke:api`, and `git diff --check`. Update affected docs/checklist with only verified behavior and report exact results and limitations.
+Build the smallest durable, explicit review-action foundation for reviewed worksheet rows. OWNER/OFFICE should be able to select one or more reviewed rows, choose a supported downstream action, preview the source and destination data, and deliberately create or link a governed follow-up record. Start with follow-up Job creation and add cost/report linkage only where the existing domain rules can be satisfied without inventing a parallel workflow. Preserve the worksheet and row as the source of truth, snapshot the relevant planned/actual text, store actor/time, action type/status, source and destination IDs, and enforce idempotency so retries or repeated clicks cannot create duplicates.
+
+Every source worksheet/row and destination Job/cost/report must belong to the active company. Use safe not-found behavior for cross-tenant IDs. Only reviewed sheets are eligible. WORKER can read their worksheet result but cannot create, retry, cancel, or alter review actions. Downstream Jobs must be normal existing Jobs with the existing lifecycle; do not create a second Job system. Make partial failure and retry behavior explicit and auditable.
+
+Add an additive Prisma migration, shared TypeScript contracts/schema helpers, strict payload validation, tenant-safe NestJS API/service behavior, a simple real office UI on reviewed worksheet detail, and representative smoke coverage for happy path, role denial, invalid status, cross-tenant sources/destinations, idempotent retry, duplicate prevention, and preserved Phase 1–8 behavior. Update all affected docs/checklist.
+
+Do not implement recurring service agreements, generated future Jobs, automatic conversion during review, invoices/offers/payments, customer email sending, AI summaries, command board, drag-and-drop, QR/barcodes, mobile features, actual PDF generation/export, logistics/warehouse behavior, or item movement.
+
+Run Prisma validate/generate and migration status, root `pnpm typecheck`, root `pnpm build`, full `pnpm smoke:api`, and `git diff --check`. Report exact files, models/migrations, endpoints, contracts, UI, permissions/lifecycle/idempotency, smoke results, validation, docs, and known limitations.
 ```

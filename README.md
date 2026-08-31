@@ -1,8 +1,8 @@
 # EinsatzPilot
 
-EinsatzPilot is a modular company operations command center for managing customers, objects, jobs, teams, reports, costs, responsibilities, and customer-facing proof.
+EinsatzPilot is a modular all-in-one operations platform for planning, assigning, documenting, reviewing, proving, and improving everyday work across business types and industries.
 
-It is designed for service companies coordinating recurring work, one-time jobs, incidents, teams, worker findings, customer proof, and commercial preparation. It is not an inventory, logistics, delivery, or warehouse app. Items and materials support job documentation and costs rather than defining the product.
+Hausmeister, cleaning, gardening, and facility-service workflows are its first concrete proof and product workbench, not its final boundary. The same modular architecture is intended to adapt to small businesses, service companies, shop owners, trades, technicians, office teams, logistics teams, corporate operational teams, and other everyday-work industries. The current implementation is not a dedicated inventory, warehouse, route-planning, or delivery system; items and materials support work documentation and costs rather than defining the product.
 
 ## Current status
 
@@ -20,20 +20,23 @@ The repository currently provides a narrower working foundation:
 - Tenant-safe job cost APIs and job-detail UI for material, labor, travel, external, fee, and custom cost lines with optional item references and backend-derived summaries.
 - OWNER/OFFICE-only customer-report APIs and real web flows for job-grounded stable snapshots, explicit selection of approved execution reports and attachment metadata references, selected cost-line breakdowns, optional full backend-derived cost summaries, draft editing, review, approval, and archival.
 - Polished customer-report list/creation/detail presentation with status-specific source eligibility, explicit cost-scope explanations, separate office-only internal notes, and a clean A4-oriented browser-print view rendered only from stored snapshot data.
+- Company-owned daily worksheets with ordered free-text planning rows, optional customer/address/object/object-area/Job context, direct worker and/or team assignment, a `DRAFT -> SENT -> SUBMITTED -> REVIEWED -> ARCHIVED` lifecycle, actor/timestamp attribution, strict tenant-safe permissions, and real office/worker web flows.
 - PostgreSQL container helpers and an API smoke flow.
 
-This is not yet the full command center. Customer-report data generation, customer-facing layout polish, and browser-print readiness are implemented. Browser print is not a generated PDF/export artifact; template/version models, customer delivery, recurring service contracts, command-center metrics, invoice/offer preparation, and commercial document workflows remain planned. Authentication is development-only, file storage is local, report evidence references can outlive their original attachment files, customer-report revision/supersession and source refresh are absent, job-report revision/resubmission and cost correction history are not implemented, automated tests/linting are not configured, and mobile is only a scaffold.
+This is not yet the full operations platform. Customer-report data generation, customer-facing layout polish, browser-print readiness, and the daily worksheet/team protocol foundation are implemented. Deliberate worksheet-review conversion into follow-up Jobs/costs/reports, recurring service agreements, command-center metrics, automation, template/version models, customer delivery, invoice/offer preparation, and commercial document workflows remain planned. Browser print is not a generated PDF/export artifact. Authentication is development-only, file storage is local, report evidence references can outlive their original attachment files, customer-report revision/supersession and source refresh are absent, job-report revision/resubmission and cost correction history are not implemented, automated tests/linting are not configured, and mobile is only a scaffold.
 
 ## Product direction
 
-- Jobs are the star.
+- Everyday operational work is the product center.
+- Jobs are governed work records in the current foundation.
+- Daily worksheets/team protocols bridge object responsibility and actual worker execution.
 - Objects are the memory.
 - Reports are the proof.
 - Costs are the money layer.
 - Assignments are the control layer.
 - Items and materials are supporting context, not the main product.
 
-A representative workflow starts with recurring services at a managed object, continues through an incident job, team assignment, worker findings and photos, office review, material/labor/travel costs, and ends in customer-facing proof with an invoice-ready summary.
+The implemented worksheet workflow starts when the office prepares a dated draft for a team or worker, combining optional directory/Job context with ad hoc instructions such as key handovers or meeting a tradesperson. Sending locks planning and exposes the sheet only to its assigned worker or current team members. Workers record actual text for each row and submit it; the office reviews and may archive it. A later phase will let the office deliberately turn reviewed entries into governed follow-up Jobs, costs, reports, or customer-communication inputs. Recurring agreements will later feed this flexible daily planning instead of generating a rigid second Job system far ahead.
 
 ## Documentation
 
@@ -118,7 +121,7 @@ The smoke flow creates development data. Package `lint` and `test` scripts curre
 
 ## Development direction
 
-Directory Gate 1, backwards-compatible Job relation Phase 2, the supporting `ItemCategory`/`Item` Phase 3 foundation, generic Assignment Phase 4, Job Execution Reports / Worker Findings Phase 5, Job Cost Ledger Phase 6, Customer/Object Report Generator Foundation Phase 7, and Customer Report Polish/PDF Readiness Phase 7B are implemented. Browser print exists; actual PDF generation/export does not. The next recommended phase is exactly `Phase 8 — Recurring Service Contracts Foundation`. Invoice issuance, payments, customer email sending, AI, item movement/logistics, command board, drag-and-drop, QR, and mobile remain deferred. Invoice, email, or PDF-export behavior requires later explicit approval. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
+Directory Gate 1, backwards-compatible Job relation Phase 2, the supporting `ItemCategory`/`Item` Phase 3 foundation, generic Assignment Phase 4, Job Execution Reports / Worker Findings Phase 5, Job Cost Ledger Phase 6, Customer/Object Report Generator Foundation Phase 7, Customer Report Polish/PDF Readiness Phase 7B, and Daily Worksheets / Team Protocols Foundation Phase 8 are implemented. Browser print exists; actual PDF generation/export does not. The next recommended phase is exactly `Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports`. Recurring service agreements are Phase 10, the command center is Phase 11, and smart planning/AI/automation is Phase 12. Invoice issuance, payments, customer email sending, item movement, drag-and-drop, QR, and mobile remain deferred. Invoice, email, or PDF-export behavior requires later explicit approval. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
 
 ## License
 

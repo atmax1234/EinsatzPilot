@@ -2,11 +2,11 @@
 
 ## What EinsatzPilot is
 
-EinsatzPilot is a modular company operations command center for managing customers, objects, jobs, teams, reports, costs, responsibilities, and customer-facing proof.
+EinsatzPilot is a modular all-in-one operations platform for planning, assigning, documenting, reviewing, proving, and improving everyday work across business types and industries.
 
 It began as a smaller, Lütjens-oriented protocol and job application. The existing implementation remains valuable: it provides a tenant-aware foundation for companies, users, memberships, teams, jobs, activity, reports, attachments, and an office web app. The direction is broader now, but agents must extend this foundation deliberately rather than discard it.
 
-The platform is industry-neutral. Gardening, Hausmeister, and cleaning businesses are valid use cases, not hard-coded product boundaries.
+Hausmeister, cleaning, gardening, and facility-service workflows are the first concrete proof and product workbench, not the final market boundary. The long-term architecture must also remain adaptable to small businesses, trades, technical and office teams, logistics teams, and larger operational teams. The governing product rule is: **specific execution, broad architecture**.
 
 ## Read and inspect first
 
@@ -30,8 +30,10 @@ A meaningful change includes a new or changed model, migration, relationship, pe
 
 ## Current instruction
 
-The directory, backwards-compatible Job relation, item/category, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator foundation, and Phase 7B Customer Report Polish and PDF Readiness are implemented. Phase 7B adds a customer-readable snapshot presentation, explicit internal-only separation, clearer source and cost-scope selection, and an A4-oriented browser-print stylesheet. The presentation consumes stored `CustomerReportSnapshot` fields only; original attachment files remain a separately authorized local-storage dependency and are not embedded in the print output.
+The directory, backwards-compatible Job relation, item/category, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator foundation, Phase 7B Customer Report Polish and PDF Readiness, and Phase 8 Daily Worksheets / Team Protocols Foundation are implemented. Phase 8 adds company-owned dated sheets and ordered rows; optional customer, address, object, object-area, and Job context; direct worker/team assignment; explicit actor/timestamp audit fields; tenant-safe API rules; and real office/worker web flows.
 
-The next recommended session is exactly `Phase 8 — Recurring Service Contracts Foundation`, following `07_NEXT_STEPS.md`. Preserve the verified Phase 1–7B behavior, especially customer-report snapshot immutability and the customer-visible/internal presentation boundary. Browser print is not a generated PDF or export artifact.
+The next recommended session is exactly `Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports`, following `07_NEXT_STEPS.md`. It should add an explicit, office-controlled, auditable, and idempotent conversion workflow for reviewed worksheet rows while preserving each source row and avoiding duplicate downstream records. Preserve the verified Phase 1–8 behavior, especially worksheet assignment/locking, Job lifecycle, tenant isolation, customer-report snapshot immutability, and the customer-visible/internal presentation boundary. Browser print is not a generated PDF or export artifact.
 
-Do not skip into invoice issuance, payments, customer email sending, AI summaries, item movement/logistics, command-board work, drag-and-drop, QR codes, or mobile work. Invoice, email, or actual PDF behavior requires later explicit approval. Items support job documentation and costs; they are not the center of an inventory or logistics product.
+Daily worksheets/team protocols are implemented as execution papers, not as a second Job system. Planning is editable only in `DRAFT`; assigned workers receive `SENT` sheets and may change only row `actualText`; submission, office review, and archival are explicit forward-only transitions. Recurring service agreements belong to Phase 10 and should feed worksheet planning rather than create a second rigid Job-generation system.
+
+Do not skip from the explicit Phase 9 conversion foundation into silent automation, recurring service agreements, invoice issuance, payments, customer email sending, AI summaries, item movement, command-board work, drag-and-drop, QR codes, or mobile work. Invoice, email, or actual PDF behavior requires later explicit approval. Items support job documentation and costs; they are not the product center or a reason to turn the current foundation into a warehouse system.

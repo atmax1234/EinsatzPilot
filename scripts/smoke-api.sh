@@ -17,6 +17,8 @@ PHASE7_MUTATED_JOB_TITLE="Phase 7 Mutated Job ${SMOKE_SUFFIX}"
 PHASE7_MUTATED_CUSTOMER_NAME="Phase 7 Mutated Customer ${SMOKE_SUFFIX}"
 PHASE7_MUTATED_OBJECT_NAME="Phase 7 Mutated Object ${SMOKE_SUFFIX}"
 PHASE7_MUTATED_AREA_NAME="Phase 7 Mutated Area ${SMOKE_SUFFIX}"
+WORKDAY_SHEET_TITLE="Phase 8 Workday Sheet ${SMOKE_SUFFIX}"
+UPDATED_WORKDAY_SHEET_TITLE="${WORKDAY_SHEET_TITLE} Updated"
 
 cleanup() {
   rm -rf "$TMP_DIR"
@@ -91,6 +93,10 @@ require_command curl
 require_command jq
 
 printf 'fake-jpg-data' > "${TMP_DIR}/proof.jpg"
+proof_upload_path="${TMP_DIR}/proof.jpg"
+if command -v cygpath >/dev/null 2>&1; then
+  proof_upload_path="$(cygpath -w "$proof_upload_path")"
+fi
 
 health="$(json_get "${API_BASE}/health")"
 
@@ -125,7 +131,7 @@ upload_attachment="$(curl -fsS -X POST "${API_BASE}/jobs/${job_id}/attachments" 
   -F "caption=Foundation upload proof" \
   -F "reportId=${report_id}" \
   -F "teamId=${team_id}" \
-  -F "file=@${TMP_DIR}/proof.jpg;type=image/jpeg")"
+  -F "file=@${proof_upload_path};type=image/jpeg")"
 attachment_id="$(printf '%s' "$upload_attachment" | jq -r '.attachments[0].id')"
 
 photos="$(json_get "${API_BASE}/attachments/photos" "$token")"
@@ -245,7 +251,7 @@ phase7_attachment_upload="$(curl -fsS -X POST "${API_BASE}/jobs/${job_id}/attach
   -F "caption=${PHASE7_ATTACHMENT_CAPTION}" \
   -F "reportId=${worker_finding_id}" \
   -F "teamId=${team_id}" \
-  -F "file=@${TMP_DIR}/proof.jpg;type=image/jpeg")"
+  -F "file=@${proof_upload_path};type=image/jpeg")"
 phase7_attachment_id="$(printf '%s' "$phase7_attachment_upload" | jq -r --arg caption "$PHASE7_ATTACHMENT_CAPTION" '.attachments[] | select(.caption == $caption) | .id')"
 customer_report_source="$(json_get "${API_BASE}/jobs/${job_id}/customer-report-source-data" "$token")"
 
@@ -321,7 +327,7 @@ other_phase7_attachment_upload="$(curl -fsS -X POST "${API_BASE}/jobs/${other_ph
   -F "kind=PHOTO" \
   -F "caption=${OTHER_PHASE7_ATTACHMENT_CAPTION}" \
   -F "reportId=${other_phase7_report_id}" \
-  -F "file=@${TMP_DIR}/proof.jpg;type=image/jpeg")"
+  -F "file=@${proof_upload_path};type=image/jpeg")"
 other_phase7_attachment_id="$(printf '%s' "$other_phase7_attachment_upload" | jq -r --arg caption "$OTHER_PHASE7_ATTACHMENT_CAPTION" '.attachments[] | select(.caption == $caption) | .id')"
 other_phase7_cost="$(json_post "${API_BASE}/jobs/${other_phase7_job_id}/costs" '{"kind":"OTHER","description":"Foreign tenant cost source","quantity":1,"unit":"FLAT_RATE","totalCost":9,"currency":"EUR","costDate":"2026-04-21T10:00:00.000Z"}' "$other_token")"
 other_phase7_cost_id="$(printf '%s' "$other_phase7_cost" | jq -r '.id')"
@@ -344,6 +350,45 @@ cross_assignment_target_status="$(curl -sS -o "${TMP_DIR}/cross-assignment-targe
 cross_cost_job_status="$(curl -sS -o "${TMP_DIR}/cross-cost-job.json" -w '%{http_code}' "${API_BASE}/jobs/${job_id}/costs" -H "Authorization: Bearer ${other_token}")"
 cross_cost_update_status="$(curl -sS -o "${TMP_DIR}/cross-cost-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/jobs/${job_id}/costs/${material_cost_id}" -H "Authorization: Bearer ${other_token}" -H 'Content-Type: application/json' -d '{"notes":"Forbidden cross-company update"}')"
 cross_cost_item_status="$(curl -sS -o "${TMP_DIR}/cross-cost-item.json" -w '%{http_code}' -X POST "${API_BASE}/jobs/${job_id}/costs" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"itemId\":\"${other_item_id}\",\"kind\":\"MATERIAL_USED\",\"description\":\"Forbidden cross-company item\",\"quantity\":1,\"unit\":\"PIECE\",\"unitCost\":1}")"
+
+unrelated_worker_login="$(json_post "${API_BASE}/auth/development-login" '{"email":"unrelated.worker@luetjens.example.de","displayName":"Unrelated Worker","companySlug":"luetjens","companyName":"Luetjens Service","membershipRole":"WORKER"}')"
+unrelated_worker_token="$(printf '%s' "$unrelated_worker_login" | jq -r '.token')"
+
+workday_sheet_options="$(json_get "${API_BASE}/workday-sheets/options" "$token")"
+create_workday_sheet="$(json_post "${API_BASE}/workday-sheets" "{\"date\":\"2026-04-22\",\"title\":\"${WORKDAY_SHEET_TITLE}\",\"teamId\":\"${team_id}\",\"workerUserId\":\"${worker_user_id}\",\"internalNotes\":\"Office-only Phase 8 note\",\"rows\":[{\"startTime\":\"07:00\",\"endTime\":\"09:00\",\"plannedText\":\"Musterstr. 1 - Treppen und H.M.S.\",\"notes\":\"Phase 8 linked row\",\"customerId\":\"${customer_id}\",\"addressId\":\"${address_id}\",\"objectId\":\"${object_id}\",\"objectAreaId\":\"${area_id}\",\"jobId\":\"${job_id}\"}]}" "$token")"
+workday_sheet_id="$(printf '%s' "$create_workday_sheet" | jq -r '.workdaySheet.id')"
+workday_sheet_row_id="$(printf '%s' "$create_workday_sheet" | jq -r '.workdaySheet.rows[0].id')"
+update_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}" "{\"title\":\"${UPDATED_WORKDAY_SHEET_TITLE}\"}" "$token")"
+update_workday_sheet_row="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" '{"plannedText":"Musterstr. 1 - Treppen, H.M.S. und Eingang pruefen"}' "$token")"
+add_workday_sheet_row="$(json_post "${API_BASE}/workday-sheets/${workday_sheet_id}/rows" '{"startTime":"11:00","plannedText":"Tischler reinlassen / Schluesseluebergabe"}' "$token")"
+workday_sheet_second_row_id="$(printf '%s' "$add_workday_sheet_row" | jq -r '.workdaySheet.rows[1].id')"
+workday_sheet_list="$(json_get "${API_BASE}/workday-sheets" "$token")"
+worker_draft_read_status="$(curl -sS -o "${TMP_DIR}/worker-draft-sheet.json" -w '%{http_code}' "${API_BASE}/workday-sheets/${workday_sheet_id}" -H "Authorization: Bearer ${worker_token}")"
+worker_create_sheet_status="$(curl -sS -o "${TMP_DIR}/worker-create-sheet.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"date":"2026-04-22","rows":[{"plannedText":"Forbidden worker plan"}]}')"
+worker_sheet_options_status="$(curl -sS -o "${TMP_DIR}/worker-sheet-options.json" -w '%{http_code}' "${API_BASE}/workday-sheets/options" -H "Authorization: Bearer ${worker_token}")"
+cross_workday_relation_status="$(curl -sS -o "${TMP_DIR}/cross-workday-relation.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"date\":\"2026-04-22\",\"workerUserId\":\"${worker_user_id}\",\"rows\":[{\"plannedText\":\"Forbidden foreign relation\",\"customerId\":\"${other_customer_id}\"}]}")"
+sent_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/status" '{"status":"SENT"}' "$token")"
+worker_sent_workday_sheet="$(json_get "${API_BASE}/workday-sheets/${workday_sheet_id}" "$worker_token")"
+worker_workday_sheet_list="$(json_get "${API_BASE}/workday-sheets" "$worker_token")"
+unrelated_worker_workday_sheet_list="$(json_get "${API_BASE}/workday-sheets" "$unrelated_worker_token")"
+unrelated_worker_read_status="$(curl -sS -o "${TMP_DIR}/unrelated-worker-sheet-read.json" -w '%{http_code}' "${API_BASE}/workday-sheets/${workday_sheet_id}" -H "Authorization: Bearer ${unrelated_worker_token}")"
+unrelated_worker_update_status="$(curl -sS -o "${TMP_DIR}/unrelated-worker-sheet-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${unrelated_worker_token}" -H 'Content-Type: application/json' -d '{"actualText":"Forbidden unrelated actual"}')"
+unrelated_worker_submit_status="$(curl -sS -o "${TMP_DIR}/unrelated-worker-sheet-submit.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${unrelated_worker_token}" -H 'Content-Type: application/json' -d '{"status":"SUBMITTED"}')"
+worker_planned_update_status="$(curl -sS -o "${TMP_DIR}/worker-planned-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"plannedText":"Forbidden worker plan edit"}')"
+worker_first_actual="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" '{"actualText":"Treppen und Eingang gereinigt; Tuergriff locker festgestellt"}' "$worker_token")"
+incomplete_workday_submit_status="$(curl -sS -o "${TMP_DIR}/incomplete-workday-submit.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"status":"SUBMITTED"}')"
+worker_second_actual="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_second_row_id}" '{"actualText":"Tischler um 11:05 eingelassen und Schluessel zurueckgenommen"}' "$worker_token")"
+office_actual_update_status="$(curl -sS -o "${TMP_DIR}/office-actual-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"actualText":"Forbidden office actual edit"}')"
+submitted_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/status" '{"status":"SUBMITTED"}' "$worker_token")"
+post_submit_actual_status="$(curl -sS -o "${TMP_DIR}/post-submit-actual.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"actualText":"Forbidden late actual edit"}')"
+worker_review_workday_status="$(curl -sS -o "${TMP_DIR}/worker-review-workday.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"status":"REVIEWED"}')"
+invalid_workday_archive_status="$(curl -sS -o "${TMP_DIR}/invalid-workday-archive.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"status":"ARCHIVED"}')"
+reviewed_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/status" '{"status":"REVIEWED","reviewNotes":"Phase 8 office review complete"}' "$token")"
+reviewed_plan_update_status="$(curl -sS -o "${TMP_DIR}/reviewed-plan-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"plannedText":"Forbidden reviewed plan edit"}')"
+archived_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/status" '{"status":"ARCHIVED"}' "$token")"
+archived_actual_update_status="$(curl -sS -o "${TMP_DIR}/archived-actual-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"actualText":"Forbidden archived actual edit"}')"
+repeat_workday_archive_status="$(curl -sS -o "${TMP_DIR}/repeat-workday-archive.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"status":"ARCHIVED"}')"
+cross_workday_read_status="$(curl -sS -o "${TMP_DIR}/cross-workday-read.json" -w '%{http_code}' "${API_BASE}/workday-sheets/${workday_sheet_id}" -H "Authorization: Bearer ${other_token}")"
 job_detail="$(json_get "${API_BASE}/jobs/${job_id}" "$token")"
 
 : > "$SUMMARY_INPUT"
@@ -424,6 +469,21 @@ append_summary_json customerReportAfterMutation "$customer_report_after_mutation
 append_summary_json archivedCustomerReport "$archived_customer_report"
 append_summary_json createArchivedDraftReport "$create_archived_draft_report"
 append_summary_json archivedDraftReport "$archived_draft_report"
+append_summary_json workdaySheetOptions "$workday_sheet_options"
+append_summary_json createWorkdaySheet "$create_workday_sheet"
+append_summary_json updateWorkdaySheet "$update_workday_sheet"
+append_summary_json updateWorkdaySheetRow "$update_workday_sheet_row"
+append_summary_json addWorkdaySheetRow "$add_workday_sheet_row"
+append_summary_json workdaySheetList "$workday_sheet_list"
+append_summary_json sentWorkdaySheet "$sent_workday_sheet"
+append_summary_json workerSentWorkdaySheet "$worker_sent_workday_sheet"
+append_summary_json workerWorkdaySheetList "$worker_workday_sheet_list"
+append_summary_json unrelatedWorkerWorkdaySheetList "$unrelated_worker_workday_sheet_list"
+append_summary_json workerFirstActual "$worker_first_actual"
+append_summary_json workerSecondActual "$worker_second_actual"
+append_summary_json submittedWorkdaySheet "$submitted_workday_sheet"
+append_summary_json reviewedWorkdaySheet "$reviewed_workday_sheet"
+append_summary_json archivedWorkdaySheet "$archived_workday_sheet"
 
 append_summary_string crossStatus "$cross_status"
 append_summary_string crossBody "$cross_body"
@@ -514,6 +574,27 @@ append_summary_string crossCustomerReportReadStatus "$cross_customer_report_read
 append_summary_string crossCustomerReportSelectedReportStatus "$cross_customer_report_selected_report_status"
 append_summary_string crossCustomerReportSelectedAttachmentStatus "$cross_customer_report_selected_attachment_status"
 append_summary_string crossCustomerReportSelectedCostStatus "$cross_customer_report_selected_cost_status"
+append_summary_string workdaySheetId "$workday_sheet_id"
+append_summary_string workdaySheetRowId "$workday_sheet_row_id"
+append_summary_string workdaySheetSecondRowId "$workday_sheet_second_row_id"
+append_summary_string updatedWorkdaySheetTitle "$UPDATED_WORKDAY_SHEET_TITLE"
+append_summary_string workerDraftReadStatus "$worker_draft_read_status"
+append_summary_string workerCreateSheetStatus "$worker_create_sheet_status"
+append_summary_string workerSheetOptionsStatus "$worker_sheet_options_status"
+append_summary_string crossWorkdayRelationStatus "$cross_workday_relation_status"
+append_summary_string unrelatedWorkerReadStatus "$unrelated_worker_read_status"
+append_summary_string unrelatedWorkerUpdateStatus "$unrelated_worker_update_status"
+append_summary_string unrelatedWorkerSubmitStatus "$unrelated_worker_submit_status"
+append_summary_string workerPlannedUpdateStatus "$worker_planned_update_status"
+append_summary_string incompleteWorkdaySubmitStatus "$incomplete_workday_submit_status"
+append_summary_string officeActualUpdateStatus "$office_actual_update_status"
+append_summary_string postSubmitActualStatus "$post_submit_actual_status"
+append_summary_string workerReviewWorkdayStatus "$worker_review_workday_status"
+append_summary_string invalidWorkdayArchiveStatus "$invalid_workday_archive_status"
+append_summary_string reviewedPlanUpdateStatus "$reviewed_plan_update_status"
+append_summary_string archivedActualUpdateStatus "$archived_actual_update_status"
+append_summary_string repeatWorkdayArchiveStatus "$repeat_workday_archive_status"
+append_summary_string crossWorkdayReadStatus "$cross_workday_read_status"
 
 jq -s '
   from_entries |
@@ -1020,6 +1101,91 @@ jq -s '
     crossCustomerReportSelectedCostStatus: $crossCustomerReportSelectedCostStatus
   }' "$SUMMARY_INPUT" > "${TMP_DIR}/summary.json"
 
+jq -s '
+  from_entries |
+  . as $phase8 |
+  {
+    workdaySheetOptionsContainAssignments: (
+      ([.workdaySheetOptions.teams[].id] | index($phase8.teamId) != null) and
+      ([.workdaySheetOptions.workers[].id] | index($phase8.workerUserId) != null)
+    ),
+    workdaySheetDraftCreated: (
+      (.createWorkdaySheet.workdaySheet.id == .workdaySheetId) and
+      (.createWorkdaySheet.workdaySheet.status == "DRAFT") and
+      (.createWorkdaySheet.workdaySheet.date == "2026-04-22") and
+      (.createWorkdaySheet.workdaySheet.teamId == .teamId) and
+      (.createWorkdaySheet.workdaySheet.workerUserId == .workerUserId) and
+      (.createWorkdaySheet.workdaySheet.internalNotes == "Office-only Phase 8 note") and
+      ((.createWorkdaySheet.workdaySheet.rows | length) == 1)
+    ),
+    workdaySheetRelationsValid: (
+      (.createWorkdaySheet.workdaySheet.rows[0].customerId == .customerId) and
+      (.createWorkdaySheet.workdaySheet.rows[0].addressId == .addressId) and
+      (.createWorkdaySheet.workdaySheet.rows[0].objectId == .objectId) and
+      (.createWorkdaySheet.workdaySheet.rows[0].objectAreaId == .areaId) and
+      (.createWorkdaySheet.workdaySheet.rows[0].jobId == .jobId)
+    ),
+    workdaySheetDraftUpdated: (
+      (.updateWorkdaySheet.workdaySheet.title == .updatedWorkdaySheetTitle) and
+      (.updateWorkdaySheetRow.workdaySheet.rows[0].plannedText == "Musterstr. 1 - Treppen, H.M.S. und Eingang pruefen") and
+      ((.addWorkdaySheetRow.workdaySheet.rows | length) == 2) and
+      (.addWorkdaySheetRow.workdaySheet.rows[1].id == .workdaySheetSecondRowId)
+    ),
+    workdaySheetListContainsCreated: ([.workdaySheetList.workdaySheets[].id] | index($phase8.workdaySheetId) != null),
+    workerDraftReadStatus: .workerDraftReadStatus,
+    workerCreateSheetStatus: .workerCreateSheetStatus,
+    workerSheetOptionsStatus: .workerSheetOptionsStatus,
+    crossWorkdayRelationStatus: .crossWorkdayRelationStatus,
+    sentWorkdaySheetValid: (
+      (.sentWorkdaySheet.workdaySheet.status == "SENT") and
+      (.sentWorkdaySheet.workdaySheet.sentBy.id == .userId) and
+      (.sentWorkdaySheet.workdaySheet.sentAt != null)
+    ),
+    workerSentSheetVisibleWithoutInternalNotes: (
+      (.workerSentWorkdaySheet.workdaySheet.id == .workdaySheetId) and
+      (.workerSentWorkdaySheet.workdaySheet.status == "SENT") and
+      (.workerSentWorkdaySheet.workdaySheet | has("internalNotes") | not)
+    ),
+    workerListContainsAssignedSheet: ([.workerWorkdaySheetList.workdaySheets[].id] | index($phase8.workdaySheetId) != null),
+    unrelatedWorkerListExcludesSheet: ([.unrelatedWorkerWorkdaySheetList.workdaySheets[].id] | index($phase8.workdaySheetId) == null),
+    unrelatedWorkerReadStatus: .unrelatedWorkerReadStatus,
+    unrelatedWorkerUpdateStatus: .unrelatedWorkerUpdateStatus,
+    unrelatedWorkerSubmitStatus: .unrelatedWorkerSubmitStatus,
+    workerPlannedUpdateStatus: .workerPlannedUpdateStatus,
+    workerActualUpdatesValid: (
+      (.workerFirstActual.workdaySheet.rows[0].actualText == "Treppen und Eingang gereinigt; Tuergriff locker festgestellt") and
+      (.workerSecondActual.workdaySheet.rows[1].actualText == "Tischler um 11:05 eingelassen und Schluessel zurueckgenommen")
+    ),
+    incompleteWorkdaySubmitStatus: .incompleteWorkdaySubmitStatus,
+    officeActualUpdateStatus: .officeActualUpdateStatus,
+    submittedWorkdaySheetValid: (
+      (.submittedWorkdaySheet.workdaySheet.status == "SUBMITTED") and
+      (.submittedWorkdaySheet.workdaySheet.submittedBy.id == .workerUserId) and
+      (.submittedWorkdaySheet.workdaySheet.submittedAt != null)
+    ),
+    postSubmitActualStatus: .postSubmitActualStatus,
+    workerReviewWorkdayStatus: .workerReviewWorkdayStatus,
+    invalidWorkdayArchiveStatus: .invalidWorkdayArchiveStatus,
+    reviewedWorkdaySheetValid: (
+      (.reviewedWorkdaySheet.workdaySheet.status == "REVIEWED") and
+      (.reviewedWorkdaySheet.workdaySheet.reviewedBy.id == .userId) and
+      (.reviewedWorkdaySheet.workdaySheet.reviewNotes == "Phase 8 office review complete") and
+      (.reviewedWorkdaySheet.workdaySheet.reviewedAt != null)
+    ),
+    reviewedPlanUpdateStatus: .reviewedPlanUpdateStatus,
+    archivedWorkdaySheetValid: (
+      (.archivedWorkdaySheet.workdaySheet.status == "ARCHIVED") and
+      (.archivedWorkdaySheet.workdaySheet.archivedBy.id == .userId) and
+      (.archivedWorkdaySheet.workdaySheet.archivedAt != null)
+    ),
+    archivedActualUpdateStatus: .archivedActualUpdateStatus,
+    repeatWorkdayArchiveStatus: .repeatWorkdayArchiveStatus,
+    crossWorkdayReadStatus: .crossWorkdayReadStatus
+  }' "$SUMMARY_INPUT" > "${TMP_DIR}/phase8-summary.json"
+
+jq -s '.[0] + .[1]' "${TMP_DIR}/summary.json" "${TMP_DIR}/phase8-summary.json" > "${TMP_DIR}/combined-summary.json"
+mv "${TMP_DIR}/combined-summary.json" "${TMP_DIR}/summary.json"
+
 jq -e \
   --arg teamName "$TEAM_NAME" \
   --arg updatedJobTitle "$UPDATED_JOB_TITLE" \
@@ -1186,7 +1352,37 @@ jq -e \
     .crossCustomerReportReadStatus == "404" and
     .crossCustomerReportSelectedReportStatus == "404" and
     .crossCustomerReportSelectedAttachmentStatus == "404" and
-    .crossCustomerReportSelectedCostStatus == "404"
+    .crossCustomerReportSelectedCostStatus == "404" and
+    .workdaySheetOptionsContainAssignments == true and
+    .workdaySheetDraftCreated == true and
+    .workdaySheetRelationsValid == true and
+    .workdaySheetDraftUpdated == true and
+    .workdaySheetListContainsCreated == true and
+    .workerDraftReadStatus == "404" and
+    .workerCreateSheetStatus == "403" and
+    .workerSheetOptionsStatus == "403" and
+    .crossWorkdayRelationStatus == "404" and
+    .sentWorkdaySheetValid == true and
+    .workerSentSheetVisibleWithoutInternalNotes == true and
+    .workerListContainsAssignedSheet == true and
+    .unrelatedWorkerListExcludesSheet == true and
+    .unrelatedWorkerReadStatus == "404" and
+    .unrelatedWorkerUpdateStatus == "404" and
+    .unrelatedWorkerSubmitStatus == "404" and
+    .workerPlannedUpdateStatus == "400" and
+    .workerActualUpdatesValid == true and
+    .incompleteWorkdaySubmitStatus == "400" and
+    .officeActualUpdateStatus == "400" and
+    .submittedWorkdaySheetValid == true and
+    .postSubmitActualStatus == "400" and
+    .workerReviewWorkdayStatus == "403" and
+    .invalidWorkdayArchiveStatus == "400" and
+    .reviewedWorkdaySheetValid == true and
+    .reviewedPlanUpdateStatus == "400" and
+    .archivedWorkdaySheetValid == true and
+    .archivedActualUpdateStatus == "400" and
+    .repeatWorkdayArchiveStatus == "400" and
+    .crossWorkdayReadStatus == "404"
   ' "${TMP_DIR}/summary.json" >/dev/null
 
 cat "${TMP_DIR}/summary.json"

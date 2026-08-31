@@ -193,6 +193,14 @@ enum CustomerReportStatus {
   ARCHIVED
 }
 
+enum WorkdaySheetStatus {
+  DRAFT
+  SENT
+  SUBMITTED
+  REVIEWED
+  ARCHIVED
+}
+
 model Company {
   id             String          @id @default(cuid())
   name           String
@@ -214,6 +222,8 @@ model Company {
   assignments    Assignment[]
   jobCostLines   JobCostLine[]
   customerReportSnapshots CustomerReportSnapshot[]
+  workdaySheets  WorkdaySheet[]
+  workdaySheetRows WorkdaySheetRow[]
 }
 
 model User {
@@ -234,6 +244,12 @@ model User {
   updatedJobCostLines JobCostLine[]   @relation("JobCostLineUpdatedBy")
   createdCustomerReports  CustomerReportSnapshot[] @relation("CustomerReportCreatedBy")
   approvedCustomerReports CustomerReportSnapshot[] @relation("CustomerReportApprovedBy")
+  assignedWorkdaySheets  WorkdaySheet[] @relation("WorkdaySheetWorker")
+  createdWorkdaySheets   WorkdaySheet[] @relation("WorkdaySheetCreatedBy")
+  sentWorkdaySheets      WorkdaySheet[] @relation("WorkdaySheetSentBy")
+  submittedWorkdaySheets WorkdaySheet[] @relation("WorkdaySheetSubmittedBy")
+  reviewedWorkdaySheets  WorkdaySheet[] @relation("WorkdaySheetReviewedBy")
+  archivedWorkdaySheets  WorkdaySheet[] @relation("WorkdaySheetArchivedBy")
 }
 
 model Membership {
@@ -267,6 +283,7 @@ model Team {
   jobs              Job[]
   reports           JobReport[]
   attachments       JobAttachment[]
+  workdaySheets     WorkdaySheet[]
 
   @@index([companyId])
 }
@@ -316,6 +333,7 @@ model Job {
   attachments    JobAttachment[]
   costLines      JobCostLine[]
   customerReportSnapshots CustomerReportSnapshot[]
+  workdaySheetRows WorkdaySheetRow[]
 
   @@index([companyId])
   @@index([teamId])
@@ -421,6 +439,7 @@ model Customer {
   objects   Object[]
   jobs      Job[]
   customerReportSnapshots CustomerReportSnapshot[]
+  workdaySheetRows WorkdaySheetRow[]
 
   @@index([companyId, name])
   @@index([companyId, isActive])
@@ -443,6 +462,7 @@ model Address {
   objects    Object[]
   jobs       Job[]
   customerReportSnapshots CustomerReportSnapshot[]
+  workdaySheetRows WorkdaySheetRow[]
 
   @@index([companyId, label])
   @@index([companyId, customerId])
@@ -465,6 +485,7 @@ model Object {
   areas      ObjectArea[]
   jobs       Job[]
   customerReportSnapshots CustomerReportSnapshot[]
+  workdaySheetRows WorkdaySheetRow[]
 
   @@index([companyId, name])
   @@index([companyId, status])
@@ -485,6 +506,7 @@ model ObjectArea {
   object    Object         @relation(fields: [objectId], references: [id], onDelete: Cascade)
   jobs      Job[]
   customerReportSnapshots CustomerReportSnapshot[]
+  workdaySheetRows WorkdaySheetRow[]
 
   @@index([companyId, objectId, name])
   @@index([companyId, type])
@@ -650,4 +672,79 @@ model CustomerReportSnapshot {
   @@index([companyId, objectAreaId])
   @@index([createdByUserId])
   @@index([approvedByUserId])
+}
+
+model WorkdaySheet {
+  id                String             @id @default(cuid())
+  companyId         String
+  date              DateTime           @db.Date
+  title             String?
+  status            WorkdaySheetStatus @default(DRAFT)
+  teamId            String?
+  workerUserId      String?
+  internalNotes     String?
+  reviewNotes       String?
+  createdByUserId   String
+  sentByUserId      String?
+  submittedByUserId String?
+  reviewedByUserId  String?
+  archivedByUserId  String?
+  sentAt            DateTime?
+  submittedAt       DateTime?
+  reviewedAt        DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  team              Team?              @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  worker            User?              @relation("WorkdaySheetWorker", fields: [workerUserId], references: [id], onDelete: SetNull)
+  createdBy         User               @relation("WorkdaySheetCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  sentBy            User?              @relation("WorkdaySheetSentBy", fields: [sentByUserId], references: [id], onDelete: Restrict)
+  submittedBy       User?              @relation("WorkdaySheetSubmittedBy", fields: [submittedByUserId], references: [id], onDelete: Restrict)
+  reviewedBy        User?              @relation("WorkdaySheetReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
+  archivedBy        User?              @relation("WorkdaySheetArchivedBy", fields: [archivedByUserId], references: [id], onDelete: Restrict)
+  rows              WorkdaySheetRow[]
+
+  @@index([companyId, date, status])
+  @@index([companyId, teamId, date])
+  @@index([companyId, workerUserId, date])
+  @@index([createdByUserId])
+  @@index([sentByUserId])
+  @@index([submittedByUserId])
+  @@index([reviewedByUserId])
+  @@index([archivedByUserId])
+}
+
+model WorkdaySheetRow {
+  id           String       @id @default(cuid())
+  companyId    String
+  sheetId      String
+  position     Int
+  startTime    String?      @db.VarChar(5)
+  endTime      String?      @db.VarChar(5)
+  plannedText  String
+  actualText   String?
+  notes        String?
+  customerId   String?
+  addressId    String?
+  objectId     String?
+  objectAreaId String?
+  jobId        String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sheet        WorkdaySheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  customer     Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  address      Address?     @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  object       Object?      @relation(fields: [objectId], references: [id], onDelete: SetNull)
+  objectArea   ObjectArea?  @relation(fields: [objectAreaId], references: [id], onDelete: SetNull)
+  job          Job?         @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@unique([sheetId, position])
+  @@index([companyId, sheetId])
+  @@index([companyId, customerId])
+  @@index([companyId, addressId])
+  @@index([companyId, objectId])
+  @@index([companyId, objectAreaId])
+  @@index([companyId, jobId])
 }

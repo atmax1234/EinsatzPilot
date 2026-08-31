@@ -13,6 +13,7 @@ import { JobCostsModule } from './job-costs/job-costs.module';
 import { OperationsModule } from './operations/operations.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReportsModule } from './reports/reports.module';
+import { WorkdaySheetsModule } from './workday-sheets/workday-sheets.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ReportsModule } from './reports/reports.module';
     ReportsModule,
     AttachmentsModule,
     AssignmentsModule,
+    WorkdaySheetsModule,
   ],
   controllers: [AppController],
 })

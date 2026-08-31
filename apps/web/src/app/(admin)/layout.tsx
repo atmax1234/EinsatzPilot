@@ -32,6 +32,7 @@ export default async function AdminLayout({
         <nav className="sidebar-nav">
           <Link href="/dashboard">Dashboard</Link>
           <Link href="/jobs">Auftraege</Link>
+          <Link href="/workday-sheets">Tagesblaetter</Link>
           <Link href="/customers">Kunden & Adressen</Link>
           <Link href="/objects">Objekte</Link>
           <Link href="/items">Artikel</Link>

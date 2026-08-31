@@ -163,6 +163,7 @@ export type CustomerReportStatus =
   | 'READY_FOR_REVIEW'
   | 'APPROVED'
   | 'ARCHIVED';
+export type WorkdaySheetStatus = 'DRAFT' | 'SENT' | 'SUBMITTED' | 'REVIEWED' | 'ARCHIVED';
 
 export type TeamMemberSummary = {
   id: string;
@@ -255,6 +256,147 @@ export type JobListItem = {
 
 export type JobListResponse = {
   jobs: JobListItem[];
+};
+
+export type WorkdaySheetActorSummary = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+export type WorkdaySheetTeamSummary = {
+  id: string;
+  name: string;
+};
+
+export type WorkdaySheetJobRelation = {
+  id: string;
+  reference: string;
+  title: string;
+};
+
+export type WorkdaySheetRowItem = {
+  id: string;
+  position: number;
+  startTime?: string;
+  endTime?: string;
+  plannedText: string;
+  actualText?: string;
+  notes?: string;
+  customerId?: string;
+  addressId?: string;
+  objectId?: string;
+  objectAreaId?: string;
+  jobId?: string;
+  customer?: JobCustomerRelation;
+  address?: JobAddressRelation;
+  object?: JobObjectRelation;
+  objectArea?: JobObjectAreaRelation;
+  job?: WorkdaySheetJobRelation;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkdaySheetListItem = {
+  id: string;
+  date: string;
+  title?: string;
+  status: WorkdaySheetStatus;
+  teamId?: string;
+  workerUserId?: string;
+  team?: WorkdaySheetTeamSummary;
+  worker?: WorkdaySheetActorSummary;
+  rowCount: number;
+  completedRowCount: number;
+  createdBy: WorkdaySheetActorSummary;
+  sentBy?: WorkdaySheetActorSummary;
+  submittedBy?: WorkdaySheetActorSummary;
+  reviewedBy?: WorkdaySheetActorSummary;
+  archivedBy?: WorkdaySheetActorSummary;
+  sentAt?: string;
+  submittedAt?: string;
+  reviewedAt?: string;
+  archivedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WorkdaySheetDetail = WorkdaySheetListItem & {
+  internalNotes?: string;
+  reviewNotes?: string;
+  rows: WorkdaySheetRowItem[];
+};
+
+export type WorkdaySheetListResponse = {
+  workdaySheets: WorkdaySheetListItem[];
+};
+
+export type WorkdaySheetDetailResponse = {
+  workdaySheet: WorkdaySheetDetail;
+};
+
+export type WorkdaySheetRowCreateInput = {
+  startTime?: string;
+  endTime?: string;
+  plannedText: string;
+  notes?: string;
+  customerId?: string;
+  addressId?: string;
+  objectId?: string;
+  objectAreaId?: string;
+  jobId?: string;
+};
+
+export type WorkdaySheetCreateInput = {
+  date: string;
+  title?: string;
+  teamId?: string;
+  workerUserId?: string;
+  internalNotes?: string;
+  rows: WorkdaySheetRowCreateInput[];
+};
+
+export type WorkdaySheetUpdateInput = {
+  date?: string;
+  title?: string | null;
+  teamId?: string | null;
+  workerUserId?: string | null;
+  internalNotes?: string | null;
+};
+
+export type WorkdaySheetRowPlannedUpdateInput = {
+  startTime?: string | null;
+  endTime?: string | null;
+  plannedText?: string;
+  notes?: string | null;
+  customerId?: string | null;
+  addressId?: string | null;
+  objectId?: string | null;
+  objectAreaId?: string | null;
+  jobId?: string | null;
+};
+
+export type WorkdaySheetRowActualUpdateInput = {
+  actualText: string | null;
+};
+
+export type WorkdaySheetRowUpdateInput =
+  | WorkdaySheetRowPlannedUpdateInput
+  | WorkdaySheetRowActualUpdateInput;
+
+export type WorkdaySheetStatusUpdateInput = {
+  status: Exclude<WorkdaySheetStatus, 'DRAFT'>;
+  reviewNotes?: string;
+};
+
+export type WorkdaySheetOptionsResponse = {
+  teams: Array<WorkdaySheetTeamSummary & { memberCount: number }>;
+  workers: WorkdaySheetActorSummary[];
+  customers: JobCustomerRelation[];
+  addresses: JobAddressRelation[];
+  objects: JobObjectRelation[];
+  objectAreas: JobObjectAreaRelation[];
+  jobs: WorkdaySheetJobRelation[];
 };
 
 export type JobActivityItem = {

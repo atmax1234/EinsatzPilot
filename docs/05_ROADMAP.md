@@ -1,6 +1,6 @@
 # Roadmap
 
-Phases are dependency order, not calendar promises. EinsatzPilot is job-centered service-operations software, not an inventory, logistics, delivery, or warehouse application.
+Phases are dependency order, not calendar promises. EinsatzPilot is a modular all-in-one operations platform for everyday work across business types and industries. Facility, Hausmeister, cleaning, and gardening workflows are the first proof workflows, not the final boundary. The operating principle is **specific execution, broad architecture**.
 
 ## Phase 0 — Protect and verify existing foundation
 
@@ -76,29 +76,47 @@ Phases are dependency order, not calendar promises. EinsatzPilot is job-centered
 
 **Must not build without separate later approval:** Actual PDF generation/export, invoice or offer issuance, payments, customer email sending, AI summaries, recurring contracts, item movement/logistics, command-board interactions, drag-and-drop, QR codes, or mobile flows. Phase 7B preparation must not be presented as working PDF export.
 
-## Phase 8 — Recurring Service Contracts
+## Phase 8 — Daily Worksheets / Team Protocols Foundation
+
+**Status:** Implemented and verified with an additive migration, shared contracts/schema helpers, tenant-safe role and relation rules, a real office/worker web workflow, and expanded smoke coverage.
+
+**Goals:** Give the office a dated execution paper for a team and/or worker, preserve ordered free-text planning alongside optional customer/address/object/object-area/Job context, deliberately send and lock planning, let assigned workers record actual work and submit, and let the office review and archive.
+
+**Implemented boundary:** `WorkdaySheet` and `WorkdaySheetRow` are company-owned. Lifecycle is forward-only `DRAFT -> SENT -> SUBMITTED -> REVIEWED -> ARCHIVED`. OWNER/OFFICE manage planning, send, review, and archive. Assigned WORKER users see sent-or-later sheets, edit only row `actualText` in `SENT`, and must complete every row before submission. Workers do not receive office internal notes. Cross-tenant relation IDs use safe not-found behavior.
+
+**Must not build yet:** Automatic follow-up conversion, recurring service agreements, generated future Jobs, command-board interactions, or a parallel Job system.
+
+## Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports
 
 **Status:** Next recommended phase.
 
-**Goals:** Model object-based recurring cleaning, caretaking, window, garden, winter-service, inspection, and maintenance definitions; add service templates, schedules, idempotent job generation, exceptions, and lifecycle.
+**Goals:** Let OWNER/OFFICE deliberately act on reviewed worksheet rows by creating governed follow-up Jobs, attaching appropriate cost/report records, or preparing billable/customer-communication inputs. Retain immutable source identity/text snapshots, actor/time audit, downstream links, action status, and idempotency so retries and repeated review cannot duplicate records.
 
-**Dependencies:** Stable customer/object relations, jobs, and explicit timezone/scheduling rules.
+**Dependencies:** Reviewed Phase 8 sheets/rows, existing Job lifecycle, Job cost/report rules, and tenant-safe source/destination validation.
 
-**Must not build yet:** Browser-only recurrence, hidden scheduling assumptions, or automatic commercial commitments.
+**Must not build yet:** Silent conversion during review, automatic customer messages, invoices/offers/payments, AI summaries, or a second Job lifecycle.
 
-## Phase 9 — Command Center Dashboard
+## Phase 10 — Service Agreements / Recurring Object Duties
 
-**Goals:** Provide a company-wide operational overview of jobs, teams, assignments, reports awaiting review, costs, objects, incidents, follow-up work, and recurring services using trusted server-backed metrics.
+**Goals:** Model object/customer-grounded expected duties, reusable planning text, cadence/timezone, effective dates, exceptions, and lifecycle. Agreements should feed flexible worksheet planning inputs close to execution time.
+
+**Dependencies:** Stable worksheet planning and review/follow-up flow plus explicit scheduling/timezone semantics.
+
+**Must not build yet:** Rigid bulk generation of future Jobs, browser-only recurrence, hidden scheduling assumptions, or automatic commercial commitments.
+
+## Phase 11 — Command Center Dashboard
+
+**Goals:** Provide a company-wide operational overview of worksheets, Jobs, teams, assignments, reports awaiting review, costs, objects, incidents, follow-up work, and recurring duties using trusted server-backed metrics.
 
 **Dependencies:** Stable upstream workflows and defined meanings for every count and status.
 
 **Must not build yet:** Drag-and-drop unless assignment commands, conflicts, permissions, and atomic updates are mature; no fake dashboard data.
 
-## Phase 10 — Smart Planning / AI / Automation
+## Phase 12 — Smart Planning / AI / Automation
 
-**Goals:** Assist with German customer replies, report summaries, job creation from messages, follow-up suggestions, and offer/invoice drafting. Add event-driven automation only with idempotency, permissions, auditability, and human review.
+**Goals:** Assist with German customer replies, report summaries, planning suggestions, job creation from messages, follow-up suggestions, and offer/invoice drafting. Add event-driven automation only with idempotency, permissions, auditability, and human review.
 
-**Dependencies:** Trusted jobs, findings, reports, costs, customer context, and stable operational workflows.
+**Dependencies:** Trusted worksheets, Jobs, findings, reports, costs, customer context, and stable operational workflows.
 
 **Must not build yet:** Autonomous high-impact actions, opaque cross-tenant data use, or AI as a substitute for missing business rules.
 

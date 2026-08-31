@@ -569,6 +569,39 @@ code {
   gap: 18px;
 }
 
+.worksheet-row-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.worksheet-row-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(216, 198, 170, 0.72);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.worksheet-plan-text,
+.worksheet-actual-text {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(241, 225, 201, 0.42);
+}
+
+.worksheet-plan-text strong,
+.worksheet-actual-text strong {
+  color: var(--text);
+}
+
+.worksheet-plan-text p,
+.worksheet-actual-text p {
+  margin-bottom: 0;
+  white-space: pre-wrap;
+}
+
 .member-row {
   display: flex;
   align-items: flex-start;

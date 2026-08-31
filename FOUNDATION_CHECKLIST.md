@@ -3,7 +3,7 @@
 Use this to track when the system is actually ready to move out of foundation work.
 Be strict. “Kinda works” = not done.
 
-Assessment snapshot: checked items below were verified through 2026-08-03 against the live local setup where applicable.
+Assessment snapshot: checked items below were verified through 2026-08-31 against the live local setup where applicable.
 Verification now includes real PostgreSQL migrations, the API smoke flow, and web pages rendering live updated data from the database.
 
 Directory and Job relation snapshot: Customer, Address, Object, and ObjectArea foundation plus backwards-compatible Job relations were migrated and verified through the expanded live PostgreSQL smoke flow on 2026-07-19.
@@ -17,6 +17,8 @@ Job execution report snapshot: backwards-compatible structured findings, follow-
 Job cost ledger snapshot: tenant-safe job cost lines, strict amount rules, optional item references, actor attribution, backend-derived summaries, real-API job-detail UI, migration, and expanded smoke coverage were verified on 2026-07-19.
 
 Customer report foundation snapshot: OWNER/OFFICE-only, job-grounded stable snapshots; explicit approved-report, attachment, and cost selection; copied directory/job context; lifecycle/activity rules; real-API web review; additive migration; and expanded smoke coverage were verified on 2026-08-03. Phase 7B customer-readable presentation, internal-only separation, source-scope UX, and browser print were added and verified through code inspection, typecheck, production build, and the unchanged 163-assertion smoke flow on 2026-08-07. PDF generation/export and delivery do not exist.
+
+Daily worksheet snapshot: company-owned dated sheets and ordered rows, free text plus optional tenant-safe directory/Job links, direct/team assignment, role-specific planning/actual-work boundaries, the forward-only send/submit/review/archive lifecycle, real office/worker UI, additive migration, and expanded 196-check smoke coverage were verified on 2026-08-31. No worksheet review-to-follow-up conversion or recurring agreement exists yet.
 
 ---
 
@@ -295,8 +297,8 @@ You can do ALL of this without hacks:
 * [x] customer-report list, source, detail, create, draft-update, and status endpoints exist
 * [x] `/customer-reports` list/create/detail flows and Job-detail integration use real API data
 * [x] expanded smoke passes all 163 assertions: 121 preserved Phase 1-6 predicates plus 42 Phase 7 source, snapshot, lifecycle, role, validation, and tenant-isolation predicates
-* [x] next recommended phase is Phase 8 — Recurring Service Contracts Foundation
-* [x] actual PDF export, invoices, payments, email sending, AI, recurrence, movement/logistics, command board, drag/drop, QR, and mobile remain unimplemented
+* [x] Phase 7 behavior remains intact after the separate Phase 8 worksheet addition
+* [x] service agreements, actual PDF export, invoices, payments, email sending, AI, movement/logistics mechanics, command board, drag/drop, QR, and mobile remain unimplemented
 
 ## 22. Phase 7B Customer Report Polish and PDF Readiness
 
@@ -308,6 +310,36 @@ You can do ALL of this without hacks:
 * [x] missing attachment/file-retention behavior is represented honestly in office context
 * [x] PDF export is described as preparation only until a real artifact/export flow exists
 * [x] invoice and email behavior require separate later approval
+
+---
+
+## 23. Phase 8 Daily Worksheets / Team Protocols Foundation
+
+* [x] company-owned dated `WorkdaySheet` and ordered `WorkdaySheetRow` models exist
+* [x] office can create and edit a `DRAFT` for a team and/or direct WORKER
+* [x] planned rows support free text and optional customer/address/object/object-area/Job context
+* [x] every linked entity is tenant-validated and object areas require/match their object
+* [x] `DRAFT -> SENT -> SUBMITTED -> REVIEWED -> ARCHIVED` transitions and audit actor/timestamps are enforced
+* [x] office planning is locked after send and reviewed/archived content is locked
+* [x] assigned workers see only authorized non-draft sheets and do not receive internal office notes
+* [x] workers can update only `actualText` on assigned `SENT` sheets and must complete all rows before submission
+* [x] OWNER/OFFICE can review submitted sheets and archive reviewed sheets
+* [x] `/workday-sheets` list/create/detail flows use the real API for office and worker roles
+* [x] expanded smoke passes all 196 checks, including roles, lifecycle, locking, optional links, and cross-tenant behavior
+* [x] worksheet review does not silently create follow-up Jobs, costs, reports, billable items, or customer messages
+* [x] recurring service agreements do not generate rigid future Jobs or form a second Job system
+* [x] next recommended phase is Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports
+
+---
+
+## 24. Phase 9 Worksheet Review → Follow-up Jobs / Costs / Reports
+
+* [ ] reviewed worksheet rows retain an explicit, auditable conversion/action record
+* [ ] action retries are idempotent and duplicate downstream records are prevented
+* [ ] OWNER/OFFICE deliberately chooses conversion; WORKER cannot trigger it
+* [ ] source and destination records are tenant-validated with safe not-found behavior
+* [ ] generated follow-up Jobs use the existing Job model and lifecycle
+* [ ] no silent review automation, invoice/email behavior, or second Job system is introduced
 
 ---
 

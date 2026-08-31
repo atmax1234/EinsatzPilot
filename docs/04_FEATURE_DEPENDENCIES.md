@@ -2,14 +2,13 @@
 
 ## Ordering rule
 
-Domain truth comes before interaction polish. The dependency center is the job lifecycle and the evidence and costs produced by real work, not inventory mechanics.
+Domain truth comes before interaction polish. The dependency center is everyday operational work: flexible worksheet planning/execution plus governed Jobs, evidence, review, and costs—not inventory mechanics or one service vertical.
 
 ## Strategic map
 
 ```text
 Tenant-safe identity and roles
 └── Customer / Verwaltung + Address + Object + ObjectArea
-    ├── Recurring service definitions (planned)
     └── Job links and compatibility migration
         ├── Job lifecycle + JobActivity
         ├── Assignment control layer
@@ -20,16 +19,26 @@ Tenant-safe identity and roles
             ├── Material purchase/use (Item reference optional)
             └── Invoice-ready summary
 
+Customer/object context + teams/workers + existing Jobs
+└── Daily worksheets / team protocols (Phase 8 implemented)
+    ├── Office plan/send lock
+    ├── Assigned worker actual work + submit
+    └── Office review
+        └── Explicit reviewed-row conversion actions (Phase 9 next)
+            ├── Follow-up Jobs / costs / reports
+            └── Billable/customer-communication inputs (preparation only)
+
 Reviewed job execution + object memory + job costs
 └── Customer/Object report snapshot foundation (implemented)
     └── Customer report polish and browser-print readiness (implemented; PDF not implemented)
 
-Customer/object foundation + jobs + timezone/scheduling rules
-└── Recurring service contracts (next)
+Worksheet planning + customer/object responsibility + schedule/timezone rules
+└── Service agreements / recurring object duties (Phase 10)
+    └── Feed flexible worksheet planning; do not bulk-generate rigid future Jobs
 
-Recurring services + jobs + assignments + reports + costs
-└── Company command-center dashboard
-    └── Smart planning / automation / AI assistance
+Trusted worksheets + Jobs + assignments + reports + costs
+└── Company command-center dashboard (Phase 11)
+    └── Smart planning / automation / AI assistance (Phase 12)
 
 ItemCategory + Item
 ├── Supporting material/tool/asset context for jobs, costs, and proof
@@ -47,8 +56,10 @@ ItemCategory + Item
 | Job cost ledger | **Implemented foundation:** tenant-owned cost lines, strict kinds/units/amounts, optional item validation, actor attribution, backend summaries | Frontend-only totals or treating item quantity as job cost |
 | Customer report generator | **Implemented foundation:** job-grounded stable source snapshots, approved-report eligibility, explicit attachment/cost selection, lifecycle, tenant rules, shared contracts, API, real UI, and smoke coverage | Resolving mutable sources live or presenting a styled view as an issued/exported document |
 | Customer report polish / PDF readiness | **Implemented:** stored-snapshot presentation boundary, explicit customer/internal separation, source-scope UX, A4 browser print, honest attachment limitation | Claiming PDF export exists because browser print renders, or coupling invoice/email behavior into presentation work |
-| Recurring service contracts | Stable customers/objects/jobs, schedule/timezone rules, templates, generation idempotency | Repeating browser reminders without durable definitions |
-| Command-center dashboard | Trusted jobs, assignments, findings, costs, object issues, server-backed metrics | Decorative cards, fake counts, or premature drag-and-drop |
+| Daily worksheets / team protocols | **Implemented foundation:** company ownership, ordered free-text rows, optional tenant-safe relations, direct/team assignment, role-specific locking, explicit lifecycle, actors/timestamps, shared contracts, API, real UI, and smoke coverage | Renaming worksheets as Jobs, client-only assignment, or exposing draft/internal data to workers |
+| Worksheet review-to-follow-up | Reviewed sheets/rows with stable identity, explicit action model, provenance, idempotency, office control, and downstream validation | Silently creating records during review or duplicating a second Job system |
+| Service agreements / recurring object duties | Stable worksheet planning, customers/objects, schedule/timezone rules, templates, and exception semantics | Bulk-generating rigid Jobs far ahead or implementing browser-only reminders |
+| Command-center dashboard | Trusted worksheets, jobs, assignments, findings, costs, object issues, and server-backed metrics | Decorative cards, fake counts, or premature drag-and-drop |
 | Offer/invoice preparation | Reviewed job costs, customer/object context, immutable line snapshots, numbering/tax rules | Mutable issued documents or unsupported totals |
 | Smart planning/automation/AI | Trusted workflows, permissions, auditability, human review, measurable tasks | Autonomous consequential changes or AI replacing absent logic |
 | Optional movement history | Demonstrated traceability need, item identity, explicit event/correction semantics | Building warehouse workflows as the default product direction |
@@ -57,7 +68,11 @@ ItemCategory + Item
 
 A model or route alone is not a completed dependency. Before dependent UI begins, require reviewed ownership and lifecycle, shared contracts, runtime validation, tenant-safe references, service-level roles, useful errors, representative denial/cross-tenant verification, and updated documentation.
 
-The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator, and Phase 7B presentation/print foundations meet this gate. The next default slice is exactly `Phase 8 — Recurring Service Contracts Foundation`. Item movement is not a prerequisite and should remain optional until a concrete traceability workflow justifies it.
+The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator, Phase 7B presentation/print, and Phase 8 daily worksheet/team protocol foundations meet this gate. The next default slice is exactly `Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports`. Recurring service agreements move to Phase 10 and must feed worksheet planning instead of bulk-generating rigid future Jobs. Item movement is not a prerequisite and should remain optional until a concrete traceability workflow justifies it.
+
+## Phase 8 worksheet gate
+
+Phase 8 supplies company-owned dated sheets and ordered rows, optional tenant-validated customer/address/object/object-area/Job links, free text, direct WORKER and/or team assignment, actor/timestamp audit fields, a forward-only `DRAFT -> SENT -> SUBMITTED -> REVIEWED -> ARCHIVED` lifecycle, role-specific field locking, real office/worker UI, and representative happy-path, denial, invalid-transition, and cross-tenant smoke proof. It deliberately supplies no conversion action, recurring agreement, generated Job, command board, PDF artifact, invoice, email, AI, or mobile workflow.
 
 ## Phase 7 snapshot gate
 

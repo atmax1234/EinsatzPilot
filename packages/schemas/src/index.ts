@@ -22,6 +22,7 @@ import type {
   ReportReviewDecisionStatus,
   ReportReviewStatus,
   TeamStatus,
+  WorkdaySheetStatus,
 } from '@einsatzpilot/types';
 
 export const membershipRoles = ['OWNER', 'OFFICE', 'WORKER'] as const satisfies readonly MembershipRole[];
@@ -166,6 +167,13 @@ export const customerReportStatuses = [
   'APPROVED',
   'ARCHIVED',
 ] as const satisfies readonly CustomerReportStatus[];
+export const workdaySheetStatuses = [
+  'DRAFT',
+  'SENT',
+  'SUBMITTED',
+  'REVIEWED',
+  'ARCHIVED',
+] as const satisfies readonly WorkdaySheetStatus[];
 
 export function parseMembershipRole(rawRole: string | undefined): MembershipRole | undefined {
   if (!rawRole) {
@@ -375,4 +383,15 @@ export function parseCustomerReportStatus(
 
   const normalized = rawStatus.toUpperCase() as CustomerReportStatus;
   return customerReportStatuses.includes(normalized) ? normalized : undefined;
+}
+
+export function parseWorkdaySheetStatus(
+  rawStatus: string | undefined,
+): WorkdaySheetStatus | undefined {
+  if (!rawStatus) {
+    return undefined;
+  }
+
+  const normalized = rawStatus.toUpperCase() as WorkdaySheetStatus;
+  return workdaySheetStatuses.includes(normalized) ? normalized : undefined;
 }

@@ -19,6 +19,8 @@ const jobCostWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const jobCostReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 const customerReportWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const customerReportReadRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
+const workdaySheetManageRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
+const workdaySheetReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
 
 function assertAuthenticatedContext(
   authContext: RequestAuthContext,
@@ -173,5 +175,21 @@ export function assertCanReadCustomerReports(authContext: RequestAuthContext) {
     authContext,
     customerReportReadRoles,
     'Nur OWNER oder OFFICE duerfen Kundenberichte lesen.',
+  );
+}
+
+export function assertCanManageWorkdaySheets(authContext: RequestAuthContext) {
+  assertRoleAllowed(
+    authContext,
+    workdaySheetManageRoles,
+    'Nur OWNER oder OFFICE duerfen Tagesblaetter planen, senden, pruefen oder archivieren.',
+  );
+}
+
+export function assertCanReadWorkdaySheets(authContext: RequestAuthContext) {
+  assertRoleAllowed(
+    authContext,
+    workdaySheetReadRoles,
+    'Nur aktive Firmenmitglieder duerfen Tagesblaetter lesen.',
   );
 }
