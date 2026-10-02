@@ -53,6 +53,14 @@ The office wrapper owns draft editing, lifecycle actions, current actor attribut
 
 No PDF artifact, PDF generator/export endpoint, template/version model, customer portal, or delivery record exists. Browser print is readiness, not export.
 
+### Worksheet Usability and API Hardening (Phase 8B)
+
+Phase 8B adds no database model or migration and does not change the `WorkdaySheet` / `WorkdaySheetRow` aggregate or lifecycle. Shared contracts now describe exact list filters and the role-aware today response. The list API accepts `date`, `status`, `teamId`, and `workerUserId`; the service always combines those filters with the caller's tenant and worker-assignment visibility rather than allowing a query to replace the authorization predicate. The today query returns full visible rows for the API server's local calendar date and uses the same visibility and internal-note redaction rules as detail reads.
+
+Draft planning writes and assigned-worker actual-text writes now lock the parent sheet through a status-scoped update inside the same transaction as the row mutation. This prevents a concurrent send or submit transition from accepting a row write after the relevant editable state has ended. It is lifecycle hardening, not a new state or audit aggregate.
+
+Completion counts remain derived from nonempty row `actualText`; they are convenience response data rather than persisted workflow state. Browser-print styling is a web presentation of the same stored sheet and rows. It creates no PDF artifact, export record, downstream Job, cost, report, or customer message.
+
 ## Planned models
 
 ### WorksheetReviewAction (Phase 9 direction)
@@ -82,7 +90,7 @@ Company
 ├── Membership ── User ── TeamMember ── Team
 ├── Customer / Verwaltung ── Address
 │   └── Object ── ObjectArea ── ServiceAgreement / RecurringObjectDuty (Phase 10 planned)
-├── WorkdaySheet / TeamProtocol (Phase 8 implemented)
+├── WorkdaySheet / TeamProtocol (Phase 8 foundation + Phase 8B usability implemented)
 │   ├── assigned Team / User
 │   └── WorkdaySheetRow ── Customer / Address / Object / ObjectArea / Job reference (optional)
 ├── Job ── JobActivity

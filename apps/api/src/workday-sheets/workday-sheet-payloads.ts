@@ -3,6 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import type {
   WorkdaySheetCreateInput,
   WorkdaySheetRowCreateInput,
+  WorkdaySheetStatus,
   WorkdaySheetStatusUpdateInput,
   WorkdaySheetUpdateInput,
 } from '@einsatzpilot/types';
@@ -81,6 +82,24 @@ function dateOnly(value: unknown, field: string) {
   return parsed;
 }
 
+function optionalWorkdaySheetStatus(value: unknown): WorkdaySheetStatus | undefined {
+  if (value == null || value === '') {
+    return undefined;
+  }
+  if (
+    value !== 'DRAFT' &&
+    value !== 'SENT' &&
+    value !== 'SUBMITTED' &&
+    value !== 'REVIEWED' &&
+    value !== 'ARCHIVED'
+  ) {
+    throw new BadRequestException(
+      'status muss DRAFT, SENT, SUBMITTED, REVIEWED oder ARCHIVED sein.',
+    );
+  }
+  return value;
+}
+
 function timeOnly(value: unknown, field: string) {
   if (value == null || value === '') {
     return undefined;
@@ -115,6 +134,22 @@ const rowFields = [
   'objectAreaId',
   'jobId',
 ];
+
+export function normalizeWorkdaySheetListFilters(input: unknown): {
+  date?: Date;
+  status?: WorkdaySheetStatus;
+  teamId?: string;
+  workerUserId?: string;
+} {
+  const raw = payloadObject(input, 'query');
+  assertAllowedKeys(raw, ['date', 'status', 'teamId', 'workerUserId']);
+  return {
+    date: raw.date === undefined || raw.date === '' ? undefined : dateOnly(raw.date, 'date'),
+    status: optionalWorkdaySheetStatus(raw.status),
+    teamId: optionalId(raw.teamId, 'teamId'),
+    workerUserId: optionalId(raw.workerUserId, 'workerUserId'),
+  };
+}
 
 export function normalizeWorkdaySheetRowCreateInput(input: WorkdaySheetRowCreateInput) {
   const raw = payloadObject(input, 'row');

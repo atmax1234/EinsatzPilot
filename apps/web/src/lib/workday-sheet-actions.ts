@@ -15,9 +15,9 @@ import {
   updateWorkdaySheetRowData,
 } from './workday-sheets';
 
-function required(formData: FormData, key: string) {
+function required(formData: FormData, key: string, label = key) {
   const value = formData.get(key);
-  if (typeof value !== 'string' || !value.trim()) throw new Error(`${key} ist erforderlich.`);
+  if (typeof value !== 'string' || !value.trim()) throw new Error(`${label} ist erforderlich.`);
   return value.trim();
 }
 
@@ -34,7 +34,7 @@ function rowInput(formData: FormData): WorkdaySheetRowCreateInput {
   return {
     startTime: optional(formData, 'startTime'),
     endTime: optional(formData, 'endTime'),
-    plannedText: required(formData, 'plannedText'),
+    plannedText: required(formData, 'plannedText', 'Geplante Arbeit'),
     notes: optional(formData, 'notes'),
     customerId: optional(formData, 'customerId'),
     addressId: optional(formData, 'addressId'),
@@ -60,10 +60,23 @@ function redirectDetail(sheetId: string, values: Record<string, string | undefin
   );
 }
 
+function redirectAfterSheetAction(
+  sheetId: string,
+  returnTo: string | undefined,
+  values: Record<string, string | undefined>,
+): never {
+  if (returnTo === '/workday-sheets/today') {
+    const params = new URLSearchParams();
+    Object.entries(values).forEach(([key, value]) => value && params.set(key, value));
+    redirect(params.size ? `${returnTo}?${params.toString()}` : returnTo);
+  }
+  redirectDetail(sheetId, values);
+}
+
 export async function createWorkdaySheetAction(formData: FormData) {
   try {
     const result = await createWorkdaySheetData({
-      date: required(formData, 'date'),
+      date: required(formData, 'date', 'Arbeitstag'),
       title: optional(formData, 'title'),
       teamId: optional(formData, 'teamId'),
       workerUserId: optional(formData, 'workerUserId'),
@@ -82,7 +95,7 @@ export async function createWorkdaySheetAction(formData: FormData) {
 export async function updateWorkdaySheetAction(sheetId: string, formData: FormData) {
   try {
     const result = await updateWorkdaySheetData(sheetId, {
-      date: required(formData, 'date'),
+      date: required(formData, 'date', 'Arbeitstag'),
       title: nullable(formData, 'title'),
       teamId: nullable(formData, 'teamId'),
       workerUserId: nullable(formData, 'workerUserId'),
@@ -138,14 +151,22 @@ export async function updateActualWorkdaySheetRowAction(
   rowId: string,
   formData: FormData,
 ) {
+  const returnTo = optional(formData, 'returnTo');
   try {
     const result = await updateWorkdaySheetRowData(sheetId, rowId, {
       actualText: nullable(formData, 'actualText'),
     });
-    redirectDetail(sheetId, result.ok ? { notice: 'actual-updated' } : { error: result.error });
+    redirectAfterSheetAction(
+      sheetId,
+      returnTo,
+      result.ok ? { notice: 'actual-updated' } : { error: result.error },
+    );
   } catch (error) {
-    redirectDetail(sheetId, {
-      error: error instanceof Error ? error.message : 'Ist-Arbeit konnte nicht gespeichert werden.',
+    redirectAfterSheetAction(sheetId, returnTo, {
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Tatsaechliche Arbeit konnte nicht gespeichert werden.',
     });
   }
 }
@@ -166,17 +187,19 @@ export async function transitionWorkdaySheetAction(
   status: WorkdaySheetStatusUpdateInput['status'],
   formData: FormData,
 ) {
+  const returnTo = optional(formData, 'returnTo');
   try {
     const result = await transitionWorkdaySheetData(sheetId, {
       status,
       reviewNotes: status === 'REVIEWED' ? optional(formData, 'reviewNotes') : undefined,
     });
-    redirectDetail(
+    redirectAfterSheetAction(
       sheetId,
+      returnTo,
       result.ok ? { notice: `status-${status.toLowerCase()}` } : { error: result.error },
     );
   } catch (error) {
-    redirectDetail(sheetId, {
+    redirectAfterSheetAction(sheetId, returnTo, {
       error: error instanceof Error ? error.message : 'Status konnte nicht geaendert werden.',
     });
   }

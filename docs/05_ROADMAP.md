@@ -86,6 +86,16 @@ Phases are dependency order, not calendar promises. EinsatzPilot is a modular al
 
 **Must not build yet:** Automatic follow-up conversion, recurring service agreements, generated future Jobs, command-board interactions, or a parallel Job system.
 
+## Phase 8B — Daily Worksheets Usability and Hardening
+
+**Status:** Implemented and verified without a schema migration.
+
+**Goals:** Make the Phase 8 worksheet workflow immediately easier to scan, execute, review, and print while preserving the existing aggregate, lifecycle, role boundaries, and distinction from Jobs.
+
+**Implemented boundary:** The role-aware list accepts exact date/status/team/worker filters and shows clearer German status, assignment, row, and completion information. A dedicated today endpoint and `/workday-sheets/today` page give assigned workers current rows, actual-text entry, guarded submission, and a small upcoming-sent view. Row context, time ranges, completion, review actors/times/notes, and locked states are clearer. Detail has A4-oriented browser-print styling that excludes navigation, controls, and office-internal notes. Status-scoped transactional guards prevent row writes from racing past send/submit transitions. No Prisma model or lifecycle state changed.
+
+**Still not implemented:** Phase 9 conversion actions, generated PDF/export artifacts, recurring service agreements, generated future Jobs, automatic downstream records, command-board behavior, or mobile workflows.
+
 ## Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports
 
 **Status:** Next recommended phase.

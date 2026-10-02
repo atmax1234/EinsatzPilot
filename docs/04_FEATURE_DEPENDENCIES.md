@@ -21,9 +21,11 @@ Tenant-safe identity and roles
 
 Customer/object context + teams/workers + existing Jobs
 └── Daily worksheets / team protocols (Phase 8 implemented)
-    ├── Office plan/send lock
-    ├── Assigned worker actual work + submit
-    └── Office review
+    └── Worksheet usability / hardening (Phase 8B implemented)
+        ├── Filtered office overview + completion clarity
+        ├── Assigned-worker today flow + actual work + submit
+        ├── Review/lock clarity + browser print
+        └── Office review
         └── Explicit reviewed-row conversion actions (Phase 9 next)
             ├── Follow-up Jobs / costs / reports
             └── Billable/customer-communication inputs (preparation only)
@@ -57,6 +59,7 @@ ItemCategory + Item
 | Customer report generator | **Implemented foundation:** job-grounded stable source snapshots, approved-report eligibility, explicit attachment/cost selection, lifecycle, tenant rules, shared contracts, API, real UI, and smoke coverage | Resolving mutable sources live or presenting a styled view as an issued/exported document |
 | Customer report polish / PDF readiness | **Implemented:** stored-snapshot presentation boundary, explicit customer/internal separation, source-scope UX, A4 browser print, honest attachment limitation | Claiming PDF export exists because browser print renders, or coupling invoice/email behavior into presentation work |
 | Daily worksheets / team protocols | **Implemented foundation:** company ownership, ordered free-text rows, optional tenant-safe relations, direct/team assignment, role-specific locking, explicit lifecycle, actors/timestamps, shared contracts, API, real UI, and smoke coverage | Renaming worksheets as Jobs, client-only assignment, or exposing draft/internal data to workers |
+| Worksheet usability / hardening | **Implemented:** role-safe exact filters, server-backed today query, derived completion counts, worker execution flow, context/review/lock presentation, browser print, and status-scoped transactional row writes | Client-only filtering, bypassing assignment visibility, treating print as PDF export, or adding downstream conversions during polish |
 | Worksheet review-to-follow-up | Reviewed sheets/rows with stable identity, explicit action model, provenance, idempotency, office control, and downstream validation | Silently creating records during review or duplicating a second Job system |
 | Service agreements / recurring object duties | Stable worksheet planning, customers/objects, schedule/timezone rules, templates, and exception semantics | Bulk-generating rigid Jobs far ahead or implementing browser-only reminders |
 | Command-center dashboard | Trusted worksheets, jobs, assignments, findings, costs, object issues, and server-backed metrics | Decorative cards, fake counts, or premature drag-and-drop |
@@ -68,11 +71,15 @@ ItemCategory + Item
 
 A model or route alone is not a completed dependency. Before dependent UI begins, require reviewed ownership and lifecycle, shared contracts, runtime validation, tenant-safe references, service-level roles, useful errors, representative denial/cross-tenant verification, and updated documentation.
 
-The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator, Phase 7B presentation/print, and Phase 8 daily worksheet/team protocol foundations meet this gate. The next default slice is exactly `Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports`. Recurring service agreements move to Phase 10 and must feed worksheet planning instead of bulk-generating rigid future Jobs. Item movement is not a prerequisite and should remain optional until a concrete traceability workflow justifies it.
+The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator, Phase 7B presentation/print, Phase 8 daily worksheet/team protocol foundation, and Phase 8B worksheet usability/hardening meet this gate. The next default slice is exactly `Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports`. Recurring service agreements move to Phase 10 and must feed worksheet planning instead of bulk-generating rigid future Jobs. Item movement is not a prerequisite and should remain optional until a concrete traceability workflow justifies it.
 
 ## Phase 8 worksheet gate
 
 Phase 8 supplies company-owned dated sheets and ordered rows, optional tenant-validated customer/address/object/object-area/Job links, free text, direct WORKER and/or team assignment, actor/timestamp audit fields, a forward-only `DRAFT -> SENT -> SUBMITTED -> REVIEWED -> ARCHIVED` lifecycle, role-specific field locking, real office/worker UI, and representative happy-path, denial, invalid-transition, and cross-tenant smoke proof. It deliberately supplies no conversion action, recurring agreement, generated Job, command board, PDF artifact, invoice, email, AI, or mobile workflow.
+
+## Phase 8B worksheet usability gate
+
+Phase 8B adds exact list filtering, a role-aware today query and worker execution page, clearer completion/assignment/context/review/lock presentation, A4-oriented browser print, and status-scoped transactional protection around row writes. It adds no schema or lifecycle state and does not loosen the Phase 8 tenant, assignment, field, or internal-note boundaries. No Phase 9 conversion action, PDF artifact/export, recurring service agreement, or generated Job exists.
 
 ## Phase 7 snapshot gate
 

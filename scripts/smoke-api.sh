@@ -19,6 +19,7 @@ PHASE7_MUTATED_OBJECT_NAME="Phase 7 Mutated Object ${SMOKE_SUFFIX}"
 PHASE7_MUTATED_AREA_NAME="Phase 7 Mutated Area ${SMOKE_SUFFIX}"
 WORKDAY_SHEET_TITLE="Phase 8 Workday Sheet ${SMOKE_SUFFIX}"
 UPDATED_WORKDAY_SHEET_TITLE="${WORKDAY_SHEET_TITLE} Updated"
+WORKDAY_SHEET_DATE="$(date +%F)"
 
 cleanup() {
   rm -rf "$TMP_DIR"
@@ -355,7 +356,7 @@ unrelated_worker_login="$(json_post "${API_BASE}/auth/development-login" '{"emai
 unrelated_worker_token="$(printf '%s' "$unrelated_worker_login" | jq -r '.token')"
 
 workday_sheet_options="$(json_get "${API_BASE}/workday-sheets/options" "$token")"
-create_workday_sheet="$(json_post "${API_BASE}/workday-sheets" "{\"date\":\"2026-04-22\",\"title\":\"${WORKDAY_SHEET_TITLE}\",\"teamId\":\"${team_id}\",\"workerUserId\":\"${worker_user_id}\",\"internalNotes\":\"Office-only Phase 8 note\",\"rows\":[{\"startTime\":\"07:00\",\"endTime\":\"09:00\",\"plannedText\":\"Musterstr. 1 - Treppen und H.M.S.\",\"notes\":\"Phase 8 linked row\",\"customerId\":\"${customer_id}\",\"addressId\":\"${address_id}\",\"objectId\":\"${object_id}\",\"objectAreaId\":\"${area_id}\",\"jobId\":\"${job_id}\"}]}" "$token")"
+create_workday_sheet="$(json_post "${API_BASE}/workday-sheets" "{\"date\":\"${WORKDAY_SHEET_DATE}\",\"title\":\"${WORKDAY_SHEET_TITLE}\",\"teamId\":\"${team_id}\",\"workerUserId\":\"${worker_user_id}\",\"internalNotes\":\"Office-only Phase 8 note\",\"rows\":[{\"startTime\":\"07:00\",\"endTime\":\"09:00\",\"plannedText\":\"Musterstr. 1 - Treppen und H.M.S.\",\"notes\":\"Phase 8 linked row\",\"customerId\":\"${customer_id}\",\"addressId\":\"${address_id}\",\"objectId\":\"${object_id}\",\"objectAreaId\":\"${area_id}\",\"jobId\":\"${job_id}\"}]}" "$token")"
 workday_sheet_id="$(printf '%s' "$create_workday_sheet" | jq -r '.workdaySheet.id')"
 workday_sheet_row_id="$(printf '%s' "$create_workday_sheet" | jq -r '.workdaySheet.rows[0].id')"
 update_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}" "{\"title\":\"${UPDATED_WORKDAY_SHEET_TITLE}\"}" "$token")"
@@ -363,6 +364,8 @@ update_workday_sheet_row="$(json_patch "${API_BASE}/workday-sheets/${workday_she
 add_workday_sheet_row="$(json_post "${API_BASE}/workday-sheets/${workday_sheet_id}/rows" '{"startTime":"11:00","plannedText":"Tischler reinlassen / Schluesseluebergabe"}' "$token")"
 workday_sheet_second_row_id="$(printf '%s' "$add_workday_sheet_row" | jq -r '.workdaySheet.rows[1].id')"
 workday_sheet_list="$(json_get "${API_BASE}/workday-sheets" "$token")"
+filtered_workday_sheet_list="$(json_get "${API_BASE}/workday-sheets?date=${WORKDAY_SHEET_DATE}&status=DRAFT&teamId=${team_id}&workerUserId=${worker_user_id}" "$token")"
+invalid_workday_filter_status="$(curl -sS -o "${TMP_DIR}/invalid-workday-filter.json" -w '%{http_code}' "${API_BASE}/workday-sheets?status=NOT_A_STATUS" -H "Authorization: Bearer ${token}")"
 worker_draft_read_status="$(curl -sS -o "${TMP_DIR}/worker-draft-sheet.json" -w '%{http_code}' "${API_BASE}/workday-sheets/${workday_sheet_id}" -H "Authorization: Bearer ${worker_token}")"
 worker_create_sheet_status="$(curl -sS -o "${TMP_DIR}/worker-create-sheet.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"date":"2026-04-22","rows":[{"plannedText":"Forbidden worker plan"}]}')"
 worker_sheet_options_status="$(curl -sS -o "${TMP_DIR}/worker-sheet-options.json" -w '%{http_code}' "${API_BASE}/workday-sheets/options" -H "Authorization: Bearer ${worker_token}")"
@@ -378,6 +381,8 @@ worker_planned_update_status="$(curl -sS -o "${TMP_DIR}/worker-planned-update.js
 worker_first_actual="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" '{"actualText":"Treppen und Eingang gereinigt; Tuergriff locker festgestellt"}' "$worker_token")"
 incomplete_workday_submit_status="$(curl -sS -o "${TMP_DIR}/incomplete-workday-submit.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"status":"SUBMITTED"}')"
 worker_second_actual="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_second_row_id}" '{"actualText":"Tischler um 11:05 eingelassen und Schluessel zurueckgenommen"}' "$worker_token")"
+worker_today_workday_sheets="$(json_get "${API_BASE}/workday-sheets/today" "$worker_token")"
+unrelated_worker_today_workday_sheets="$(json_get "${API_BASE}/workday-sheets/today" "$unrelated_worker_token")"
 office_actual_update_status="$(curl -sS -o "${TMP_DIR}/office-actual-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"actualText":"Forbidden office actual edit"}')"
 submitted_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/status" '{"status":"SUBMITTED"}' "$worker_token")"
 post_submit_actual_status="$(curl -sS -o "${TMP_DIR}/post-submit-actual.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"actualText":"Forbidden late actual edit"}')"
@@ -475,12 +480,15 @@ append_summary_json updateWorkdaySheet "$update_workday_sheet"
 append_summary_json updateWorkdaySheetRow "$update_workday_sheet_row"
 append_summary_json addWorkdaySheetRow "$add_workday_sheet_row"
 append_summary_json workdaySheetList "$workday_sheet_list"
+append_summary_json filteredWorkdaySheetList "$filtered_workday_sheet_list"
 append_summary_json sentWorkdaySheet "$sent_workday_sheet"
 append_summary_json workerSentWorkdaySheet "$worker_sent_workday_sheet"
 append_summary_json workerWorkdaySheetList "$worker_workday_sheet_list"
 append_summary_json unrelatedWorkerWorkdaySheetList "$unrelated_worker_workday_sheet_list"
 append_summary_json workerFirstActual "$worker_first_actual"
 append_summary_json workerSecondActual "$worker_second_actual"
+append_summary_json workerTodayWorkdaySheets "$worker_today_workday_sheets"
+append_summary_json unrelatedWorkerTodayWorkdaySheets "$unrelated_worker_today_workday_sheets"
 append_summary_json submittedWorkdaySheet "$submitted_workday_sheet"
 append_summary_json reviewedWorkdaySheet "$reviewed_workday_sheet"
 append_summary_json archivedWorkdaySheet "$archived_workday_sheet"
@@ -578,6 +586,8 @@ append_summary_string workdaySheetId "$workday_sheet_id"
 append_summary_string workdaySheetRowId "$workday_sheet_row_id"
 append_summary_string workdaySheetSecondRowId "$workday_sheet_second_row_id"
 append_summary_string updatedWorkdaySheetTitle "$UPDATED_WORKDAY_SHEET_TITLE"
+append_summary_string workdaySheetDate "$WORKDAY_SHEET_DATE"
+append_summary_string invalidWorkdayFilterStatus "$invalid_workday_filter_status"
 append_summary_string workerDraftReadStatus "$worker_draft_read_status"
 append_summary_string workerCreateSheetStatus "$worker_create_sheet_status"
 append_summary_string workerSheetOptionsStatus "$worker_sheet_options_status"
@@ -1112,7 +1122,7 @@ jq -s '
     workdaySheetDraftCreated: (
       (.createWorkdaySheet.workdaySheet.id == .workdaySheetId) and
       (.createWorkdaySheet.workdaySheet.status == "DRAFT") and
-      (.createWorkdaySheet.workdaySheet.date == "2026-04-22") and
+      (.createWorkdaySheet.workdaySheet.date == .workdaySheetDate) and
       (.createWorkdaySheet.workdaySheet.teamId == .teamId) and
       (.createWorkdaySheet.workdaySheet.workerUserId == .workerUserId) and
       (.createWorkdaySheet.workdaySheet.internalNotes == "Office-only Phase 8 note") and
@@ -1132,6 +1142,13 @@ jq -s '
       (.addWorkdaySheetRow.workdaySheet.rows[1].id == .workdaySheetSecondRowId)
     ),
     workdaySheetListContainsCreated: ([.workdaySheetList.workdaySheets[].id] | index($phase8.workdaySheetId) != null),
+    workdaySheetFiltersValid: (
+      ((.filteredWorkdaySheetList.workdaySheets | length) == 1) and
+      (.filteredWorkdaySheetList.workdaySheets[0].id == .workdaySheetId) and
+      (.filteredWorkdaySheetList.workdaySheets[0].rowCount == 2) and
+      (.filteredWorkdaySheetList.workdaySheets[0].completedRowCount == 0)
+    ),
+    invalidWorkdayFilterStatus: .invalidWorkdayFilterStatus,
     workerDraftReadStatus: .workerDraftReadStatus,
     workerCreateSheetStatus: .workerCreateSheetStatus,
     workerSheetOptionsStatus: .workerSheetOptionsStatus,
@@ -1155,6 +1172,20 @@ jq -s '
     workerActualUpdatesValid: (
       (.workerFirstActual.workdaySheet.rows[0].actualText == "Treppen und Eingang gereinigt; Tuergriff locker festgestellt") and
       (.workerSecondActual.workdaySheet.rows[1].actualText == "Tischler um 11:05 eingelassen und Schluessel zurueckgenommen")
+    ),
+    workerTodaySheetValid: (
+      (.workerTodayWorkdaySheets.date == .workdaySheetDate) and
+      ([.workerTodayWorkdaySheets.workdaySheets[] |
+        select(
+          .id == $phase8.workdaySheetId and
+          .completedRowCount == 2 and
+          .rowCount == 2 and
+          (has("internalNotes") | not)
+        )
+      ] | length) == 1
+    ),
+    unrelatedWorkerTodayExcludesSheet: (
+      ([.unrelatedWorkerTodayWorkdaySheets.workdaySheets[].id] | index($phase8.workdaySheetId) == null)
     ),
     incompleteWorkdaySubmitStatus: .incompleteWorkdaySubmitStatus,
     officeActualUpdateStatus: .officeActualUpdateStatus,
@@ -1358,6 +1389,8 @@ jq -e \
     .workdaySheetRelationsValid == true and
     .workdaySheetDraftUpdated == true and
     .workdaySheetListContainsCreated == true and
+    .workdaySheetFiltersValid == true and
+    .invalidWorkdayFilterStatus == "400" and
     .workerDraftReadStatus == "404" and
     .workerCreateSheetStatus == "403" and
     .workerSheetOptionsStatus == "403" and
@@ -1371,6 +1404,8 @@ jq -e \
     .unrelatedWorkerSubmitStatus == "404" and
     .workerPlannedUpdateStatus == "400" and
     .workerActualUpdatesValid == true and
+    .workerTodaySheetValid == true and
+    .unrelatedWorkerTodayExcludesSheet == true and
     .incompleteWorkdaySubmitStatus == "400" and
     .officeActualUpdateStatus == "400" and
     .submittedWorkdaySheetValid == true and

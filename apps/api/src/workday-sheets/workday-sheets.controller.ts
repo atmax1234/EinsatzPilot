@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -16,11 +17,13 @@ import type {
   RequestAuthContext,
   WorkdaySheetCreateInput,
   WorkdaySheetDetailResponse,
+  WorkdaySheetListFilters,
   WorkdaySheetListResponse,
   WorkdaySheetOptionsResponse,
   WorkdaySheetRowCreateInput,
   WorkdaySheetRowUpdateInput,
   WorkdaySheetStatusUpdateInput,
+  WorkdaySheetTodayResponse,
   WorkdaySheetUpdateInput,
 } from '@einsatzpilot/types';
 
@@ -44,8 +47,23 @@ export class WorkdaySheetsController {
     @CurrentCompany() company: ActiveCompanyContext,
     @CurrentUser() actor: AuthenticatedUser,
     @CurrentAuthContext() authContext: RequestAuthContext,
+    @Query() filters: WorkdaySheetListFilters,
   ): Promise<WorkdaySheetListResponse> {
     return this.workdaySheetsService.getWorkdaySheets({
+      companyId: company.id,
+      actor,
+      authContext,
+      filters,
+    });
+  }
+
+  @Get('today')
+  getTodayWorkdaySheets(
+    @CurrentCompany() company: ActiveCompanyContext,
+    @CurrentUser() actor: AuthenticatedUser,
+    @CurrentAuthContext() authContext: RequestAuthContext,
+  ): Promise<WorkdaySheetTodayResponse> {
+    return this.workdaySheetsService.getTodayWorkdaySheets({
       companyId: company.id,
       actor,
       authContext,

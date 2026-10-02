@@ -12,7 +12,7 @@ const actorSelect = {
   displayName: true,
 } as const;
 
-export const workdaySheetInclude = {
+const workdaySheetListRelations = {
   team: {
     select: {
       id: true,
@@ -25,6 +25,17 @@ export const workdaySheetInclude = {
   submittedBy: { select: actorSelect },
   reviewedBy: { select: actorSelect },
   archivedBy: { select: actorSelect },
+} as const;
+
+export const workdaySheetListInclude = {
+  ...workdaySheetListRelations,
+  rows: {
+    select: { actualText: true },
+  },
+} satisfies Prisma.WorkdaySheetInclude;
+
+export const workdaySheetInclude = {
+  ...workdaySheetListRelations,
   rows: {
     include: {
       customer: {
@@ -58,6 +69,10 @@ export type WorkdaySheetRecord = Prisma.WorkdaySheetGetPayload<{
   include: typeof workdaySheetInclude;
 }>;
 
+export type WorkdaySheetListRecord = Prisma.WorkdaySheetGetPayload<{
+  include: typeof workdaySheetListInclude;
+}>;
+
 function mapActor(actor: {
   id: string;
   email: string;
@@ -70,7 +85,9 @@ function mapActor(actor: {
   };
 }
 
-export function mapWorkdaySheetListItem(sheet: WorkdaySheetRecord): WorkdaySheetListItem {
+export function mapWorkdaySheetListItem(
+  sheet: WorkdaySheetRecord | WorkdaySheetListRecord,
+): WorkdaySheetListItem {
   return {
     id: sheet.id,
     date: sheet.date.toISOString().slice(0, 10),

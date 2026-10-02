@@ -331,8 +331,20 @@ export type WorkdaySheetListResponse = {
   workdaySheets: WorkdaySheetListItem[];
 };
 
+export type WorkdaySheetListFilters = {
+  date?: string;
+  status?: WorkdaySheetStatus;
+  teamId?: string;
+  workerUserId?: string;
+};
+
 export type WorkdaySheetDetailResponse = {
   workdaySheet: WorkdaySheetDetail;
+};
+
+export type WorkdaySheetTodayResponse = {
+  date: string;
+  workdaySheets: WorkdaySheetDetail[];
 };
 
 export type WorkdaySheetRowCreateInput = {

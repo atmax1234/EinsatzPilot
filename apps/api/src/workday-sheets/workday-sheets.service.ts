@@ -13,11 +13,13 @@ import type {
   RequestAuthContext,
   WorkdaySheetCreateInput,
   WorkdaySheetDetailResponse,
+  WorkdaySheetListFilters,
   WorkdaySheetListResponse,
   WorkdaySheetOptionsResponse,
   WorkdaySheetRowCreateInput,
   WorkdaySheetRowUpdateInput,
   WorkdaySheetStatusUpdateInput,
+  WorkdaySheetTodayResponse,
   WorkdaySheetUpdateInput,
 } from '@einsatzpilot/types';
 
@@ -31,11 +33,13 @@ import {
   mapWorkdaySheetDetail,
   mapWorkdaySheetListItem,
   workdaySheetInclude,
+  workdaySheetListInclude,
   type WorkdaySheetRecord,
 } from './workday-sheet-mapper';
 import {
   assertWorkdaySheetRowTimeRange,
   normalizeWorkdaySheetCreateInput,
+  normalizeWorkdaySheetListFilters,
   normalizeWorkdaySheetRowActualUpdateInput,
   normalizeWorkdaySheetRowCreateInput,
   normalizeWorkdaySheetRowPlannedUpdateInput,
@@ -50,6 +54,13 @@ function isOfficeRole(authContext: RequestAuthContext) {
     authContext.isAuthenticated &&
     (authContext.membershipRole === 'OWNER' || authContext.membershipRole === 'OFFICE')
   );
+}
+
+function localCalendarDate(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 @Injectable()
@@ -75,6 +86,29 @@ export class WorkdaySheetsService {
               some: { userId },
             },
           },
+        },
+      ],
+    };
+  }
+
+  private listWhere(input: {
+    companyId: string;
+    actorUserId: string;
+    authContext: RequestAuthContext;
+    filters?: WorkdaySheetListFilters;
+  }): Prisma.WorkdaySheetWhereInput {
+    const filters = normalizeWorkdaySheetListFilters(input.filters ?? {});
+    const visibility = isOfficeRole(input.authContext)
+      ? { companyId: input.companyId }
+      : this.workerAccessWhere(input.companyId, input.actorUserId);
+    return {
+      AND: [
+        visibility,
+        {
+          date: filters.date,
+          status: filters.status,
+          teamId: filters.teamId,
+          workerUserId: filters.workerUserId,
         },
       ],
     };
@@ -123,6 +157,29 @@ export class WorkdaySheetsService {
     return row;
   }
 
+  private async lockWritableSheet(
+    transaction: Prisma.TransactionClient,
+    input: {
+      companyId: string;
+      sheetId: string;
+      status: 'DRAFT' | 'SENT';
+    },
+  ) {
+    const result = await transaction.workdaySheet.updateMany({
+      where: {
+        id: input.sheetId,
+        companyId: input.companyId,
+        status: input.status,
+      },
+      data: { updatedAt: new Date() },
+    });
+    if (result.count !== 1) {
+      throw new ConflictException(
+        'Der Status des Tageszettels hat sich geaendert. Bitte neu laden.',
+      );
+    }
+  }
+
   private mapDetailForContext(
     sheet: WorkdaySheetRecord,
     authContext: RequestAuthContext,
@@ -151,7 +208,9 @@ export class WorkdaySheetsService {
     ]);
 
     if (workerMembership && workerMembership.role !== 'WORKER') {
-      throw new BadRequestException('workerUserId muss zu einer aktiven WORKER-Mitgliedschaft gehoeren.');
+      throw new BadRequestException(
+        'Der direkt zugewiesene Mitarbeiter muss eine aktive WORKER-Mitgliedschaft haben.',
+      );
     }
 
     return { team, workerMembership };
@@ -161,17 +220,45 @@ export class WorkdaySheetsService {
     companyId: string;
     actor: AuthenticatedUser;
     authContext: RequestAuthContext;
+    filters?: WorkdaySheetListFilters;
   }): Promise<WorkdaySheetListResponse> {
     assertCanReadWorkdaySheets(input.authContext);
-    const where = isOfficeRole(input.authContext)
-      ? { companyId: input.companyId }
-      : this.workerAccessWhere(input.companyId, input.actor.id);
     const sheets = await this.prisma.workdaySheet.findMany({
-      where,
-      include: workdaySheetInclude,
+      where: this.listWhere({
+        companyId: input.companyId,
+        actorUserId: input.actor.id,
+        authContext: input.authContext,
+        filters: input.filters,
+      }),
+      include: workdaySheetListInclude,
       orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
     });
     return { workdaySheets: sheets.map(mapWorkdaySheetListItem) };
+  }
+
+  async getTodayWorkdaySheets(input: {
+    companyId: string;
+    actor: AuthenticatedUser;
+    authContext: RequestAuthContext;
+  }): Promise<WorkdaySheetTodayResponse> {
+    assertCanReadWorkdaySheets(input.authContext);
+    const date = localCalendarDate();
+    const sheets = await this.prisma.workdaySheet.findMany({
+      where: this.listWhere({
+        companyId: input.companyId,
+        actorUserId: input.actor.id,
+        authContext: input.authContext,
+        filters: { date },
+      }),
+      include: workdaySheetInclude,
+      orderBy: [{ createdAt: 'asc' }],
+    });
+    return {
+      date,
+      workdaySheets: sheets.map(
+        (sheet) => this.mapDetailForContext(sheet, input.authContext).workdaySheet,
+      ),
+    };
   }
 
   async getWorkdaySheetDetail(input: {
@@ -310,7 +397,7 @@ export class WorkdaySheetsService {
     const payload = normalizeWorkdaySheetUpdateInput(input.payload);
     const sheet = await this.getCompanySheetOrThrow(input.companyId, input.sheetId);
     if (sheet.status !== 'DRAFT') {
-      throw new BadRequestException('Nur DRAFT-Tagesblaetter koennen geplant werden.');
+      throw new BadRequestException('Nur Tageszettel im Entwurf koennen geplant werden.');
     }
     await this.validateAssignees(input.companyId, {
       teamId: payload.teamId === undefined ? sheet.teamId : payload.teamId,
@@ -318,12 +405,18 @@ export class WorkdaySheetsService {
         payload.workerUserId === undefined ? sheet.workerUserId : payload.workerUserId,
     });
 
-    const updated = await this.prisma.workdaySheet.update({
-      where: { id: sheet.id },
+    const result = await this.prisma.workdaySheet.updateMany({
+      where: { id: sheet.id, companyId: input.companyId, status: 'DRAFT' },
       data: payload,
-      include: workdaySheetInclude,
     });
-    return mapWorkdaySheetDetail(updated);
+    if (result.count !== 1) {
+      throw new ConflictException(
+        'Der Status des Tageszettels hat sich geaendert. Bitte neu laden.',
+      );
+    }
+    return mapWorkdaySheetDetail(
+      await this.getCompanySheetOrThrow(input.companyId, input.sheetId),
+    );
   }
 
   async addWorkdaySheetRow(input: {
@@ -336,20 +429,37 @@ export class WorkdaySheetsService {
     const payload = normalizeWorkdaySheetRowCreateInput(input.payload);
     const sheet = await this.getCompanySheetOrThrow(input.companyId, input.sheetId);
     if (sheet.status !== 'DRAFT') {
-      throw new BadRequestException('Geplante Zeilen koennen nur im DRAFT geaendert werden.');
+      throw new BadRequestException('Planzeilen koennen nur im Entwurf geaendert werden.');
     }
     if (sheet.rows.length >= 100) {
       throw new BadRequestException('Ein Tagesblatt darf hoechstens 100 Zeilen enthalten.');
     }
     await this.relationsService.validateRowRelations(input.companyId, payload);
-    const nextPosition = sheet.rows.reduce((max, row) => Math.max(max, row.position), -1) + 1;
-    await this.prisma.workdaySheetRow.create({
-      data: {
+    await this.prisma.$transaction(async (transaction) => {
+      await this.lockWritableSheet(transaction, {
         companyId: input.companyId,
         sheetId: sheet.id,
-        position: nextPosition,
-        ...payload,
-      },
+        status: 'DRAFT',
+      });
+      const rowCount = await transaction.workdaySheetRow.count({
+        where: { sheetId: sheet.id },
+      });
+      const lastRow = await transaction.workdaySheetRow.findFirst({
+        where: { sheetId: sheet.id },
+        select: { position: true },
+        orderBy: { position: 'desc' },
+      });
+      if (rowCount >= 100) {
+        throw new BadRequestException('Ein Tagesblatt darf hoechstens 100 Zeilen enthalten.');
+      }
+      await transaction.workdaySheetRow.create({
+        data: {
+          companyId: input.companyId,
+          sheetId: sheet.id,
+          position: (lastRow?.position ?? -1) + 1,
+          ...payload,
+        },
+      });
     });
     return mapWorkdaySheetDetail(
       await this.getCompanySheetOrThrow(input.companyId, input.sheetId),
@@ -368,7 +478,7 @@ export class WorkdaySheetsService {
       assertCanManageWorkdaySheets(input.authContext);
       const sheet = await this.getCompanySheetOrThrow(input.companyId, input.sheetId);
       if (sheet.status !== 'DRAFT') {
-        throw new BadRequestException('Geplante Zeilen koennen nur im DRAFT geaendert werden.');
+        throw new BadRequestException('Planzeilen koennen nur im Entwurf geaendert werden.');
       }
       const row = this.getRowOrThrow(sheet, input.rowId);
       const payload = normalizeWorkdaySheetRowPlannedUpdateInput(input.payload);
@@ -386,7 +496,20 @@ export class WorkdaySheetsService {
       const startTime = payload.startTime === undefined ? row.startTime : payload.startTime;
       const endTime = payload.endTime === undefined ? row.endTime : payload.endTime;
       assertWorkdaySheetRowTimeRange(startTime, endTime);
-      await this.prisma.workdaySheetRow.update({ where: { id: row.id }, data: payload });
+      await this.prisma.$transaction(async (transaction) => {
+        await this.lockWritableSheet(transaction, {
+          companyId: input.companyId,
+          sheetId: sheet.id,
+          status: 'DRAFT',
+        });
+        const result = await transaction.workdaySheetRow.updateMany({
+          where: { id: row.id, sheetId: sheet.id, companyId: input.companyId },
+          data: payload,
+        });
+        if (result.count !== 1) {
+          throw new NotFoundException('Zeile wurde in diesem Tageszettel nicht gefunden.');
+        }
+      });
       return mapWorkdaySheetDetail(
         await this.getCompanySheetOrThrow(input.companyId, input.sheetId),
       );
@@ -399,11 +522,26 @@ export class WorkdaySheetsService {
       authContext: input.authContext,
     });
     if (sheet.status !== 'SENT') {
-      throw new BadRequestException('Ist-Arbeit kann nur in einem SENT-Tagesblatt erfasst werden.');
+      throw new BadRequestException(
+        'Tatsaechliche Arbeit kann nur in einem gesendeten Tageszettel erfasst werden.',
+      );
     }
     const row = this.getRowOrThrow(sheet, input.rowId);
     const payload = normalizeWorkdaySheetRowActualUpdateInput(input.payload);
-    await this.prisma.workdaySheetRow.update({ where: { id: row.id }, data: payload });
+    await this.prisma.$transaction(async (transaction) => {
+      await this.lockWritableSheet(transaction, {
+        companyId: input.companyId,
+        sheetId: sheet.id,
+        status: 'SENT',
+      });
+      const result = await transaction.workdaySheetRow.updateMany({
+        where: { id: row.id, sheetId: sheet.id, companyId: input.companyId },
+        data: payload,
+      });
+      if (result.count !== 1) {
+        throw new NotFoundException('Zeile wurde in diesem Tageszettel nicht gefunden.');
+      }
+    });
     return this.mapDetailForContext(
       await this.getReadableSheetOrThrow({
         companyId: input.companyId,
@@ -424,10 +562,22 @@ export class WorkdaySheetsService {
     assertCanManageWorkdaySheets(input.authContext);
     const sheet = await this.getCompanySheetOrThrow(input.companyId, input.sheetId);
     if (sheet.status !== 'DRAFT') {
-      throw new BadRequestException('Geplante Zeilen koennen nur im DRAFT entfernt werden.');
+      throw new BadRequestException('Planzeilen koennen nur im Entwurf entfernt werden.');
     }
     const row = this.getRowOrThrow(sheet, input.rowId);
-    await this.prisma.workdaySheetRow.delete({ where: { id: row.id } });
+    await this.prisma.$transaction(async (transaction) => {
+      await this.lockWritableSheet(transaction, {
+        companyId: input.companyId,
+        sheetId: sheet.id,
+        status: 'DRAFT',
+      });
+      const result = await transaction.workdaySheetRow.deleteMany({
+        where: { id: row.id, sheetId: sheet.id, companyId: input.companyId },
+      });
+      if (result.count !== 1) {
+        throw new NotFoundException('Zeile wurde in diesem Tageszettel nicht gefunden.');
+      }
+    });
     return mapWorkdaySheetDetail(
       await this.getCompanySheetOrThrow(input.companyId, input.sheetId),
     );
@@ -478,7 +628,7 @@ export class WorkdaySheetsService {
     } else if (payload.status === 'SUBMITTED') {
       if (sheet.rows.some((row) => !row.actualText)) {
         throw new BadRequestException(
-          'Vor dem Abgeben muss fuer jede Zeile actualText erfasst werden.',
+          'Vor dem Einreichen muss jede Zeile eine Beschreibung der tatsaechlichen Arbeit enthalten.',
         );
       }
       data = {
@@ -501,13 +651,47 @@ export class WorkdaySheetsService {
       };
     }
 
-    const result = await this.prisma.workdaySheet.updateMany({
-      where: { id: sheet.id, companyId: input.companyId, status: sheet.status },
-      data,
+    await this.prisma.$transaction(async (transaction) => {
+      const result = await transaction.workdaySheet.updateMany({
+        where: { id: sheet.id, companyId: input.companyId, status: sheet.status },
+        data,
+      });
+      if (result.count !== 1) {
+        throw new ConflictException('Das Tagesblatt wurde parallel geaendert. Bitte neu laden.');
+      }
+
+      if (payload.status === 'SENT') {
+        const current = await transaction.workdaySheet.findUnique({
+          where: { id: sheet.id },
+          select: {
+            teamId: true,
+            workerUserId: true,
+            _count: { select: { rows: true } },
+          },
+        });
+        if (!current?.teamId && !current?.workerUserId) {
+          throw new BadRequestException(
+            'Vor dem Senden muss ein Team oder WORKER zugewiesen sein.',
+          );
+        }
+        if (!current._count.rows) {
+          throw new BadRequestException(
+            'Vor dem Senden ist mindestens eine geplante Zeile erforderlich.',
+          );
+        }
+      }
+
+      if (payload.status === 'SUBMITTED') {
+        const incompleteRows = await transaction.workdaySheetRow.count({
+          where: { sheetId: sheet.id, actualText: null },
+        });
+        if (incompleteRows) {
+          throw new BadRequestException(
+            'Vor dem Einreichen muss jede Zeile eine Beschreibung der tatsaechlichen Arbeit enthalten.',
+          );
+        }
+      }
     });
-    if (result.count !== 1) {
-      throw new ConflictException('Das Tagesblatt wurde parallel geaendert. Bitte neu laden.');
-    }
 
     const updated = await this.getReadableSheetOrThrow({
       companyId: input.companyId,

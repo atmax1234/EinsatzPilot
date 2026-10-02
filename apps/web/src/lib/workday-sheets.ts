@@ -1,12 +1,14 @@
 import type {
   WorkdaySheetCreateInput,
   WorkdaySheetDetailResponse,
+  WorkdaySheetListFilters,
   WorkdaySheetListResponse,
   WorkdaySheetOptionsResponse,
   WorkdaySheetRowCreateInput,
   WorkdaySheetRowUpdateInput,
   WorkdaySheetStatus,
   WorkdaySheetStatusUpdateInput,
+  WorkdaySheetTodayResponse,
   WorkdaySheetUpdateInput,
 } from '@einsatzpilot/types';
 
@@ -23,14 +25,35 @@ export function getWorkdaySheetStatusLabel(status: WorkdaySheetStatus) {
   return {
     DRAFT: 'Entwurf',
     SENT: 'Gesendet',
-    SUBMITTED: 'Abgegeben',
-    REVIEWED: 'Geprueft',
+    SUBMITTED: 'Eingereicht',
+    REVIEWED: 'Geprüft',
     ARCHIVED: 'Archiviert',
   }[status];
 }
 
-export async function getWorkdaySheetsData() {
-  return fetchApiJson<WorkdaySheetListResponse>('/api/workday-sheets', {
+export function getWorkdaySheetStatusTone(status: WorkdaySheetStatus) {
+  return {
+    DRAFT: '',
+    SENT: 'accent',
+    SUBMITTED: 'warn',
+    REVIEWED: 'done',
+    ARCHIVED: 'archived',
+  }[status];
+}
+
+export async function getWorkdaySheetsData(filters: WorkdaySheetListFilters = {}) {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+  const query = params.size ? `?${params.toString()}` : '';
+  return fetchApiJson<WorkdaySheetListResponse>(`/api/workday-sheets${query}`, {
+    authToken: await token(),
+  });
+}
+
+export async function getTodayWorkdaySheetsData() {
+  return fetchApiJson<WorkdaySheetTodayResponse>('/api/workday-sheets/today', {
     authToken: await token(),
   });
 }

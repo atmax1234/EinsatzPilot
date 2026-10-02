@@ -20,6 +20,8 @@ Customer report foundation snapshot: OWNER/OFFICE-only, job-grounded stable snap
 
 Daily worksheet snapshot: company-owned dated sheets and ordered rows, free text plus optional tenant-safe directory/Job links, direct/team assignment, role-specific planning/actual-work boundaries, the forward-only send/submit/review/archive lifecycle, real office/worker UI, additive migration, and expanded 196-check smoke coverage were verified on 2026-08-31. No worksheet review-to-follow-up conversion or recurring agreement exists yet.
 
+Daily worksheet usability/hardening snapshot: exact role-safe filters, a dedicated today query and worker flow, completion/context/review/lock clarity, browser-print styling, and status-scoped transactional row-write protection were added without a schema change and verified with the expanded 200-check smoke flow on 2026-10-02. No Phase 9 conversion action, worksheet PDF export, recurring agreement, or generated Job exists.
+
 ---
 
 ## 1. Repo / Structure
@@ -332,7 +334,24 @@ You can do ALL of this without hacks:
 
 ---
 
-## 24. Phase 9 Worksheet Review → Follow-up Jobs / Costs / Reports
+## 24. Phase 8B Daily Worksheets Usability and Hardening
+
+* [x] worksheet list supports exact date and status filtering for visible sheets
+* [x] office list additionally supports team and worker filtering
+* [x] status, direct/team assignment, row counts, completion counts, progress, actions, and empty states are clear
+* [x] `GET /api/workday-sheets/today` preserves tenant and direct/team assignment visibility
+* [x] `/workday-sheets/today` supports assigned-worker actual-text entry and guarded submission
+* [x] time ranges and linked customer/address/object/object-area/Job context are readable per row
+* [x] submitted/reviewed/archived state, actor/time attribution, review notes, and locks are explicit
+* [x] worksheet detail has A4-oriented browser-print styling that hides controls and internal notes
+* [x] draft/actual row writes are status-scoped transactionally against send/submit races
+* [x] expanded smoke passes all 200 checks, preserving Phase 1–8 and proving filters/today/count/redaction/isolation behavior
+* [x] no schema migration or lifecycle state was added
+* [x] no Phase 9 conversion, PDF artifact/export, recurring agreement, generated Job, or automatic downstream record exists
+
+---
+
+## 25. Phase 9 Worksheet Review → Follow-up Jobs / Costs / Reports
 
 * [ ] reviewed worksheet rows retain an explicit, auditable conversion/action record
 * [ ] action retries are idempotent and duplicate downstream records are prevented

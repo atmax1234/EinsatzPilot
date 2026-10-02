@@ -282,6 +282,11 @@ ol {
   color: #8d2f1d;
 }
 
+.status-pill.archived {
+  background: rgba(89, 96, 102, 0.16);
+  color: #4c555c;
+}
+
 .table-shell {
   overflow-x: auto;
 }
@@ -540,6 +545,12 @@ code {
   color: #fff7f2;
 }
 
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .secondary-button {
   background: rgba(241, 225, 201, 0.8);
   color: var(--text);
@@ -600,6 +611,144 @@ code {
 .worksheet-actual-text p {
   margin-bottom: 0;
   white-space: pre-wrap;
+}
+
+.worksheet-print-only {
+  display: none;
+}
+
+.worksheet-row-summary {
+  display: grid;
+  gap: 14px;
+}
+
+.worksheet-row-summary h3 {
+  margin: 0;
+}
+
+.worksheet-actual-text.complete {
+  border-left: 3px solid #5d9264;
+  background: rgba(233, 245, 231, 0.66);
+}
+
+.worksheet-context-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.context-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid rgba(216, 198, 170, 0.72);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-decoration: none;
+}
+
+.context-link {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.worksheet-filter-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.worksheet-progress {
+  width: 120px;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(216, 198, 170, 0.54);
+}
+
+.worksheet-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #5d9264;
+}
+
+.jobs-table td .status-pill {
+  display: inline-flex;
+  margin-top: 0;
+}
+
+.worksheet-empty-state {
+  padding: 24px;
+  border: 1px dashed rgba(196, 107, 45, 0.44);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.worksheet-empty-state h2,
+.worksheet-empty-state h3,
+.worksheet-empty-state p:last-child {
+  margin-bottom: 0;
+}
+
+.worksheet-lock-state {
+  border-left: 4px solid var(--accent);
+  background: rgba(241, 225, 201, 0.58);
+}
+
+.worksheet-lock-state.locked {
+  border-left-color: #5d9264;
+  background: rgba(233, 245, 231, 0.58);
+}
+
+.worksheet-lock-state p:last-child {
+  margin-bottom: 0;
+}
+
+.worksheet-review-note {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-left: 3px solid #5d9264;
+  background: rgba(233, 245, 231, 0.58);
+}
+
+.worksheet-review-note p:last-child {
+  margin-bottom: 0;
+  white-space: pre-wrap;
+}
+
+.worksheet-today-card {
+  display: grid;
+  gap: 18px;
+}
+
+.worksheet-today-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.worksheet-upcoming-list {
+  display: grid;
+  gap: 10px;
+}
+
+.worksheet-upcoming-list a {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.45fr) minmax(0, 1fr) minmax(140px, 0.45fr);
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid rgba(216, 198, 170, 0.68);
+  border-radius: 16px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.worksheet-upcoming-list span,
+.worksheet-upcoming-list small {
+  color: var(--muted);
 }
 
 .member-row {
@@ -1184,8 +1333,14 @@ code {
   .grid,
   .team-grid,
   .proof-grid,
-  .form-grid {
+  .form-grid,
+  .worksheet-filter-grid {
     grid-template-columns: 1fr;
+  }
+
+  .worksheet-upcoming-list a {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 }
 
@@ -1312,8 +1467,13 @@ code {
   }
 
   .sidebar,
-  .report-admin-only {
+  .report-admin-only,
+  .worksheet-screen-only {
     display: none !important;
+  }
+
+  .worksheet-print-only {
+    display: block !important;
   }
 
   .content-shell {
@@ -1323,6 +1483,76 @@ code {
   .content-page,
   .customer-report-detail-page {
     display: block !important;
+  }
+
+  .workday-sheet-detail-page {
+    color: #000;
+  }
+
+  .workday-sheet-detail-page .hero-card,
+  .workday-sheet-detail-page .panel {
+    margin: 0;
+    padding: 7mm 0;
+    border: 0;
+    border-bottom: 1px solid #bbb;
+    border-radius: 0;
+    box-shadow: none;
+    background: #fff !important;
+    color: #000;
+  }
+
+  .workday-sheet-detail-page .worksheet-print-header {
+    padding-top: 0;
+  }
+
+  .workday-sheet-detail-page h1,
+  .workday-sheet-detail-page h2,
+  .workday-sheet-detail-page h3 {
+    break-after: avoid-page;
+    color: #000;
+  }
+
+  .workday-sheet-detail-page p,
+  .workday-sheet-detail-page dt,
+  .workday-sheet-detail-page dd,
+  .workday-sheet-detail-page span,
+  .workday-sheet-detail-page strong {
+    color: #111;
+  }
+
+  .workday-sheet-detail-page .worksheet-row-card,
+  .workday-sheet-detail-page .worksheet-lock-state,
+  .workday-sheet-detail-page .worksheet-review-note,
+  .workday-sheet-detail-page .info-list > div {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .workday-sheet-detail-page .worksheet-row-list {
+    gap: 4mm;
+  }
+
+  .workday-sheet-detail-page .worksheet-row-card {
+    padding: 4mm;
+    border: 1px solid #bbb;
+    border-radius: 0;
+    background: #fff !important;
+  }
+
+  .workday-sheet-detail-page .worksheet-plan-text,
+  .workday-sheet-detail-page .worksheet-actual-text,
+  .workday-sheet-detail-page .worksheet-review-note {
+    padding: 3mm;
+    border: 1px solid #ccc;
+    border-radius: 0;
+    background: #fff !important;
+  }
+
+  .workday-sheet-detail-page .context-chip,
+  .workday-sheet-detail-page .inline-chip,
+  .workday-sheet-detail-page .status-pill {
+    border: 1px solid #aaa;
+    background: #fff !important;
   }
 
   .customer-report-document {
