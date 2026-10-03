@@ -1,15 +1,29 @@
 import { BadRequestException } from '@nestjs/common';
 
 import type {
+  JobCostCreateInput,
   JobPriority,
+  JobReportCreateInput,
   WorksheetFollowUpJobCreateInput,
+  WorksheetJobCostLineCreateInput,
+  WorksheetJobReportCreateInput,
 } from '@einsatzpilot/types';
+
+import { normalizeJobCostCreateInput } from '../job-costs/job-cost-payloads';
+import { normalizeJobReportCreateInput } from '../reports/reports-payloads';
 
 function payloadObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new BadRequestException('Payload muss ein JSON-Objekt sein.');
   }
   return value as Record<string, unknown>;
+}
+
+function assertAllowedFields(raw: Record<string, unknown>, allowed: readonly string[]) {
+  const invalid = Object.keys(raw).filter((key) => !allowed.includes(key));
+  if (invalid.length) {
+    throw new BadRequestException(`Nicht erlaubte Felder: ${invalid.join(', ')}.`);
+  }
 }
 
 function requiredText(value: unknown, field: string, maxLength: number) {
@@ -81,10 +95,7 @@ export function normalizeWorksheetFollowUpJobCreateInput(
     'objectId',
     'objectAreaId',
   ];
-  const invalid = Object.keys(raw).filter((key) => !allowed.includes(key));
-  if (invalid.length) {
-    throw new BadRequestException(`Nicht erlaubte Felder: ${invalid.join(', ')}.`);
-  }
+  assertAllowedFields(raw, allowed);
 
   const scheduledStart = isoDate(raw.scheduledStart, 'scheduledStart');
   const scheduledEnd = optionalIsoDate(raw.scheduledEnd, 'scheduledEnd');
@@ -105,5 +116,63 @@ export function normalizeWorksheetFollowUpJobCreateInput(
     addressId: optionalNullableId(raw.addressId, 'addressId'),
     objectId: optionalNullableId(raw.objectId, 'objectId'),
     objectAreaId: optionalNullableId(raw.objectAreaId, 'objectAreaId'),
+  };
+}
+
+export function normalizeWorksheetJobCostLineCreateInput(
+  input: WorksheetJobCostLineCreateInput,
+) {
+  const raw = payloadObject(input);
+  assertAllowedFields(raw, ['targetJobId', 'costLine']);
+  const rawCostLine = payloadObject(raw.costLine);
+  assertAllowedFields(rawCostLine, [
+    'itemId',
+    'kind',
+    'description',
+    'quantity',
+    'unit',
+    'unitCost',
+    'totalCost',
+    'currency',
+    'taxRate',
+    'costDate',
+    'vendorName',
+    'receiptReference',
+    'notes',
+  ]);
+
+  return {
+    targetJobId: requiredText(raw.targetJobId, 'targetJobId', 191),
+    costLine: normalizeJobCostCreateInput(rawCostLine as JobCostCreateInput),
+  };
+}
+
+export function normalizeWorksheetJobReportCreateInput(
+  input: WorksheetJobReportCreateInput,
+) {
+  const raw = payloadObject(input);
+  assertAllowedFields(raw, ['targetJobId', 'report']);
+  const rawReport = payloadObject(raw.report);
+  assertAllowedFields(rawReport, [
+    'summary',
+    'details',
+    'teamId',
+    'type',
+    'findingSummary',
+    'workPerformed',
+    'workStillNeeded',
+    'followUpRequired',
+    'followUpNotes',
+  ]);
+  const report = normalizeJobReportCreateInput(rawReport as JobReportCreateInput);
+  if (report.type === 'GENERAL') {
+    throw new BadRequestException(
+      'Tageszettel-Aktionen duerfen nur strukturierte Auftragsberichte erstellen.',
+    );
+  }
+
+  return {
+    targetJobId: requiredText(raw.targetJobId, 'targetJobId', 191),
+    report,
   };
 }

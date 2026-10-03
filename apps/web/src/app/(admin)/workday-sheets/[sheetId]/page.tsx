@@ -17,6 +17,10 @@ import {
   getWorkdaySheetStatusTone,
 } from '../../../../lib/workday-sheets';
 import { WorkdaySheetPrintButton } from '../workday-sheet-print-button';
+import {
+  WorkdaySheetCostActionForm,
+  WorkdaySheetReportActionForm,
+} from '../workday-sheet-cost-report-actions';
 import { WorkdaySheetFollowUpJobForm } from '../workday-sheet-follow-up-job-form';
 import { WorkdaySheetRelationFields } from '../workday-sheet-relation-fields';
 import { WorkdaySheetRowSummary } from '../workday-sheet-row-summary';
@@ -34,6 +38,10 @@ const notices: Record<string, string> = {
   'status-archived': 'Der Tageszettel wurde archiviert.',
   'follow-up-job-created': 'Der Folgeauftrag wurde erstellt und mit der Quellzeile protokolliert.',
   'follow-up-job-existing': 'Der bereits erstellte Folgeauftrag wurde wiederverwendet.',
+  'job-cost-created': 'Die Kostenzeile wurde im Zielauftrag erstellt und protokolliert.',
+  'job-cost-existing': 'Die bereits erstellte Kostenzeile wurde wiederverwendet.',
+  'job-report-created': 'Der strukturierte Auftragsbericht wurde erstellt und protokolliert.',
+  'job-report-existing': 'Der bereits erstellte Auftragsbericht wurde wiederverwendet.',
 };
 
 function formatDate(value: string) {
@@ -142,7 +150,7 @@ export default async function WorkdaySheetDetailPage({
               : sheet.status === 'SUBMITTED'
                 ? 'Die Ausführung kann nach dem Einreichen nicht mehr geändert werden.'
                 : sheet.status === 'REVIEWED'
-                  ? 'Planung und Ausführung bleiben unverändert; das Office kann einzelne Zeilen bewusst in normale Folgeaufträge überführen.'
+                  ? 'Planung und Ausführung bleiben unverändert; das Office kann je Zeile bewusst einen Folgeauftrag, eine auftragsgebundene Kostenzeile und einen strukturierten Auftragsbericht erstellen.'
                   : 'Dieser Tageszettel dient nur noch als nachvollziehbarer Nachweis.'}
           </p>
         </section>
@@ -217,6 +225,15 @@ export default async function WorkdaySheetDetailPage({
         <div className="worksheet-row-list">
           {sheet.rows.map((row, index) => {
             const workerCanEdit = session.membershipRole === 'WORKER' && sheet.status === 'SENT';
+            const followUpAction = row.reviewActions.find(
+              (action) => action.type === 'CREATE_FOLLOW_UP_JOB',
+            );
+            const costAction = row.reviewActions.find(
+              (action) => action.type === 'CREATE_JOB_COST_LINE',
+            );
+            const reportAction = row.reviewActions.find(
+              (action) => action.type === 'CREATE_JOB_REPORT',
+            );
             return (
               <article className="worksheet-row-card" key={row.id}>
                 {canManage && sheet.status === 'DRAFT' && options ? (
@@ -318,24 +335,54 @@ export default async function WorkdaySheetDetailPage({
                 )}
                 {canManage && row.reviewActions.length ? (
                   <div className="worksheet-follow-up-result worksheet-screen-only">
-                    <strong>Erstellter Folgeauftrag</strong>
+                    <strong>Erstellte Prüfaktionen</strong>
                     {row.reviewActions.map((action) => (
-                      <div className="row-spread" key={action.id}>
-                        <span>
-                          {action.destinationJob.reference} · {action.destinationJob.title}
-                        </span>
-                        <Link
-                          className="secondary-link"
-                          href={`/jobs/${action.destinationJob.id}`}
-                        >
-                          Auftrag öffnen
+                      <div className="worksheet-action-result" key={action.id}>
+                        <div>
+                          <span className="status-pill done">
+                            {action.type === 'CREATE_FOLLOW_UP_JOB'
+                              ? 'Folgeauftrag'
+                              : action.type === 'CREATE_JOB_COST_LINE'
+                                ? 'Kostenzeile'
+                                : 'Auftragsbericht'}
+                          </span>
+                          <strong>
+                            {action.type === 'CREATE_JOB_COST_LINE'
+                              ? action.destinationCostLine?.description
+                              : action.type === 'CREATE_JOB_REPORT'
+                                ? action.destinationReport?.summary
+                                : `${action.destinationJob.reference} · ${action.destinationJob.title}`}
+                          </strong>
+                          {action.destinationCostLine ? (
+                            <small>
+                              {action.destinationCostLine.totalCost.toFixed(2)}{' '}
+                              {action.destinationCostLine.currency}
+                            </small>
+                          ) : null}
+                          {action.destinationReport ? (
+                            <small>Status: Ausstehende Prüfung</small>
+                          ) : null}
+                          {action.type !== 'CREATE_FOLLOW_UP_JOB' ? (
+                            <small>
+                              Ziel: {action.destinationJob.reference} · {action.destinationJob.title}
+                            </small>
+                          ) : null}
+                        </div>
+                        <Link className="secondary-link" href={`/jobs/${action.destinationJob.id}`}>
+                          Zielauftrag öffnen
                         </Link>
                       </div>
                     ))}
                   </div>
                 ) : null}
-                {canManage && sheet.status === 'REVIEWED' && options && !row.reviewActions.length ? (
+                {canManage && sheet.status === 'REVIEWED' && options && !followUpAction ? (
                   <WorkdaySheetFollowUpJobForm options={options} row={row} sheet={sheet} />
+                ) : null}
+                {canManage && sheet.status === 'REVIEWED' && options && !costAction ? (
+                  <WorkdaySheetCostActionForm options={options} row={row} sheet={sheet} />
+                ) : null}
+                {canManage && sheet.status === 'REVIEWED' && options && !reportAction ? (
+                  <WorkdaySheetReportActionForm options={options} row={row} sheet={sheet} />
                 ) : null}
               </article>
             );

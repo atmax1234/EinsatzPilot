@@ -21,6 +21,8 @@ WORKDAY_SHEET_TITLE="Phase 8 Workday Sheet ${SMOKE_SUFFIX}"
 UPDATED_WORKDAY_SHEET_TITLE="${WORKDAY_SHEET_TITLE} Updated"
 WORKDAY_SHEET_DATE="$(date +%F)"
 FOLLOW_UP_JOB_TITLE="Phase 9 Follow-up Job ${SMOKE_SUFFIX}"
+WORKSHEET_COST_DESCRIPTION="Phase 9B worksheet material ${SMOKE_SUFFIX}"
+WORKSHEET_REPORT_SUMMARY="Phase 9B worksheet finding ${SMOKE_SUFFIX}"
 
 cleanup() {
   rm -rf "$TMP_DIR"
@@ -300,6 +302,8 @@ archived_draft_report="$(json_patch "${API_BASE}/customer-reports/${archived_dra
 
 other_login="$(json_post "${API_BASE}/auth/development-login" '{"email":"owner@otherco.example.de","displayName":"Other Owner","companySlug":"otherco","companyName":"Other Co","membershipRole":"OWNER"}')"
 other_token="$(printf '%s' "$other_login" | jq -r '.token')"
+other_team="$(json_post "${API_BASE}/teams" "{\"name\":\"Other Phase 9B Team ${SMOKE_SUFFIX}\",\"status\":\"ACTIVE\"}" "$other_token")"
+other_team_id="$(printf '%s' "$other_team" | jq -r '.id')"
 cross_report_read_status="$(curl -sS -o "${TMP_DIR}/cross-report-read.json" -w '%{http_code}' "${API_BASE}/jobs/${job_id}/reports" -H "Authorization: Bearer ${other_token}")"
 cross_report_review_status="$(curl -sS -o "${TMP_DIR}/cross-report-review.json" -w '%{http_code}' -X PATCH "${API_BASE}/jobs/${job_id}/reports/${worker_finding_id}/review" -H "Authorization: Bearer ${other_token}" -H 'Content-Type: application/json' -d '{"reviewStatus":"REJECTED"}')"
 cross_status="$(curl -sS -o "${TMP_DIR}/cross-company.json" -w '%{http_code}' "${API_BASE}/jobs/${job_id}" -H "Authorization: Bearer ${other_token}")"
@@ -390,6 +394,8 @@ post_submit_actual_status="$(curl -sS -o "${TMP_DIR}/post-submit-actual.json" -w
 worker_review_workday_status="$(curl -sS -o "${TMP_DIR}/worker-review-workday.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"status":"REVIEWED"}')"
 invalid_workday_archive_status="$(curl -sS -o "${TMP_DIR}/invalid-workday-archive.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"status":"ARCHIVED"}')"
 unreviewed_follow_up_status="$(curl -sS -o "${TMP_DIR}/unreviewed-follow-up.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/follow-up-job" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"${FOLLOW_UP_JOB_TITLE}\",\"customerName\":\"Phase 9 Customer\",\"location\":\"Teststrasse 42, Essen\",\"scheduledStart\":\"2026-04-23T08:00:00.000Z\",\"priority\":\"HIGH\"}")"
+unreviewed_cost_action_status="$(curl -sS -o "${TMP_DIR}/unreviewed-cost-action.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-cost-line" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"targetJobId\":\"${job_id}\",\"costLine\":{\"kind\":\"OTHER\",\"description\":\"Unreviewed cost\",\"quantity\":1,\"unit\":\"FLAT_RATE\",\"totalCost\":1}}")"
+unreviewed_report_action_status="$(curl -sS -o "${TMP_DIR}/unreviewed-report-action.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-report" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"targetJobId\":\"${job_id}\",\"report\":{\"type\":\"WORKER_FINDING\",\"summary\":\"Unreviewed report\",\"findingSummary\":\"Should be rejected\"}}")"
 reviewed_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/status" '{"status":"REVIEWED","reviewNotes":"Phase 8 office review complete"}' "$token")"
 reviewed_plan_update_status="$(curl -sS -o "${TMP_DIR}/reviewed-plan-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"plannedText":"Forbidden reviewed plan edit"}')"
 worker_follow_up_status="$(curl -sS -o "${TMP_DIR}/worker-follow-up.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/follow-up-job" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d "{\"title\":\"${FOLLOW_UP_JOB_TITLE}\",\"customerName\":\"Phase 9 Customer\",\"location\":\"Teststrasse 42, Essen\",\"scheduledStart\":\"2026-04-23T08:00:00.000Z\",\"priority\":\"HIGH\"}")"
@@ -400,10 +406,34 @@ follow_up_job_id="$(printf '%s' "$follow_up_job" | jq -r '.job.id')"
 follow_up_action_id="$(printf '%s' "$follow_up_job" | jq -r '.reviewAction.id')"
 follow_up_job_replay="$(json_post "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/follow-up-job" "{\"title\":\"${FOLLOW_UP_JOB_TITLE}\",\"description\":\"Explicit Phase 9 review decision\",\"customerName\":\"Phase 9 Customer\",\"location\":\"Teststrasse 42, Essen\",\"scheduledStart\":\"2026-04-23T08:00:00.000Z\",\"scheduledEnd\":\"2026-04-23T10:00:00.000Z\",\"priority\":\"HIGH\"}" "$token")"
 changed_follow_up_retry_status="$(curl -sS -o "${TMP_DIR}/changed-follow-up-retry.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/follow-up-job" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Changed ${FOLLOW_UP_JOB_TITLE}\",\"description\":\"Explicit Phase 9 review decision\",\"customerName\":\"Phase 9 Customer\",\"location\":\"Teststrasse 42, Essen\",\"scheduledStart\":\"2026-04-23T08:00:00.000Z\",\"scheduledEnd\":\"2026-04-23T10:00:00.000Z\",\"priority\":\"HIGH\"}")"
+worksheet_cost_payload="{\"targetJobId\":\"${follow_up_job_id}\",\"costLine\":{\"itemId\":\"${quantity_item_id}\",\"kind\":\"MATERIAL_USED\",\"description\":\"${WORKSHEET_COST_DESCRIPTION}\",\"quantity\":2,\"unit\":\"KG\",\"unitCost\":15,\"currency\":\"EUR\",\"taxRate\":19,\"costDate\":\"2026-04-23T10:00:00.000Z\",\"notes\":\"Explicit Phase 9B review decision\"}}"
+worksheet_report_payload="{\"targetJobId\":\"${follow_up_job_id}\",\"report\":{\"teamId\":\"${team_id}\",\"type\":\"WORKER_FINDING\",\"summary\":\"${WORKSHEET_REPORT_SUMMARY}\",\"details\":\"Created from one reviewed worksheet row\",\"findingSummary\":\"Tuergriff locker festgestellt\",\"workPerformed\":\"Treppen und Eingang gereinigt\",\"workStillNeeded\":\"Tuergriff befestigen\",\"followUpRequired\":true,\"followUpNotes\":\"Im Zielauftrag pruefen\"}}"
+worker_cost_action_status="$(curl -sS -o "${TMP_DIR}/worker-cost-action.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-cost-line" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d "$worksheet_cost_payload")"
+worker_report_action_status="$(curl -sS -o "${TMP_DIR}/worker-report-action.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-report" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d "$worksheet_report_payload")"
+cross_cost_action_source_status="$(curl -sS -o "${TMP_DIR}/cross-cost-action-source.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-cost-line" -H "Authorization: Bearer ${other_token}" -H 'Content-Type: application/json' -d "{\"targetJobId\":\"${other_phase7_job_id}\",\"costLine\":{\"kind\":\"OTHER\",\"description\":\"Foreign source\",\"quantity\":1,\"unit\":\"FLAT_RATE\",\"totalCost\":1}}")"
+cross_cost_action_job_status="$(curl -sS -o "${TMP_DIR}/cross-cost-action-job.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-cost-line" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"targetJobId\":\"${other_phase7_job_id}\",\"costLine\":{\"kind\":\"OTHER\",\"description\":\"Foreign target\",\"quantity\":1,\"unit\":\"FLAT_RATE\",\"totalCost\":1}}")"
+cross_cost_action_item_status="$(curl -sS -o "${TMP_DIR}/cross-cost-action-item.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-cost-line" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"targetJobId\":\"${follow_up_job_id}\",\"costLine\":{\"itemId\":\"${other_item_id}\",\"kind\":\"MATERIAL_USED\",\"description\":\"Foreign item\",\"quantity\":1,\"unit\":\"PIECE\",\"unitCost\":1}}")"
+cross_report_action_team_status="$(curl -sS -o "${TMP_DIR}/cross-report-action-team.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-report" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"targetJobId\":\"${follow_up_job_id}\",\"report\":{\"teamId\":\"${other_team_id}\",\"type\":\"WORKER_FINDING\",\"summary\":\"Foreign team\",\"findingSummary\":\"Should be rejected\"}}")"
+missing_action_target_status="$(curl -sS -o "${TMP_DIR}/missing-action-target.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-cost-line" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"costLine":{"kind":"OTHER","description":"No target","quantity":1,"unit":"FLAT_RATE","totalCost":1}}')"
+general_report_action_status="$(curl -sS -o "${TMP_DIR}/general-report-action.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-report" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"targetJobId\":\"${follow_up_job_id}\",\"report\":{\"type\":\"GENERAL\",\"summary\":\"Legacy report forbidden here\"}}")"
+worksheet_cost_action="$(json_post "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-cost-line" "$worksheet_cost_payload" "$token")"
+worksheet_cost_action_id="$(printf '%s' "$worksheet_cost_action" | jq -r '.reviewAction.id')"
+worksheet_cost_line_id="$(printf '%s' "$worksheet_cost_action" | jq -r '.costLine.id')"
+worksheet_cost_action_replay="$(json_post "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-cost-line" "$worksheet_cost_payload" "$token")"
+changed_cost_action_status="$(curl -sS -o "${TMP_DIR}/changed-cost-action.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-cost-line" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"targetJobId\":\"${follow_up_job_id}\",\"costLine\":{\"itemId\":\"${quantity_item_id}\",\"kind\":\"MATERIAL_USED\",\"description\":\"Changed ${WORKSHEET_COST_DESCRIPTION}\",\"quantity\":2,\"unit\":\"KG\",\"unitCost\":15,\"currency\":\"EUR\"}}")"
+worksheet_report_action="$(json_post "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-report" "$worksheet_report_payload" "$token")"
+worksheet_report_action_id="$(printf '%s' "$worksheet_report_action" | jq -r '.reviewAction.id')"
+worksheet_job_report_id="$(printf '%s' "$worksheet_report_action" | jq -r '.report.id')"
+worksheet_report_action_replay="$(json_post "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-report" "$worksheet_report_payload" "$token")"
+changed_report_action_status="$(curl -sS -o "${TMP_DIR}/changed-report-action.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/job-report" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"targetJobId\":\"${follow_up_job_id}\",\"report\":{\"teamId\":\"${team_id}\",\"type\":\"WORKER_FINDING\",\"summary\":\"Changed ${WORKSHEET_REPORT_SUMMARY}\",\"findingSummary\":\"Tuergriff locker festgestellt\"}}")"
 workday_sheet_after_follow_up="$(json_get "${API_BASE}/workday-sheets/${workday_sheet_id}" "$token")"
+worker_workday_sheet_after_actions="$(json_get "${API_BASE}/workday-sheets/${workday_sheet_id}" "$worker_token")"
+follow_up_job_costs="$(json_get "${API_BASE}/jobs/${follow_up_job_id}/costs" "$token")"
+follow_up_job_reports="$(json_get "${API_BASE}/jobs/${follow_up_job_id}/reports" "$token")"
 follow_up_job_detail="$(json_get "${API_BASE}/jobs/${follow_up_job_id}" "$token")"
 archived_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/status" '{"status":"ARCHIVED"}' "$token")"
 archived_follow_up_status="$(curl -sS -o "${TMP_DIR}/archived-follow-up.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_second_row_id}/review-actions/follow-up-job" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Archived follow-up ${SMOKE_SUFFIX}\",\"customerName\":\"Phase 9 Customer\",\"location\":\"Teststrasse 42, Essen\",\"scheduledStart\":\"2026-04-24T08:00:00.000Z\",\"priority\":\"NORMAL\"}")"
+archived_cost_action_status="$(curl -sS -o "${TMP_DIR}/archived-cost-action.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_second_row_id}/review-actions/job-cost-line" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"targetJobId\":\"${follow_up_job_id}\",\"costLine\":{\"kind\":\"OTHER\",\"description\":\"Archived cost\",\"quantity\":1,\"unit\":\"FLAT_RATE\",\"totalCost\":1}}")"
 archived_actual_update_status="$(curl -sS -o "${TMP_DIR}/archived-actual-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"actualText":"Forbidden archived actual edit"}')"
 repeat_workday_archive_status="$(curl -sS -o "${TMP_DIR}/repeat-workday-archive.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"status":"ARCHIVED"}')"
 cross_workday_read_status="$(curl -sS -o "${TMP_DIR}/cross-workday-read.json" -w '%{http_code}' "${API_BASE}/workday-sheets/${workday_sheet_id}" -H "Authorization: Bearer ${other_token}")"
@@ -506,7 +536,14 @@ append_summary_json submittedWorkdaySheet "$submitted_workday_sheet"
 append_summary_json reviewedWorkdaySheet "$reviewed_workday_sheet"
 append_summary_json followUpJob "$follow_up_job"
 append_summary_json followUpJobReplay "$follow_up_job_replay"
+append_summary_json worksheetCostAction "$worksheet_cost_action"
+append_summary_json worksheetCostActionReplay "$worksheet_cost_action_replay"
+append_summary_json worksheetReportAction "$worksheet_report_action"
+append_summary_json worksheetReportActionReplay "$worksheet_report_action_replay"
 append_summary_json workdaySheetAfterFollowUp "$workday_sheet_after_follow_up"
+append_summary_json workerWorkdaySheetAfterActions "$worker_workday_sheet_after_actions"
+append_summary_json followUpJobCosts "$follow_up_job_costs"
+append_summary_json followUpJobReports "$follow_up_job_reports"
 append_summary_json followUpJobDetail "$follow_up_job_detail"
 append_summary_json archivedWorkdaySheet "$archived_workday_sheet"
 
@@ -620,14 +657,33 @@ append_summary_string workerReviewWorkdayStatus "$worker_review_workday_status"
 append_summary_string invalidWorkdayArchiveStatus "$invalid_workday_archive_status"
 append_summary_string reviewedPlanUpdateStatus "$reviewed_plan_update_status"
 append_summary_string unreviewedFollowUpStatus "$unreviewed_follow_up_status"
+append_summary_string unreviewedCostActionStatus "$unreviewed_cost_action_status"
+append_summary_string unreviewedReportActionStatus "$unreviewed_report_action_status"
 append_summary_string workerFollowUpStatus "$worker_follow_up_status"
+append_summary_string workerCostActionStatus "$worker_cost_action_status"
+append_summary_string workerReportActionStatus "$worker_report_action_status"
 append_summary_string crossFollowUpSourceStatus "$cross_follow_up_source_status"
 append_summary_string crossFollowUpDestinationStatus "$cross_follow_up_destination_status"
+append_summary_string crossCostActionSourceStatus "$cross_cost_action_source_status"
+append_summary_string crossCostActionJobStatus "$cross_cost_action_job_status"
+append_summary_string crossCostActionItemStatus "$cross_cost_action_item_status"
+append_summary_string crossReportActionTeamStatus "$cross_report_action_team_status"
+append_summary_string missingActionTargetStatus "$missing_action_target_status"
+append_summary_string generalReportActionStatus "$general_report_action_status"
 append_summary_string changedFollowUpRetryStatus "$changed_follow_up_retry_status"
+append_summary_string changedCostActionStatus "$changed_cost_action_status"
+append_summary_string changedReportActionStatus "$changed_report_action_status"
 append_summary_string archivedFollowUpStatus "$archived_follow_up_status"
+append_summary_string archivedCostActionStatus "$archived_cost_action_status"
 append_summary_string followUpJobId "$follow_up_job_id"
 append_summary_string followUpActionId "$follow_up_action_id"
 append_summary_string followUpJobTitle "$FOLLOW_UP_JOB_TITLE"
+append_summary_string worksheetCostActionId "$worksheet_cost_action_id"
+append_summary_string worksheetCostLineId "$worksheet_cost_line_id"
+append_summary_string worksheetCostDescription "$WORKSHEET_COST_DESCRIPTION"
+append_summary_string worksheetReportActionId "$worksheet_report_action_id"
+append_summary_string worksheetJobReportId "$worksheet_job_report_id"
+append_summary_string worksheetReportSummary "$WORKSHEET_REPORT_SUMMARY"
 append_summary_string archivedActualUpdateStatus "$archived_actual_update_status"
 append_summary_string repeatWorkdayArchiveStatus "$repeat_workday_archive_status"
 append_summary_string crossWorkdayReadStatus "$cross_workday_read_status"
@@ -1143,7 +1199,8 @@ jq -s '
   {
     workdaySheetOptionsContainAssignments: (
       ([.workdaySheetOptions.teams[].id] | index($phase8.teamId) != null) and
-      ([.workdaySheetOptions.workers[].id] | index($phase8.workerUserId) != null)
+      ([.workdaySheetOptions.workers[].id] | index($phase8.workerUserId) != null) and
+      ([.workdaySheetOptions.items[].id] | index($phase8.quantityItemId) != null)
     ),
     workdaySheetDraftCreated: (
       (.createWorkdaySheet.workdaySheet.id == .workdaySheetId) and
@@ -1245,9 +1302,19 @@ jq -s '
   . as $phase9 |
   {
     unreviewedFollowUpStatus: .unreviewedFollowUpStatus,
+    unreviewedCostActionStatus: .unreviewedCostActionStatus,
+    unreviewedReportActionStatus: .unreviewedReportActionStatus,
     workerFollowUpStatus: .workerFollowUpStatus,
+    workerCostActionStatus: .workerCostActionStatus,
+    workerReportActionStatus: .workerReportActionStatus,
     crossFollowUpSourceStatus: .crossFollowUpSourceStatus,
     crossFollowUpDestinationStatus: .crossFollowUpDestinationStatus,
+    crossCostActionSourceStatus: .crossCostActionSourceStatus,
+    crossCostActionJobStatus: .crossCostActionJobStatus,
+    crossCostActionItemStatus: .crossCostActionItemStatus,
+    crossReportActionTeamStatus: .crossReportActionTeamStatus,
+    missingActionTargetStatus: .missingActionTargetStatus,
+    generalReportActionStatus: .generalReportActionStatus,
     followUpJobCreated: (
       (.followUpJob.replayed == false) and
       (.followUpJob.reviewAction.id == .followUpActionId) and
@@ -1285,15 +1352,83 @@ jq -s '
       (.followUpJobReplay.job.id == .followUpJobId)
     ),
     changedFollowUpRetryStatus: .changedFollowUpRetryStatus,
-    workdayDetailContainsOneAction: (
-      ([.workdaySheetAfterFollowUp.workdaySheet.rows[] | select(.id == $phase9.workdaySheetRowId) | .reviewActions[]] | length) == 1 and
-      ([.workdaySheetAfterFollowUp.workdaySheet.rows[] | select(.id == $phase9.workdaySheetRowId) | .reviewActions[0].id] | first) == .followUpActionId
+    worksheetCostActionCreated: (
+      (.worksheetCostAction.replayed == false) and
+      (.worksheetCostAction.reviewAction.id == .worksheetCostActionId) and
+      (.worksheetCostAction.reviewAction.type == "CREATE_JOB_COST_LINE") and
+      (.worksheetCostAction.reviewAction.status == "COMPLETED") and
+      (.worksheetCostAction.reviewAction.sourceSheetId == .workdaySheetId) and
+      (.worksheetCostAction.reviewAction.sourceRowId == .workdaySheetRowId) and
+      (.worksheetCostAction.reviewAction.destinationJob.id == .followUpJobId) and
+      (.worksheetCostAction.reviewAction.destinationCostLine.id == .worksheetCostLineId) and
+      (.worksheetCostAction.costLine.id == .worksheetCostLineId) and
+      (.worksheetCostAction.costLine.description == .worksheetCostDescription) and
+      (.worksheetCostAction.costLine.totalCost == 30) and
+      (.worksheetCostAction.costLine.item.id == .quantityItemId)
+    ),
+    worksheetCostSourceSnapshotValid: (
+      (.worksheetCostAction.reviewAction.sourceSnapshot.schemaVersion == 1) and
+      (.worksheetCostAction.reviewAction.sourceSnapshot.sheet.id == .workdaySheetId) and
+      (.worksheetCostAction.reviewAction.sourceSnapshot.row.id == .workdaySheetRowId) and
+      (.worksheetCostAction.reviewAction.sourceSnapshot.row.actualText == "Treppen und Eingang gereinigt; Tuergriff locker festgestellt")
+    ),
+    worksheetCostReplayIsIdempotent: (
+      (.worksheetCostActionReplay.replayed == true) and
+      (.worksheetCostActionReplay.reviewAction.id == .worksheetCostActionId) and
+      (.worksheetCostActionReplay.costLine.id == .worksheetCostLineId)
+    ),
+    changedCostActionStatus: .changedCostActionStatus,
+    worksheetReportActionCreated: (
+      (.worksheetReportAction.replayed == false) and
+      (.worksheetReportAction.reviewAction.id == .worksheetReportActionId) and
+      (.worksheetReportAction.reviewAction.type == "CREATE_JOB_REPORT") and
+      (.worksheetReportAction.reviewAction.status == "COMPLETED") and
+      (.worksheetReportAction.reviewAction.sourceSheetId == .workdaySheetId) and
+      (.worksheetReportAction.reviewAction.sourceRowId == .workdaySheetRowId) and
+      (.worksheetReportAction.reviewAction.destinationJob.id == .followUpJobId) and
+      (.worksheetReportAction.reviewAction.destinationReport.id == .worksheetJobReportId) and
+      (.worksheetReportAction.report.id == .worksheetJobReportId) and
+      (.worksheetReportAction.report.summary == .worksheetReportSummary) and
+      (.worksheetReportAction.report.type == "WORKER_FINDING") and
+      (.worksheetReportAction.report.reviewStatus == "PENDING_REVIEW") and
+      (.worksheetReportAction.report.team.id == .teamId) and
+      (.worksheetReportAction.report.followUpRequired == true)
+    ),
+    worksheetReportSourceSnapshotValid: (
+      (.worksheetReportAction.reviewAction.sourceSnapshot.schemaVersion == 1) and
+      (.worksheetReportAction.reviewAction.sourceSnapshot.sheet.id == .workdaySheetId) and
+      (.worksheetReportAction.reviewAction.sourceSnapshot.row.id == .workdaySheetRowId) and
+      (.worksheetReportAction.reviewAction.sourceSnapshot.row.plannedText == "Musterstr. 1 - Treppen, H.M.S. und Eingang pruefen")
+    ),
+    worksheetReportReplayIsIdempotent: (
+      (.worksheetReportActionReplay.replayed == true) and
+      (.worksheetReportActionReplay.reviewAction.id == .worksheetReportActionId) and
+      (.worksheetReportActionReplay.report.id == .worksheetJobReportId)
+    ),
+    changedReportActionStatus: .changedReportActionStatus,
+    downstreamRecordsUseExistingJobDomains: (
+      ([.followUpJobCosts.costLines[].id] | index($phase9.worksheetCostLineId) != null) and
+      ([.followUpJobReports.reports[].id] | index($phase9.worksheetJobReportId) != null)
+    ),
+    workdayDetailContainsThreeActionTypes: (
+      ([.workdaySheetAfterFollowUp.workdaySheet.rows[] | select(.id == $phase9.workdaySheetRowId) | .reviewActions[]] | length) == 3 and
+      ([.workdaySheetAfterFollowUp.workdaySheet.rows[] | select(.id == $phase9.workdaySheetRowId) | .reviewActions[].type] | sort) == ["CREATE_FOLLOW_UP_JOB", "CREATE_JOB_COST_LINE", "CREATE_JOB_REPORT"] and
+      ([.workdaySheetAfterFollowUp.workdaySheet.rows[] | select(.id == $phase9.workdaySheetRowId) | .reviewActions[].id] | index($phase9.followUpActionId) != null) and
+      ([.workdaySheetAfterFollowUp.workdaySheet.rows[] | select(.id == $phase9.workdaySheetRowId) | .reviewActions[].id] | index($phase9.worksheetCostActionId) != null) and
+      ([.workdaySheetAfterFollowUp.workdaySheet.rows[] | select(.id == $phase9.workdaySheetRowId) | .reviewActions[].id] | index($phase9.worksheetReportActionId) != null)
+    ),
+    assignedWorkerCanReadActionResults: (
+      (.workerWorkdaySheetAfterActions.workdaySheet | has("internalNotes") | not) and
+      ([.workerWorkdaySheetAfterActions.workdaySheet.rows[] | select(.id == $phase9.workdaySheetRowId) | .reviewActions[]] | length) == 3
     ),
     followUpJobActivityLogged: (
       ([.followUpJobDetail.job.activity[].title] | index("Auftrag erstellt") != null) and
-      ([.followUpJobDetail.job.activity[].title] | index("Aus geprueftem Tageszettel erstellt") != null)
+      ([.followUpJobDetail.job.activity[].title] | index("Aus geprueftem Tageszettel erstellt") != null) and
+      ([.followUpJobDetail.job.activity[].title] | index("Kostenzeile aus Tageszettel erstellt: " + $phase9.worksheetCostDescription) != null) and
+      ([.followUpJobDetail.job.activity[].title] | index("Bericht erfasst: " + $phase9.worksheetReportSummary) != null)
     ),
-    archivedFollowUpStatus: .archivedFollowUpStatus
+    archivedFollowUpStatus: .archivedFollowUpStatus,
+    archivedCostActionStatus: .archivedCostActionStatus
   }' "$SUMMARY_INPUT" > "${TMP_DIR}/phase9-summary.json"
 
 jq -s '.[0] + .[1] + .[2]' "${TMP_DIR}/summary.json" "${TMP_DIR}/phase8-summary.json" "${TMP_DIR}/phase9-summary.json" > "${TMP_DIR}/combined-summary.json"
@@ -1497,18 +1632,39 @@ jq -e \
     .reviewedWorkdaySheetValid == true and
     .reviewedPlanUpdateStatus == "400" and
     .unreviewedFollowUpStatus == "400" and
+    .unreviewedCostActionStatus == "400" and
+    .unreviewedReportActionStatus == "400" and
     .workerFollowUpStatus == "403" and
+    .workerCostActionStatus == "403" and
+    .workerReportActionStatus == "403" and
     .crossFollowUpSourceStatus == "404" and
     .crossFollowUpDestinationStatus == "404" and
+    .crossCostActionSourceStatus == "404" and
+    .crossCostActionJobStatus == "404" and
+    .crossCostActionItemStatus == "404" and
+    .crossReportActionTeamStatus == "404" and
+    .missingActionTargetStatus == "400" and
+    .generalReportActionStatus == "400" and
     .followUpJobCreated == true and
     .followUpJobRelationsCopied == true and
     .followUpSourceSnapshotValid == true and
     .followUpReplayIsIdempotent == true and
     .changedFollowUpRetryStatus == "409" and
-    .workdayDetailContainsOneAction == true and
+    .worksheetCostActionCreated == true and
+    .worksheetCostSourceSnapshotValid == true and
+    .worksheetCostReplayIsIdempotent == true and
+    .changedCostActionStatus == "409" and
+    .worksheetReportActionCreated == true and
+    .worksheetReportSourceSnapshotValid == true and
+    .worksheetReportReplayIsIdempotent == true and
+    .changedReportActionStatus == "409" and
+    .downstreamRecordsUseExistingJobDomains == true and
+    .workdayDetailContainsThreeActionTypes == true and
+    .assignedWorkerCanReadActionResults == true and
     .followUpJobActivityLogged == true and
     .archivedWorkdaySheetValid == true and
     .archivedFollowUpStatus == "400" and
+    .archivedCostActionStatus == "400" and
     .archivedActualUpdateStatus == "400" and
     .repeatWorkdayArchiveStatus == "400" and
     .crossWorkdayReadStatus == "404"

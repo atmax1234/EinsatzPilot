@@ -1,4 +1,30 @@
+import { Prisma } from '@prisma/client';
+
 import type { JobCostLineItem } from '@einsatzpilot/types';
+
+export const jobCostLineInclude = {
+  item: {
+    select: {
+      id: true,
+      customId: true,
+      name: true,
+    },
+  },
+  createdBy: {
+    select: {
+      id: true,
+      email: true,
+      displayName: true,
+    },
+  },
+  updatedBy: {
+    select: {
+      id: true,
+      email: true,
+      displayName: true,
+    },
+  },
+} satisfies Prisma.JobCostLineInclude;
 
 type DecimalValue = { toNumber(): number };
 

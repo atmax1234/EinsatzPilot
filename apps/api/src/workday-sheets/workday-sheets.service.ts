@@ -25,9 +25,15 @@ import type {
   WorkdaySheetUpdateInput,
   WorksheetFollowUpJobCreateInput,
   WorksheetFollowUpJobCreateResponse,
+  WorksheetJobCostLineCreateInput,
+  WorksheetJobCostLineCreateResponse,
+  WorksheetJobReportCreateInput,
+  WorksheetJobReportCreateResponse,
   WorksheetReviewActionSourceSnapshotV1,
 } from '@einsatzpilot/types';
 
+import { resolveJobCostAmounts } from '../job-costs/job-cost-calculation';
+import { jobCostLineInclude, mapJobCostLine } from '../job-costs/job-costs-mapper';
 import {
   buildJobCreatedActivity,
   buildJobRelationChangedActivities,
@@ -35,11 +41,14 @@ import {
 import { OperationsLookupService } from '../operations/operations-lookup.service';
 import { mapJobListItem } from '../operations/operations-mapper';
 import {
+  assertCanCreateJobReports,
   assertCanManageWorkdaySheets,
   assertCanReadWorkdaySheets,
+  assertCanWriteJobCosts,
 } from '../operations/operations-permissions';
 import { createJobReference } from '../operations/operations-reference';
 import { PrismaService } from '../prisma/prisma.service';
+import { jobReportInclude, mapJobReportItem } from '../reports/reports-mapper';
 import {
   mapWorkdaySheetDetail,
   mapWorkdaySheetListItem,
@@ -61,7 +70,11 @@ import {
 } from './workday-sheet-payloads';
 import { WorkdaySheetRelationsService } from './workday-sheet-relations.service';
 import { assertWorkdaySheetStatusTransition } from './workday-sheet-status-rules';
-import { normalizeWorksheetFollowUpJobCreateInput } from './worksheet-review-action-payloads';
+import {
+  normalizeWorksheetFollowUpJobCreateInput,
+  normalizeWorksheetJobCostLineCreateInput,
+  normalizeWorksheetJobReportCreateInput,
+} from './worksheet-review-action-payloads';
 
 function isOfficeRole(authContext: RequestAuthContext) {
   return (
@@ -86,6 +99,8 @@ const followUpJobInclude = {
 } as const;
 
 type FollowUpPayload = ReturnType<typeof normalizeWorksheetFollowUpJobCreateInput>;
+type CostActionPayload = ReturnType<typeof normalizeWorksheetJobCostLineCreateInput>;
+type ReportActionPayload = ReturnType<typeof normalizeWorksheetJobReportCreateInput>;
 
 function actorName(actor: AuthenticatedUser) {
   return actor.displayName ?? actor.email;
@@ -132,7 +147,11 @@ function sourceSnapshot(
   };
 }
 
-function requestFingerprint(
+function hashRequest(value: unknown) {
+  return createHash('sha256').update(JSON.stringify(value)).digest('hex');
+}
+
+function followUpRequestFingerprint(
   payload: FollowUpPayload,
   relationIds: {
     teamId?: string;
@@ -142,7 +161,7 @@ function requestFingerprint(
     objectAreaId?: string;
   },
 ) {
-  const serialized = JSON.stringify({
+  return hashRequest({
     title: payload.title,
     description: payload.description ?? null,
     customerName: payload.customerName,
@@ -156,7 +175,44 @@ function requestFingerprint(
     objectId: relationIds.objectId ?? null,
     objectAreaId: relationIds.objectAreaId ?? null,
   });
-  return createHash('sha256').update(serialized).digest('hex');
+}
+
+function costActionRequestFingerprint(payload: CostActionPayload) {
+  return hashRequest({
+    targetJobId: payload.targetJobId,
+    costLine: {
+      itemId: payload.costLine.itemId ?? null,
+      kind: payload.costLine.kind,
+      description: payload.costLine.description,
+      quantity: payload.costLine.quantity,
+      unit: payload.costLine.unit,
+      unitCost: payload.costLine.unitCost ?? null,
+      totalCost: payload.costLine.totalCost ?? null,
+      currency: payload.costLine.currency,
+      taxRate: payload.costLine.taxRate ?? null,
+      costDate: payload.costLine.costDate?.toISOString() ?? null,
+      vendorName: payload.costLine.vendorName ?? null,
+      receiptReference: payload.costLine.receiptReference ?? null,
+      notes: payload.costLine.notes ?? null,
+    },
+  });
+}
+
+function reportActionRequestFingerprint(payload: ReportActionPayload) {
+  return hashRequest({
+    targetJobId: payload.targetJobId,
+    report: {
+      summary: payload.report.summary,
+      details: payload.report.details ?? null,
+      teamId: payload.report.teamId ?? null,
+      type: payload.report.type,
+      findingSummary: payload.report.findingSummary ?? null,
+      workPerformed: payload.report.workPerformed ?? null,
+      workStillNeeded: payload.report.workStillNeeded ?? null,
+      followUpRequired: payload.report.followUpRequired,
+      followUpNotes: payload.report.followUpNotes ?? null,
+    },
+  });
 }
 
 @Injectable()
@@ -169,6 +225,33 @@ export class WorkdaySheetsService {
     @Inject(WorkdaySheetRelationsService)
     private readonly relationsService: WorkdaySheetRelationsService,
   ) {}
+
+  private async getReviewedActionSource(
+    transaction: Prisma.TransactionClient,
+    input: { companyId: string; sheetId: string; rowId: string },
+  ) {
+    const lockedSheet = await transaction.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`SELECT "id" FROM "WorkdaySheet" WHERE "id" = ${input.sheetId} AND "companyId" = ${input.companyId} FOR UPDATE`,
+    );
+    if (!lockedSheet.length) {
+      throw new NotFoundException('Tagesblatt wurde in der aktiven Firma nicht gefunden.');
+    }
+
+    const sheet = await transaction.workdaySheet.findFirst({
+      where: { id: input.sheetId, companyId: input.companyId },
+      include: workdaySheetInclude,
+    });
+    if (!sheet) {
+      throw new NotFoundException('Tagesblatt wurde in der aktiven Firma nicht gefunden.');
+    }
+    if (sheet.status !== 'REVIEWED') {
+      throw new BadRequestException(
+        'Folgeaktionen koennen nur aus geprueften Tageszetteln erstellt werden.',
+      );
+    }
+
+    return { sheet, row: this.getRowOrThrow(sheet, input.rowId) };
+  }
 
   private workerAccessWhere(companyId: string, userId: string): Prisma.WorkdaySheetWhereInput {
     return {
@@ -452,7 +535,7 @@ export class WorkdaySheetsService {
     authContext: RequestAuthContext;
   }): Promise<WorkdaySheetOptionsResponse> {
     assertCanManageWorkdaySheets(input.authContext);
-    const [teams, memberships, customers, addresses, objects, objectAreas, jobs] =
+    const [teams, memberships, customers, addresses, objects, objectAreas, jobs, items] =
       await Promise.all([
         this.prisma.team.findMany({
           where: { companyId: input.companyId, status: 'ACTIVE' },
@@ -502,6 +585,12 @@ export class WorkdaySheetsService {
           orderBy: [{ scheduledStart: 'desc' }, { createdAt: 'desc' }],
           take: 250,
         }),
+        this.prisma.item.findMany({
+          where: { companyId: input.companyId, status: { not: 'ARCHIVED' } },
+          select: { id: true, customId: true, name: true },
+          orderBy: [{ status: 'asc' }, { name: 'asc' }],
+          take: 250,
+        }),
       ]);
 
     return {
@@ -520,6 +609,7 @@ export class WorkdaySheetsService {
       objects,
       objectAreas,
       jobs,
+      items,
     };
   }
 
@@ -766,26 +856,7 @@ export class WorkdaySheetsService {
     const payload = normalizeWorksheetFollowUpJobCreateInput(input.payload);
 
     return this.prisma.$transaction(async (transaction) => {
-      const lockedSheet = await transaction.$queryRaw<Array<{ id: string }>>(
-        Prisma.sql`SELECT "id" FROM "WorkdaySheet" WHERE "id" = ${input.sheetId} AND "companyId" = ${input.companyId} FOR UPDATE`,
-      );
-      if (!lockedSheet.length) {
-        throw new NotFoundException('Tagesblatt wurde in der aktiven Firma nicht gefunden.');
-      }
-
-      const sheet = await transaction.workdaySheet.findFirst({
-        where: { id: input.sheetId, companyId: input.companyId },
-        include: workdaySheetInclude,
-      });
-      if (!sheet) {
-        throw new NotFoundException('Tagesblatt wurde in der aktiven Firma nicht gefunden.');
-      }
-      if (sheet.status !== 'REVIEWED') {
-        throw new BadRequestException(
-          'Folgeauftraege koennen nur aus geprueften Tageszetteln erstellt werden.',
-        );
-      }
-      const row = this.getRowOrThrow(sheet, input.rowId);
+      const { sheet, row } = await this.getReviewedActionSource(transaction, input);
       const relationIds = {
         teamId:
           payload.teamId === undefined ? sheet.teamId ?? undefined : payload.teamId ?? undefined,
@@ -804,22 +875,12 @@ export class WorkdaySheetsService {
             ? row.objectAreaId ?? undefined
             : payload.objectAreaId ?? undefined,
       };
-      const relations = await this.resolveFollowUpJobRelations(
-        transaction,
-        input.companyId,
-        relationIds,
-      );
-      const fingerprint = requestFingerprint(payload, relationIds);
+      const fingerprint = followUpRequestFingerprint(payload, relationIds);
       const existingAction = row.reviewActions.find(
         (action) => action.type === 'CREATE_FOLLOW_UP_JOB',
       );
 
-      if (existingAction) {
-        if (existingAction.requestFingerprint !== fingerprint) {
-          throw new ConflictException(
-            'Diese Zeile hat bereits einen Folgeauftrag mit anderen Zieldaten.',
-          );
-        }
+      if (existingAction?.requestFingerprint === fingerprint) {
         const existingJob = await transaction.job.findFirst({
           where: { id: existingAction.destinationJobId, companyId: input.companyId },
           include: followUpJobInclude,
@@ -832,6 +893,17 @@ export class WorkdaySheetsService {
           job: mapJobListItem(existingJob),
           replayed: true,
         };
+      }
+
+      const relations = await this.resolveFollowUpJobRelations(
+        transaction,
+        input.companyId,
+        relationIds,
+      );
+      if (existingAction) {
+        throw new ConflictException(
+          'Diese Zeile hat bereits einen Folgeauftrag mit anderen Zieldaten.',
+        );
       }
 
       const completedAt = new Date();
@@ -931,6 +1003,246 @@ export class WorkdaySheetsService {
       return {
         reviewAction: mapWorksheetReviewAction(reviewAction),
         job: mapJobListItem(job),
+        replayed: false,
+      };
+    });
+  }
+
+  async createJobCostLineFromRow(input: {
+    companyId: string;
+    sheetId: string;
+    rowId: string;
+    actor: AuthenticatedUser;
+    authContext: RequestAuthContext;
+    payload: WorksheetJobCostLineCreateInput;
+  }): Promise<WorksheetJobCostLineCreateResponse> {
+    assertCanManageWorkdaySheets(input.authContext);
+    assertCanWriteJobCosts(input.authContext);
+    const payload = normalizeWorksheetJobCostLineCreateInput(input.payload);
+
+    return this.prisma.$transaction(async (transaction) => {
+      const { sheet, row } = await this.getReviewedActionSource(transaction, input);
+      const targetJob = await transaction.job.findFirst({
+        where: { id: payload.targetJobId, companyId: input.companyId },
+        include: followUpJobInclude,
+      });
+      if (!targetJob) {
+        throw new NotFoundException('Auftrag wurde in der aktiven Firma nicht gefunden.');
+      }
+
+      const fingerprint = costActionRequestFingerprint(payload);
+      const existingAction = row.reviewActions.find(
+        (action) => action.type === 'CREATE_JOB_COST_LINE',
+      );
+      if (existingAction?.requestFingerprint === fingerprint) {
+        if (!existingAction.destinationJobCostLine) {
+          throw new ConflictException('Die bereits erstellte Kostenzeile ist nicht verfuegbar.');
+        }
+        return {
+          reviewAction: mapWorksheetReviewAction(existingAction),
+          costLine: mapJobCostLine(existingAction.destinationJobCostLine),
+          replayed: true,
+        };
+      }
+
+      if (payload.costLine.itemId) {
+        const item = await transaction.item.findFirst({
+          where: { id: payload.costLine.itemId, companyId: input.companyId },
+          select: { id: true },
+        });
+        if (!item) {
+          throw new NotFoundException('Artikel wurde in der aktiven Firma nicht gefunden.');
+        }
+      }
+
+      const conflictingCurrency = await transaction.jobCostLine.findFirst({
+        where: {
+          companyId: input.companyId,
+          jobId: targetJob.id,
+          currency: { not: payload.costLine.currency },
+        },
+        select: { currency: true },
+      });
+      if (conflictingCurrency) {
+        throw new BadRequestException(
+          `Alle Kostenzeilen eines Auftrags muessen dieselbe Waehrung verwenden (${conflictingCurrency.currency}).`,
+        );
+      }
+
+      const amounts = resolveJobCostAmounts({
+        kind: payload.costLine.kind,
+        quantity: payload.costLine.quantity,
+        unitCost: payload.costLine.unitCost ?? null,
+        submittedTotalCost: payload.costLine.totalCost,
+      });
+      if (existingAction) {
+        throw new ConflictException(
+          'Diese Zeile hat bereits eine Kostenaktion mit anderen Zieldaten.',
+        );
+      }
+
+      const completedAt = new Date();
+      const costLine = await transaction.jobCostLine.create({
+        data: {
+          ...payload.costLine,
+          companyId: input.companyId,
+          jobId: targetJob.id,
+          createdByUserId: input.actor.id,
+          updatedByUserId: input.actor.id,
+          quantity: amounts.quantity,
+          unitCost: amounts.unitCost,
+          totalCost: amounts.totalCost,
+        },
+        include: jobCostLineInclude,
+      });
+      await transaction.jobActivity.create({
+        data: {
+          jobId: targetJob.id,
+          kind: 'NOTE',
+          title: `Kostenzeile aus Tageszettel erstellt: ${costLine.description}`,
+          content: `Quelle: Tageszettel ${sheet.date.toISOString().slice(0, 10)}, Zeile ${row.position + 1} (${sheet.id}/${row.id}).`,
+          authorName: actorName(input.actor),
+        },
+      });
+
+      const snapshot = sourceSnapshot(sheet, row, completedAt);
+      const reviewAction = await transaction.worksheetReviewAction.create({
+        data: {
+          companyId: input.companyId,
+          sourceSheetId: sheet.id,
+          sourceRowId: row.id,
+          type: 'CREATE_JOB_COST_LINE',
+          status: 'COMPLETED',
+          idempotencyKey: `worksheet-row:${row.id}:job-cost-line`,
+          requestFingerprint: fingerprint,
+          sourceSnapshot: JSON.parse(JSON.stringify(snapshot)) as Prisma.InputJsonValue,
+          destinationJobId: targetJob.id,
+          destinationJobReference: targetJob.reference,
+          destinationJobTitle: targetJob.title,
+          destinationJobCostLineId: costLine.id,
+          destinationCostDescription: costLine.description,
+          createdByUserId: input.actor.id,
+          completedAt,
+        },
+        include: worksheetReviewActionInclude,
+      });
+
+      return {
+        reviewAction: mapWorksheetReviewAction(reviewAction),
+        costLine: mapJobCostLine(costLine),
+        replayed: false,
+      };
+    });
+  }
+
+  async createJobReportFromRow(input: {
+    companyId: string;
+    sheetId: string;
+    rowId: string;
+    actor: AuthenticatedUser;
+    authContext: RequestAuthContext;
+    payload: WorksheetJobReportCreateInput;
+  }): Promise<WorksheetJobReportCreateResponse> {
+    assertCanManageWorkdaySheets(input.authContext);
+    assertCanCreateJobReports(input.authContext);
+    const payload = normalizeWorksheetJobReportCreateInput(input.payload);
+
+    return this.prisma.$transaction(async (transaction) => {
+      const { sheet, row } = await this.getReviewedActionSource(transaction, input);
+      const targetJob = await transaction.job.findFirst({
+        where: { id: payload.targetJobId, companyId: input.companyId },
+        include: followUpJobInclude,
+      });
+      if (!targetJob) {
+        throw new NotFoundException('Auftrag wurde in der aktiven Firma nicht gefunden.');
+      }
+
+      const fingerprint = reportActionRequestFingerprint(payload);
+      const existingAction = row.reviewActions.find(
+        (action) => action.type === 'CREATE_JOB_REPORT',
+      );
+      if (existingAction?.requestFingerprint === fingerprint) {
+        if (!existingAction.destinationJobReport) {
+          throw new ConflictException('Der bereits erstellte Bericht ist nicht verfuegbar.');
+        }
+        return {
+          reviewAction: mapWorksheetReviewAction(existingAction),
+          report: mapJobReportItem(existingAction.destinationJobReport),
+          replayed: true,
+        };
+      }
+
+      const team =
+        payload.report.teamId === undefined
+          ? targetJob.team
+          : await transaction.team.findFirst({
+              where: { id: payload.report.teamId, companyId: input.companyId },
+              select: { id: true, name: true },
+            });
+      if (payload.report.teamId && !team) {
+        throw new NotFoundException('Team nicht gefunden.');
+      }
+
+      if (existingAction) {
+        throw new ConflictException(
+          'Diese Zeile hat bereits eine Berichtsaktion mit anderen Zieldaten.',
+        );
+      }
+
+      const completedAt = new Date();
+      const report = await transaction.jobReport.create({
+        data: {
+          companyId: input.companyId,
+          jobId: targetJob.id,
+          teamId: team?.id,
+          authorUserId: input.actor.id,
+          type: payload.report.type,
+          summary: payload.report.summary,
+          details: payload.report.details,
+          findingSummary: payload.report.findingSummary,
+          workPerformed: payload.report.workPerformed,
+          workStillNeeded: payload.report.workStillNeeded,
+          followUpRequired: payload.report.followUpRequired,
+          followUpNotes: payload.report.followUpNotes,
+          reviewStatus: 'PENDING_REVIEW',
+        },
+        include: jobReportInclude,
+      });
+      await transaction.jobActivity.create({
+        data: {
+          jobId: targetJob.id,
+          kind: 'REPORT',
+          title: `Bericht erfasst: ${report.summary}`,
+          content: report.details ?? undefined,
+          authorName: actorName(input.actor),
+        },
+      });
+
+      const snapshot = sourceSnapshot(sheet, row, completedAt);
+      const reviewAction = await transaction.worksheetReviewAction.create({
+        data: {
+          companyId: input.companyId,
+          sourceSheetId: sheet.id,
+          sourceRowId: row.id,
+          type: 'CREATE_JOB_REPORT',
+          status: 'COMPLETED',
+          idempotencyKey: `worksheet-row:${row.id}:job-report`,
+          requestFingerprint: fingerprint,
+          sourceSnapshot: JSON.parse(JSON.stringify(snapshot)) as Prisma.InputJsonValue,
+          destinationJobId: targetJob.id,
+          destinationJobReference: targetJob.reference,
+          destinationJobTitle: targetJob.title,
+          destinationJobReportId: report.id,
+          destinationReportSummary: report.summary,
+          createdByUserId: input.actor.id,
+          completedAt,
+        },
+        include: worksheetReviewActionInclude,
+      });
+
+      return {
+        reviewAction: mapWorksheetReviewAction(reviewAction),
+        report: mapJobReportItem(report),
         replayed: false,
       };
     });

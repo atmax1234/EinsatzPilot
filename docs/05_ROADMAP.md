@@ -98,7 +98,7 @@ Phases are dependency order, not calendar promises. EinsatzPilot is a modular al
 
 ## Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports
 
-**Status:** In progress. The follow-up Job foundation is implemented and verified; cost/report actions remain deferred to Phase 9B.
+**Status:** Implemented and verified. The follow-up Job slice and Phase 9B Job-grounded cost/report actions use one shared provenance aggregate.
 
 **Goals:** Let OWNER/OFFICE deliberately act on reviewed worksheet rows by creating governed follow-up Jobs, attaching appropriate cost/report records, or preparing billable/customer-communication inputs. Retain immutable source identity/text snapshots, actor/time audit, downstream links, action status, and idempotency so retries and repeated review cannot duplicate records.
 
@@ -106,9 +106,9 @@ Phases are dependency order, not calendar promises. EinsatzPilot is a modular al
 
 **Implemented first slice:** `WorksheetReviewAction` records one `CREATE_FOLLOW_UP_JOB` action per reviewed source row. OWNER/OFFICE explicitly provides and previews normal Job fields; row relations are copied by default but may be deliberately changed or cleared with tenant validation. The source worksheet/row text and context are stored as a schema-versioned immutable JSON snapshot alongside actor/time, completion status, request fingerprint, and destination Job identity. Job, activity, and action are committed atomically. An identical retry returns the original result; a changed retry returns conflict. WORKER, non-reviewed/archived, wrong-row, and cross-tenant requests cannot create an action.
 
-**Next slice:** Phase 9B may add explicit cost-line and structured report/finding actions only when a tenant-owned target Job is selected or already established. Each action must use the existing cost/report models, validation, permissions, and lifecycle and must preserve the same provenance/idempotency guarantees.
+**Implemented Phase 9B slice:** The same aggregate adds one `CREATE_JOB_COST_LINE` and one `CREATE_JOB_REPORT` action per reviewed row. Both require a deliberately selected tenant-owned normal Job, including a row-linked or previously created follow-up Job. Cost actions use normal `JobCostLine` validation, optional Item context, currency/amount rules, and actor attribution. Report actions accept structured report types only and create normal `JobReport` records in `PENDING_REVIEW`. Each action retains a typed downstream link and copied destination label; downstream record, Job activity, and provenance action commit atomically. Same-input replay and changed-input conflict apply independently per type.
 
-**Must not build yet:** Silent conversion during review, automatic customer messages, Communication Hub/email delivery, Document Studio, invoices/offers/payments, AI summaries, or a second Job lifecycle.
+**Still not implemented:** Billable-item/customer-message actions, bulk actions, automatic conversion, undo/cancel, correction/supersession, Communication Hub/email delivery, Document Studio, invoices/offers/payments, AI summaries, or a second Job lifecycle.
 
 ## Phase 10 — Service Agreements / Recurring Object Duties
 

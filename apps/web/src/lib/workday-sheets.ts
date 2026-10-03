@@ -12,6 +12,10 @@ import type {
   WorkdaySheetUpdateInput,
   WorksheetFollowUpJobCreateInput,
   WorksheetFollowUpJobCreateResponse,
+  WorksheetJobCostLineCreateInput,
+  WorksheetJobCostLineCreateResponse,
+  WorksheetJobReportCreateInput,
+  WorksheetJobReportCreateResponse,
 } from '@einsatzpilot/types';
 
 import { fetchApiJson } from './api';
@@ -135,6 +139,36 @@ export async function createFollowUpJobFromWorksheetRowData(
 ) {
   return fetchApiJson<WorksheetFollowUpJobCreateResponse>(
     `/api/workday-sheets/${sheetId}/rows/${rowId}/review-actions/follow-up-job`,
+    {
+      authToken: await token(),
+      method: 'POST',
+      json: input,
+    },
+  );
+}
+
+export async function createJobCostLineFromWorksheetRowData(
+  sheetId: string,
+  rowId: string,
+  input: WorksheetJobCostLineCreateInput,
+) {
+  return fetchApiJson<WorksheetJobCostLineCreateResponse>(
+    `/api/workday-sheets/${sheetId}/rows/${rowId}/review-actions/job-cost-line`,
+    {
+      authToken: await token(),
+      method: 'POST',
+      json: input,
+    },
+  );
+}
+
+export async function createJobReportFromWorksheetRowData(
+  sheetId: string,
+  rowId: string,
+  input: WorksheetJobReportCreateInput,
+) {
+  return fetchApiJson<WorksheetJobReportCreateResponse>(
+    `/api/workday-sheets/${sheetId}/rows/${rowId}/review-actions/job-report`,
     {
       authToken: await token(),
       method: 'POST',

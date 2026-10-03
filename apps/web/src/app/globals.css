@@ -737,6 +737,59 @@ code {
   background: rgba(233, 245, 231, 0.62);
 }
 
+.worksheet-review-action {
+  border: 1px solid rgba(196, 107, 45, 0.34);
+  border-radius: 18px;
+  background: rgba(255, 250, 242, 0.72);
+  overflow: hidden;
+}
+
+.worksheet-review-action > summary {
+  cursor: pointer;
+  padding: 15px 16px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.worksheet-review-action[open] > summary {
+  border-bottom: 1px solid rgba(216, 198, 170, 0.68);
+  background: rgba(247, 236, 218, 0.56);
+}
+
+.worksheet-review-action-body {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.worksheet-action-source-preview {
+  padding: 14px 16px;
+  border-left: 3px solid var(--accent);
+  background: rgba(247, 236, 218, 0.48);
+}
+
+.worksheet-action-source-preview p {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+}
+
+.worksheet-action-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.worksheet-action-result > div {
+  display: grid;
+  gap: 5px;
+}
+
+.worksheet-action-result small {
+  color: var(--muted);
+}
+
 .worksheet-today-card {
   display: grid;
   gap: 18px;

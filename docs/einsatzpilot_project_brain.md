@@ -4,7 +4,7 @@ _Last reconciled with the checked-in repository: 2026-10-03._
 
 This file is a consolidated handoff for coding agents working on **EinsatzPilot**. It describes the product vision, current implemented foundation, architecture direction, roadmap, known constraints, and founder decisions. Treat checked-in repository docs and code as the final source of truth when they differ from this file.
 
-Repository reconciliation: Phase 8B is implemented. Phase 9 is in progress, and its first explicit reviewed-row action now creates one normal follow-up Job with immutable provenance, atomic persistence, strict tenant/role checks, and idempotent replay. Cost/report actions are not implemented. The next recommended slice is Phase 9B, not Communication Hub, Document Studio, AI, recurrence, or generated future Jobs.
+Repository reconciliation: Phase 8B and Phase 9 are implemented. Reviewed rows now support three explicit, independently idempotent actions through one provenance aggregate: a normal follow-up Job, a Job-grounded cost line, and a structured Job report. Each action is atomic, tenant/role safe, and never automatic. The next recommended phase is Phase 10 service agreements/recurring object duties, not Communication Hub, Document Studio, AI, generated PDF, or generated future Jobs.
 
 ---
 
@@ -576,7 +576,7 @@ No recurring future Jobs are generated.
 
 Current worksheet limitations after Phase 8B and the first Phase 9 slice:
 
-- only the explicit reviewed-row follow-up Job action exists; no cost/report/customer-message action exists
+- explicit follow-up Job, Job-grounded cost-line, and structured Job-report actions exist; no billable/customer-message action exists
 - no row reordering, copying, templates, or bulk import
 - today and exact filters exist; no calendar board, range/search filter, or saved view exists
 - team visibility follows current team membership, not frozen recipient snapshot
@@ -638,8 +638,8 @@ Corrected roadmap:
 ```text
 Phase 8  — Daily Worksheets / Team Protocols Foundation — implemented
 Phase 8B — Daily Worksheets Usability and Hardening — implemented
-Phase 9  — Worksheet Review → Follow-up Jobs / Costs / Reports — in progress; follow-up Job slice implemented
-Phase 9B — Worksheet Review Actions: Cost and Report Links — next
+Phase 9  — Worksheet Review → Follow-up Jobs / Costs / Reports — implemented
+Phase 9B — Worksheet Review Actions: Cost and Report Links — implemented
 Phase 10 — Service Agreements / Recurring Object Duties
 Phase 11 — Command Center Dashboard
 Phase 12 — Smart Planning / AI / Automation
@@ -688,20 +688,25 @@ Important principles:
 - Downstream Jobs must be normal Jobs with existing lifecycle.
 - Do not create a second Job system.
 
-Resolved for the follow-up Job slice:
+Resolved across Phase 9 and Phase 9B:
 
 - One row can create one action per action type; the implemented type is `CREATE_FOLLOW_UP_JOB`.
 - Actions cannot be undone/canceled; the immutable provenance remains while the normal Job uses its own lifecycle.
 - Actions are linked back to the row and exposed on worksheet detail.
 - Planned and actual text, time, notes, worksheet context, and linked entity summaries are copied into a versioned source snapshot.
 - Conversion is allowed only from `REVIEWED`; `ARCHIVED` cannot receive new actions.
+- The additional action types are `CREATE_JOB_COST_LINE` and `CREATE_JOB_REPORT`; each can coexist once with the follow-up Job action on the same row.
+- Every cost/report action requires a deliberately selected tenant-owned target Job. Free-floating costs and reports are rejected by contract.
+- Cost actions reuse the existing cost payload, optional Item validation, currency/amount rules, and actor attribution.
+- Report actions accept structured types only and create normal `PENDING_REVIEW` JobReports with existing review behavior.
+- Typed downstream links, copied destination labels, source snapshots, actor/time, fingerprint, and required target Job identity remain on the immutable action.
+- The downstream record, readable Job activity, and action commit atomically. Same-input replay returns the existing record; changed input conflicts independently per action type.
 
-Open for Phase 9B and later:
+Open for later phases:
 
 - What correction/supersession model should apply when reviewed work is later found wrong?
-- How to handle cost creation if no job exists?
-- Should costs require linking to an existing/new job?
-- Which structured report types are safe and useful from a worksheet row?
+- Whether a separate billable-work preparation action is justified after invoice/offer rules exist.
+- Whether customer-communication preparation should consume reviewed rows after the Communication Hub has its own permissions, confirmation, and audit design.
 
 ---
 
@@ -733,7 +738,7 @@ Not implemented / must not be claimed as existing:
 - QR/barcodes
 - logistics/warehouse system
 - item movement/custody
-- worksheet cost/report/billable/customer-message actions
+- worksheet billable/customer-message actions
 - generated worksheet PDF/export (browser print exists)
 
 ---
@@ -874,19 +879,19 @@ Do not do these unless explicitly approved:
 
 ## 17. Suggested Next Safe Prompt Direction
 
-Phase 8B and the Phase 9 follow-up Job action are implemented. The next prompt is:
+Phase 8B and all three Phase 9 review actions are implemented. The next prompt is:
 
 ```text
-Phase 9B — Worksheet Review Actions: Cost and Report Links
+Phase 10 — Service Agreements / Recurring Object Duties Foundation
 ```
 
-It must extend `WorksheetReviewAction`, require a tenant-owned normal target Job, reuse existing JobCostLine/JobReport rules, remain explicit and atomic, and avoid automatic conversion or free-floating downstream records.
+It must model company-owned, customer/object-grounded agreements and reusable recurring duties with explicit lifecycle, effective dates, cadence/timezone semantics, tenant-safe relations, and real office administration. These definitions may later feed deliberate DRAFT worksheet planning close to execution time; they must not silently create worksheets or bulk-generate rigid future Jobs.
 
 ---
 
 ## 18. Phase 9 Implementation Direction
 
-Implemented first slice:
+Implemented Phase 9 actions:
 
 ```text
 Phase 9 — Worksheet Review Actions: Follow-up Jobs First
@@ -898,12 +903,14 @@ Phase 9 — Worksheet Review Actions: Follow-up Jobs First
 - idempotency/duplicate prevention
 - tenant-safe relation validation
 - normal existing Job plus Job activity and action created atomically
+- row → normal Job-grounded cost line, with existing amount/currency/Item rules
+- row → structured normal JobReport in `PENDING_REVIEW`
+- all action types retain immutable source provenance, typed destinations, atomic persistence, and duplicate-safe replay
 
-Next, only where existing rules are clean:
+Next:
 
-- row → cost draft/line
-- row → report/finding
-- row → customer report source support
+- Phase 10 service agreements/recurring object duties as controlled worksheet-planning inputs
+- no automatic recurrence execution or generated future Jobs
 
 ---
 

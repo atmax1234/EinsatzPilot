@@ -203,6 +203,8 @@ enum WorkdaySheetStatus {
 
 enum WorksheetReviewActionType {
   CREATE_FOLLOW_UP_JOB
+  CREATE_JOB_COST_LINE
+  CREATE_JOB_REPORT
 }
 
 enum WorksheetReviewActionStatus {
@@ -396,6 +398,7 @@ model JobReport {
   author           User?              @relation("JobReportAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
   reviewer         User?              @relation("JobReportReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
   attachments      JobAttachment[]
+  worksheetReviewActions WorksheetReviewAction[]
 
   @@index([companyId])
   @@index([companyId, reviewStatus, createdAt])
@@ -592,6 +595,7 @@ model JobCostLine {
   item             Item?       @relation(fields: [itemId], references: [id], onDelete: SetNull)
   createdBy        User        @relation("JobCostLineCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
   updatedBy        User        @relation("JobCostLineUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: Restrict)
+  worksheetReviewActions WorksheetReviewAction[]
 
   @@index([companyId, jobId, costDate])
   @@index([companyId, kind])
@@ -625,7 +629,6 @@ model Assignment {
   @@index([companyId, startsAt])
   @@index([createdByUserId])
 }
-
 model CustomerReportSnapshot {
   id                         String               @id @default(cuid())
   companyId                  String
@@ -775,6 +778,10 @@ model WorksheetReviewAction {
   destinationJobId        String
   destinationJobReference String
   destinationJobTitle     String
+  destinationJobCostLineId String?
+  destinationJobReportId   String?
+  destinationCostDescription String?
+  destinationReportSummary  String?
   createdByUserId         String
   completedAt             DateTime
   createdAt               DateTime                    @default(now())
@@ -783,11 +790,15 @@ model WorksheetReviewAction {
   sourceSheet             WorkdaySheet                @relation(fields: [sourceSheetId], references: [id], onDelete: Restrict)
   sourceRow               WorkdaySheetRow             @relation(fields: [sourceRowId], references: [id], onDelete: Restrict)
   destinationJob          Job                         @relation(fields: [destinationJobId], references: [id], onDelete: Restrict)
+  destinationJobCostLine  JobCostLine?                @relation(fields: [destinationJobCostLineId], references: [id], onDelete: Restrict)
+  destinationJobReport    JobReport?                  @relation(fields: [destinationJobReportId], references: [id], onDelete: Restrict)
   createdBy               User                        @relation("WorksheetReviewActionCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
 
   @@unique([companyId, sourceRowId, type])
   @@unique([companyId, idempotencyKey])
   @@index([companyId, sourceSheetId, createdAt])
   @@index([destinationJobId])
+  @@index([destinationJobCostLineId])
+  @@index([destinationJobReportId])
   @@index([createdByUserId])
 }

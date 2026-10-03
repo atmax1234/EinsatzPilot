@@ -2,49 +2,47 @@
 
 ## End-of-session checkpoint
 
-Phase 9 is now in progress. The first controlled slice, worksheet review to a normal follow-up Job, is implemented on the Phase 8/8B worksheet foundation.
+Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports is implemented. Phase 9B completed the controlled cost/report slice without creating a parallel downstream system.
 
 ### Implemented Phase 9 behavior
 
-- `WorksheetReviewAction` is a company-owned audit record with action type `CREATE_FOLLOW_UP_JOB` and status `COMPLETED`.
-- OWNER/OFFICE can deliberately create a follow-up Job from one row only while its worksheet is `REVIEWED`. WORKER cannot invoke the action.
-- The destination is an ordinary existing `Job` in `PLANNED`, not a worksheet-specific subtype or second lifecycle.
-- The action stores source sheet/row identity, a schema-versioned immutable snapshot of the reviewed worksheet/row content and linked context, creating actor, completion time, deterministic idempotency identity, request fingerprint, and destination Job identity/reference/title.
-- Source row relations and sheet team are copied by default. The office may deliberately select or clear destination relations; every supplied source/destination ID is validated inside the active tenant and object-area/object compatibility is preserved.
-- Job, readable Job activity, and review action are created in one transaction. Failure persists none of them.
-- An identical retry returns the existing action and Job with `replayed: true`. A changed retry for the same row/action type returns `409` and cannot duplicate the Job.
-- Reviewed worksheet planning/execution remains locked. `ARCHIVED` is terminal and cannot receive a new action.
-- Worksheet detail provides a real German office form per eligible reviewed row and shows the resulting linked Job afterward.
-- No cost, report, billable item, customer message, recurring Job, PDF, invoice, email, or AI result is created by this slice.
+- `WorksheetReviewAction` is the one company-owned, append-only provenance aggregate for explicit reviewed-row decisions.
+- Implemented types are `CREATE_FOLLOW_UP_JOB`, `CREATE_JOB_COST_LINE`, and `CREATE_JOB_REPORT`; status is `COMPLETED`.
+- OWNER/OFFICE can invoke each type at most once per row and only while its worksheet is `REVIEWED`. WORKER cannot invoke, retry, cancel, or alter actions.
+- Follow-up creation produces a normal `PLANNED` Job. Cost/report actions require a deliberately selected tenant-owned normal Job, including a row-linked Job or the Phase 9 follow-up Job.
+- Cost creation uses the existing `JobCostLine` model, optional Item context, amount/currency rules, and actor attribution. It does not change Item quantity.
+- Report creation accepts structured report types only and creates a normal `JobReport` in `PENDING_REVIEW`, preserving the existing office review lifecycle.
+- Every action stores source sheet/row identity, a schema-versioned immutable source snapshot, creating actor, completion time, action type/status, deterministic idempotency identity, request fingerprint, required destination Job identity, and the typed cost/report destination where applicable.
+- The downstream record, readable Job activity, and review action commit in one transaction. Failure persists none of them.
+- Identical retries return the existing action/downstream record with `replayed: true`; a changed retry for the same row/type returns `409`.
+- Source, target Job, optional Item/Team, and all other relations are tenant-validated with safe not-found behavior.
+- Assigned workers can read action results through their authorized worksheet detail, but office controls are not exposed to them.
+- The reviewed-row UI previews source data, requires explicit destination fields, shows each completed action independently, and links to the normal destination Job.
+- `ARCHIVED` remains terminal for new actions. No action is automatic.
 
 ## API and persistence boundary
 
-The additive Phase 9 migration introduces:
+The Phase 9B migrations extend `WorksheetReviewActionType` and add restrictive typed destination links to `JobCostLine` and `JobReport`, copied destination description/summary fields, indexes, foreign keys, and a hardened type-specific destination-shape check.
 
-- `WorksheetReviewActionType`
-- `WorksheetReviewActionStatus`
-- `WorksheetReviewAction`
-- unique company/source-row/action-type and company/idempotency-key constraints
-- restrictive source sheet/row, destination Job, and actor relations
-- checks for nonblank idempotency/destination snapshot fields and a SHA-256 request fingerprint
+Added endpoints:
 
-The added endpoint is:
+- `POST /api/workday-sheets/:sheetId/rows/:rowId/review-actions/job-cost-line`
+- `POST /api/workday-sheets/:sheetId/rows/:rowId/review-actions/job-report`
 
-- `POST /api/workday-sheets/:sheetId/rows/:rowId/review-actions/follow-up-job`
-
-Worksheet detail rows now include their review-action summaries. Shared contracts cover the action/source snapshot, follow-up Job input, and action/Job/replay response.
+The existing follow-up endpoint remains unchanged. Worksheet options now include tenant-owned Item summaries for the optional cost context. Shared contracts cover both nested action payloads, structured-report type restriction, responses, and typed action destinations.
 
 ## Checkpoint validation
 
-On 2026-10-03, all thirteen migrations were applied/current on PostgreSQL 16. Prisma validate/generate, root `pnpm typecheck`, root `pnpm build`, the full `pnpm smoke:api` flow, and `git diff --check` passed. The smoke result contains 212 passing checks. Existing Phase 1–8B behavior remains green; the new checks prove reviewed-only eligibility, worker denial, cross-tenant source/destination denial, normal Job creation and copied relations, immutable provenance, same-input replay, changed-input conflict, one-action detail projection, Job activity, and archived lockout.
+On 2026-10-03, all fifteen migrations were applied/current on PostgreSQL 16. Prisma validate/generate, root `pnpm typecheck`, root `pnpm build`, the full `pnpm smoke:api` flow, and `git diff --check` passed. The smoke result contains 233 passing checks. Existing Phase 1–9 behavior remains green; the Phase 9B checks prove reviewed-only eligibility, worker denial, required target Job, structured-report restriction, cross-tenant source/target Job/Item/Team denial, normal Job cost/report creation, immutable provenance, assigned-worker result reads, independent one-action-per-type behavior, same-input replay, changed-input conflict, readable Job activity, and archived lockout.
 
 ## Known current limitations
 
-- The only implemented worksheet review action is one follow-up Job per row. There are no cost-line, report/finding, billable-work, or customer-communication actions yet.
-- Actions cannot be canceled, undone, corrected, or superseded. The destination Job may be managed through its normal lifecycle; the provenance action remains immutable.
-- A source row cannot create a second follow-up Job action. Future distinct action types may coexist, but bulk selection and multi-row action commands do not exist.
-- Rows cannot be reordered, copied, bulk imported, templated, or split after creation. Position is stable insertion order.
-- Exact list filters have no ranges, free-text search, pagination, saved views, or calendar board.
+- Each row can create at most one action of each implemented type. There are no bulk or multi-row commands.
+- Actions cannot be canceled, undone, corrected, or superseded. The normal destination Job, cost line, or report continues through its own existing domain rules while immutable provenance remains.
+- There is no billable-item action, customer-message action, invoice/offer/payment behavior, or automatic downstream record creation.
+- Cost lines still have no delete/correction event history or approval lifecycle. Reports still have no edit/resubmission path after `NEEDS_REVISION`.
+- Rows cannot be reordered, copied, bulk imported, templated, or split after creation. Position remains stable insertion order.
+- Exact worksheet filters have no ranges, free-text search, pagination, saved views, or calendar board.
 - The today endpoint uses the API server's local calendar date; company timezone semantics are not modeled.
 - Worksheet browser print exists, but no generated PDF/export artifact exists.
 - Team authorization follows current team membership rather than a frozen recipient snapshot.
@@ -54,12 +52,11 @@ On 2026-10-03, all thirteen migrations were applied/current on PostgreSQL 16. Pr
 
 ## Correct roadmap order
 
-1. `Phase 9B — Worksheet Review Actions: Cost and Report Links`
-2. `Phase 10 — Service Agreements / Recurring Object Duties`
-3. `Phase 11 — Command Center Dashboard`
-4. `Phase 12 — Smart Planning / AI / Automation`
+1. `Phase 10 — Service Agreements / Recurring Object Duties Foundation`
+2. `Phase 11 — Command Center Dashboard`
+3. `Phase 12 — Smart Planning / AI / Automation`
 
-Recurring agreements should later supply flexible worksheet planning inputs. They must not generate rigid Jobs far ahead or become a second Job system. Communication Hub, Document Studio, and AI capabilities require separate later phases after stable manual workflows, permissions, audit, and confirmation rules exist.
+Service agreements should define reusable customer/object responsibilities and supply flexible worksheet planning close to execution time. They must not bulk-generate rigid future Jobs, silently create worksheets, or become a second Job system. Communication Hub, Document Studio, invoice/payment, generated PDF, and AI capabilities require separate later phases after stable manual workflows, permissions, audit, and confirmation rules exist.
 
 ## Exact recommended prompt
 
@@ -70,15 +67,17 @@ Use long-session. This is an IMPLEMENTATION session.
 
 Implement:
 
-`Phase 9B — Worksheet Review Actions: Cost and Report Links`
+`Phase 10 — Service Agreements / Recurring Object Duties Foundation`
 
-Preserve the verified Phase 1–9 follow-up-Job behavior, especially tenant isolation, role enforcement, worksheet assignment and locking, immutable customer-report snapshots, existing Job/report/cost lifecycles, and the distinction between a worksheet and a Job.
+Preserve the verified Phase 1–9B behavior, especially tenant isolation, role enforcement, worksheet assignment and locking, explicit review actions and idempotency, existing Job/report/cost lifecycles, immutable customer-report snapshots, and the distinction between worksheets, Jobs, and recurring responsibility definitions.
 
-Extend the existing `WorksheetReviewAction` aggregate; do not create another conversion system and do not rebuild the follow-up Job action. Add only explicit OWNER/OFFICE actions from `REVIEWED` worksheet rows into the existing Job-grounded cost and structured report domains. Require a tenant-owned target Job for every cost/report action: use an existing linked Job or a deliberately selected normal Job, including the Phase 9 follow-up Job where appropriate. Do not create free-floating costs or reports.
+Build the smallest durable company-owned foundation for reusable customer/object service agreements and their recurring duties. Model explicit ownership, lifecycle, effective dates, cadence/timezone semantics, reusable planning text, optional customer/address/object/object-area context, and stable ordered duty rows. Use existing directory records and company context; do not create duplicate customer/object concepts. Decide and document how inactive/archived definitions remain readable.
 
-For each supported action, preview source and destination data, reuse existing cost/report payload validation and permissions, store a schema-versioned source snapshot plus actor/time/type/status/source/destination identity, and enforce one action per source row/action type with deterministic idempotent replay and changed-request conflict. Create the downstream record and review action atomically. WORKER may read an assigned worksheet result but cannot invoke, retry, cancel, or alter review actions. Cross-tenant source, target Job, item, team, and other relation IDs must return safe not-found behavior.
+OWNER/OFFICE may create, edit, activate/deactivate, and read company agreements/duties. WORKER access must be deliberately specified and backend-enforced; do not expose commercial/internal agreement fields merely for convenience. Every linked relation must be tenant-validated with safe not-found behavior, and object-area/object compatibility must remain strict.
 
-Keep the UI small and real on reviewed worksheet detail. Show already-created actions and link to the normal destination Job. Do not add automatic conversion, bulk actions, undo/cancel, invoices/offers/payments, customer messages, Communication Hub/email, Document Studio, AI, recurring agreements, generated future Jobs, command board, drag-and-drop, QR, mobile, actual PDF generation/export, logistics/warehouse behavior, or item movement.
+Provide tenant-safe API contracts, strict runtime validation, real web administration, representative smoke coverage, and accurate docs/checklist updates. If a small manual planning handoff is included, it may only preview or explicitly copy selected due duty text into an editable DRAFT worksheet near execution time. Do not silently create worksheets or Jobs, do not schedule browser-only background work, and do not generate rigid future Jobs.
 
-Add only the additive schema changes actually required, shared contracts, strict validation, tenant-safe API/service behavior, representative smoke coverage, and accurate docs/checklist updates. Run Prisma validate/generate and migration status if schema changes, root `pnpm typecheck`, root `pnpm build`, full `pnpm smoke:api`, and `git diff --check`. Stop if the pre-flight baseline is broken.
+Do not add automatic recurrence execution, bulk future Job generation, invoices/offers/payments, customer messages, Communication Hub/email, Document Studio, AI, command board, drag-and-drop, QR, mobile, actual PDF generation/export, logistics/warehouse behavior, or item movement.
+
+Before changing behavior, run the full pre-flight gate. Add only the additive schema changes actually required, then run Prisma validate/generate and migration status, root `pnpm typecheck`, root `pnpm build`, full `pnpm smoke:api`, and `git diff --check`. Stop if the baseline is broken.
 ```

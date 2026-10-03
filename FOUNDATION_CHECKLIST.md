@@ -22,7 +22,7 @@ Daily worksheet snapshot: company-owned dated sheets and ordered rows, free text
 
 Daily worksheet usability/hardening snapshot: exact role-safe filters, a dedicated today query and worker flow, completion/context/review/lock clarity, browser-print styling, and status-scoped transactional row-write protection were added without a schema change and verified with the expanded 200-check smoke flow on 2026-10-02. At that checkpoint, no Phase 9 conversion action existed; worksheet PDF export, recurring agreements, and generated-future-Job behavior remain absent.
 
-Worksheet review-action snapshot: the first Phase 9 slice adds one explicit OWNER/OFFICE `CREATE_FOLLOW_UP_JOB` action per reviewed row, a schema-versioned immutable source snapshot, actor/time/status and destination identity, atomic normal-Job/activity/action creation, tenant-safe optional destination relations, deterministic replay, and changed-request conflict. It was verified with the expanded 212-check smoke flow on 2026-10-03. Cost/report/customer-message actions, automatic conversion, recurring agreements, generated future Jobs, PDF export, email, and AI remain absent.
+Worksheet review-action snapshot: Phase 9 and Phase 9B add one explicit OWNER/OFFICE `CREATE_FOLLOW_UP_JOB`, `CREATE_JOB_COST_LINE`, and `CREATE_JOB_REPORT` action per reviewed row through one provenance aggregate. All retain a schema-versioned immutable source snapshot, actor/time/status, required destination Job, typed downstream identity where applicable, atomic downstream/activity/action creation, tenant-safe source/target/Item/Team handling, deterministic replay, and changed-request conflict. The complete slice was verified with the expanded 233-check smoke flow on 2026-10-03. Billable/customer-message actions, automatic conversion, recurring agreements, generated future Jobs, PDF export, email, and AI remain absent.
 
 ---
 
@@ -364,8 +364,14 @@ You can do ALL of this without hacks:
 * [x] follow-up Jobs use the existing Job model and lifecycle and start `PLANNED`
 * [x] Job, Job activity, and review action are committed atomically
 * [x] real worksheet detail UI previews destination fields and links the completed action to the normal Job
-* [x] expanded smoke passes all 212 checks while preserving Phase 1–8B
-* [ ] Phase 9B cost-line and structured report/finding actions are implemented
+* [x] expanded smoke passes all 233 checks while preserving Phase 1–8B and the follow-up Job action
+* [x] Phase 9B cost-line and structured report/finding actions are implemented
+* [x] every cost/report action requires a deliberately selected tenant-owned normal Job
+* [x] cost actions reuse existing amount/currency/Item rules and create normal JobCostLine records
+* [x] report actions accept structured types only and create normal PENDING_REVIEW JobReport records
+* [x] cost/report downstream record, readable Job activity, and action commit atomically
+* [x] assigned workers can read authorized action results but cannot invoke review actions
+* [x] one action per row/type, deterministic replay, changed-input conflict, and archived lockout are smoke-proven
 * [x] no silent review automation, invoice/email/AI behavior, recurring generation, or second Job system is introduced
 
 ---

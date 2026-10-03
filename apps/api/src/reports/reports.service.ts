@@ -18,22 +18,11 @@ import {
   assertCanReviewJobReports,
 } from '../operations/operations-permissions';
 import { assertReportReviewTransition } from './report-review-rules';
-import { mapJobReportItem } from './reports-mapper';
+import { jobReportInclude, mapJobReportItem } from './reports-mapper';
 import {
   normalizeJobReportCreateInput,
   normalizeJobReportReviewInput,
 } from './reports-payloads';
-
-const jobReportInclude = {
-  author: true,
-  team: true,
-  reviewer: true,
-  attachments: {
-    orderBy: {
-      createdAt: 'desc' as const,
-    },
-  },
-} as const;
 
 const reviewActivityLabels = {
   APPROVED: 'freigegeben',

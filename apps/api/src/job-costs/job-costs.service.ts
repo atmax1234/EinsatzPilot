@@ -20,31 +20,7 @@ import {
   normalizeJobCostCreateInput,
   normalizeJobCostUpdateInput,
 } from './job-cost-payloads';
-import { mapJobCostLine } from './job-costs-mapper';
-
-const costLineInclude = {
-  item: {
-    select: {
-      id: true,
-      customId: true,
-      name: true,
-    },
-  },
-  createdBy: {
-    select: {
-      id: true,
-      email: true,
-      displayName: true,
-    },
-  },
-  updatedBy: {
-    select: {
-      id: true,
-      email: true,
-      displayName: true,
-    },
-  },
-} as const;
+import { jobCostLineInclude, mapJobCostLine } from './job-costs-mapper';
 
 @Injectable()
 export class JobCostsService {
@@ -66,7 +42,7 @@ export class JobCostsService {
         companyId: input.companyId,
         jobId: input.jobId,
       },
-      include: costLineInclude,
+      include: jobCostLineInclude,
     });
 
     if (!costLine) {
@@ -113,7 +89,7 @@ export class JobCostsService {
   private async getPersistedCostLines(companyId: string, jobId: string) {
     return this.prisma.jobCostLine.findMany({
       where: { companyId, jobId },
-      include: costLineInclude,
+      include: jobCostLineInclude,
       orderBy: [{ costDate: 'desc' }, { createdAt: 'desc' }],
     });
   }
@@ -186,7 +162,7 @@ export class JobCostsService {
         unitCost: amounts.unitCost,
         totalCost: amounts.totalCost,
       },
-      include: costLineInclude,
+      include: jobCostLineInclude,
     });
 
     return mapJobCostLine(costLine);
@@ -248,7 +224,7 @@ export class JobCostsService {
         unitCost: amounts.unitCost,
         totalCost: amounts.totalCost,
       },
-      include: costLineInclude,
+      include: jobCostLineInclude,
     });
 
     return mapJobCostLine(updated);

@@ -63,11 +63,11 @@ Completion counts remain derived from nonempty row `actualText`; they are conven
 
 ## Review actions and planned models
 
-### WorksheetReviewAction (Phase 9 first slice implemented)
+### WorksheetReviewAction (Phase 9 and 9B implemented)
 
-`WorksheetReviewAction` is a company-owned, append-only record of an explicit office decision on one reviewed worksheet row. The implemented type is `CREATE_FOLLOW_UP_JOB`; the implemented status is `COMPLETED`. One company/source-row/action-type tuple is unique. The action stores its source sheet and row, a schema-versioned immutable JSON snapshot of worksheet date/title/assignment plus row planned/actual text, times, notes, and linked context, creating actor, completion time, deterministic idempotency key, request fingerprint, and required destination Job plus copied Job reference/title.
+`WorksheetReviewAction` is a company-owned, append-only record of an explicit office decision on one reviewed worksheet row. Implemented types are `CREATE_FOLLOW_UP_JOB`, `CREATE_JOB_COST_LINE`, and `CREATE_JOB_REPORT`; the implemented status is `COMPLETED`. One company/source-row/action-type tuple is unique. Every action stores its source sheet and row, a schema-versioned immutable JSON snapshot of worksheet date/title/assignment plus row planned/actual text, times, notes, and linked context, creating actor, completion time, deterministic idempotency key, request fingerprint, and required destination Job plus copied Job reference/title. Cost/report types additionally store a restrictive typed link to the created `JobCostLine` or `JobReport` and a copied description/summary. A database check keeps the type-specific destination fields coherent.
 
-OWNER/OFFICE alone can invoke the action, and only while the sheet is `REVIEWED`. The destination is a normal existing `Job` in `PLANNED`, with its usual relation fields and `JobActivity`; it is not a worksheet-specific Job subtype. Job, activity, and action are one database transaction, so a failure persists none of them. Same-input replay resolves to the stored action/Job; a changed replay conflicts. `ARCHIVED` remains terminal for new actions. Cost/report/customer-communication action types are not implemented yet.
+OWNER/OFFICE alone can invoke an action, and only while the sheet is `REVIEWED`. Follow-up creation produces a normal `PLANNED` Job. Cost/report actions require an existing tenant-owned target Job—whether already linked, deliberately selected, or created by the follow-up action—and create normal `JobCostLine` / structured `JobReport` records using their existing validation, permissions, amount rules, and `PENDING_REVIEW` report lifecycle. The downstream record, readable Job activity, and action are one database transaction, so a failure persists none of them. Same-input replay resolves to the stored result; a changed replay conflicts. `ARCHIVED` remains terminal for new actions. No free-floating cost/report, customer-communication action, automatic conversion, undo/cancel, or correction/supersession action exists.
 
 ### ServiceAgreement / RecurringObjectDuty (Phase 10 direction)
 
@@ -95,7 +95,10 @@ Company
 ├── WorkdaySheet / TeamProtocol (Phase 8 foundation + Phase 8B usability implemented)
 │   ├── assigned Team / User
 │   └── WorkdaySheetRow ── Customer / Address / Object / ObjectArea / Job reference (optional)
-│       └── WorksheetReviewAction ── normal follow-up Job (Phase 9 first slice)
+│       └── WorksheetReviewAction (Phase 9 complete)
+│           ├── normal follow-up Job
+│           ├── Job-grounded JobCostLine
+│           └── Job-grounded structured JobReport
 ├── Job ── JobActivity
 │   ├── JobReport / Finding ── JobAttachment
 │   ├── JobCostLine ── Item reference (optional)

@@ -27,6 +27,10 @@ import type {
   WorkdaySheetUpdateInput,
   WorksheetFollowUpJobCreateInput,
   WorksheetFollowUpJobCreateResponse,
+  WorksheetJobCostLineCreateInput,
+  WorksheetJobCostLineCreateResponse,
+  WorksheetJobReportCreateInput,
+  WorksheetJobReportCreateResponse,
 } from '@einsatzpilot/types';
 
 import { AuthenticatedGuard } from '../common/authenticated.guard';
@@ -184,6 +188,44 @@ export class WorkdaySheetsController {
     @Body() payload: WorksheetFollowUpJobCreateInput,
   ): Promise<WorksheetFollowUpJobCreateResponse> {
     return this.workdaySheetsService.createFollowUpJobFromRow({
+      companyId: company.id,
+      sheetId,
+      rowId,
+      actor,
+      authContext,
+      payload,
+    });
+  }
+
+  @Post(':sheetId/rows/:rowId/review-actions/job-cost-line')
+  createJobCostLineFromRow(
+    @CurrentCompany() company: ActiveCompanyContext,
+    @CurrentUser() actor: AuthenticatedUser,
+    @CurrentAuthContext() authContext: RequestAuthContext,
+    @Param('sheetId') sheetId: string,
+    @Param('rowId') rowId: string,
+    @Body() payload: WorksheetJobCostLineCreateInput,
+  ): Promise<WorksheetJobCostLineCreateResponse> {
+    return this.workdaySheetsService.createJobCostLineFromRow({
+      companyId: company.id,
+      sheetId,
+      rowId,
+      actor,
+      authContext,
+      payload,
+    });
+  }
+
+  @Post(':sheetId/rows/:rowId/review-actions/job-report')
+  createJobReportFromRow(
+    @CurrentCompany() company: ActiveCompanyContext,
+    @CurrentUser() actor: AuthenticatedUser,
+    @CurrentAuthContext() authContext: RequestAuthContext,
+    @Param('sheetId') sheetId: string,
+    @Param('rowId') rowId: string,
+    @Body() payload: WorksheetJobReportCreateInput,
+  ): Promise<WorksheetJobReportCreateResponse> {
+    return this.workdaySheetsService.createJobReportFromRow({
       companyId: company.id,
       sheetId,
       rowId,

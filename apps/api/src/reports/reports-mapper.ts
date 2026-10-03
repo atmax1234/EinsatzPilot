@@ -1,4 +1,17 @@
+import { Prisma } from '@prisma/client';
+
 import type { JobAttachmentItem, JobReportItem } from '@einsatzpilot/types';
+
+export const jobReportInclude = {
+  author: true,
+  team: true,
+  reviewer: true,
+  attachments: {
+    orderBy: {
+      createdAt: 'desc' as const,
+    },
+  },
+} satisfies Prisma.JobReportInclude;
 
 function mapUserSummary(user?: {
   id: string;

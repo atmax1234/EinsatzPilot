@@ -1,15 +1,20 @@
 'use server';
 
 import type {
+  JobCostKind,
+  JobCostUnit,
   JobPriority,
   WorkdaySheetRowCreateInput,
   WorkdaySheetStatusUpdateInput,
+  WorksheetStructuredJobReportType,
 } from '@einsatzpilot/types';
 import { redirect } from 'next/navigation';
 
 import {
   addWorkdaySheetRowData,
   createFollowUpJobFromWorksheetRowData,
+  createJobCostLineFromWorksheetRowData,
+  createJobReportFromWorksheetRowData,
   createWorkdaySheetData,
   deleteWorkdaySheetRowData,
   transitionWorkdaySheetData,
@@ -47,6 +52,65 @@ function jobPriority(formData: FormData): JobPriority {
     return value;
   }
   throw new Error('Priorität ist ungültig.');
+}
+
+function optionalNumber(formData: FormData, key: string) {
+  const value = optional(formData, key);
+  if (value === undefined) return undefined;
+  const parsed = Number(value.replace(',', '.'));
+  if (!Number.isFinite(parsed)) throw new Error(`${key} muss eine gueltige Zahl sein.`);
+  return parsed;
+}
+
+function requiredNumber(formData: FormData, key: string, label: string) {
+  const value = optionalNumber(formData, key);
+  if (value === undefined) throw new Error(`${label} ist erforderlich.`);
+  return value;
+}
+
+function jobCostKind(formData: FormData): JobCostKind {
+  const value = required(formData, 'kind', 'Kostenart') as JobCostKind;
+  const allowed: JobCostKind[] = [
+    'MATERIAL_PURCHASE',
+    'MATERIAL_USED',
+    'LABOR',
+    'TRAVEL',
+    'EXTERNAL_SERVICE',
+    'FEE',
+    'OTHER',
+  ];
+  if (!allowed.includes(value)) throw new Error('Kostenart ist ungültig.');
+  return value;
+}
+
+function jobCostUnit(formData: FormData): JobCostUnit {
+  const value = required(formData, 'unit', 'Einheit') as JobCostUnit;
+  const allowed: JobCostUnit[] = [
+    'PIECE',
+    'HOUR',
+    'KILOMETER',
+    'KG',
+    'LITER',
+    'METER',
+    'SQUARE_METER',
+    'CUBIC_METER',
+    'FLAT_RATE',
+    'OTHER',
+  ];
+  if (!allowed.includes(value)) throw new Error('Einheit ist ungültig.');
+  return value;
+}
+
+function structuredReportType(formData: FormData): WorksheetStructuredJobReportType {
+  const value = required(formData, 'type', 'Berichtstyp') as WorksheetStructuredJobReportType;
+  const allowed: WorksheetStructuredJobReportType[] = [
+    'WORKER_FINDING',
+    'WORK_COMPLETION',
+    'INCIDENT_REPORT',
+    'FOLLOW_UP_REQUEST',
+  ];
+  if (!allowed.includes(value)) throw new Error('Berichtstyp ist ungültig.');
+  return value;
 }
 
 function rowInput(formData: FormData): WorkdaySheetRowCreateInput {
@@ -253,6 +317,77 @@ export async function createFollowUpJobFromWorksheetRowAction(
   } catch (error) {
     redirectDetail(sheetId, {
       error: error instanceof Error ? error.message : 'Folgeauftrag konnte nicht erstellt werden.',
+    });
+  }
+}
+
+export async function createJobCostLineFromWorksheetRowAction(
+  sheetId: string,
+  rowId: string,
+  formData: FormData,
+) {
+  try {
+    const result = await createJobCostLineFromWorksheetRowData(sheetId, rowId, {
+      targetJobId: required(formData, 'targetJobId', 'Zielauftrag'),
+      costLine: {
+        itemId: optional(formData, 'itemId'),
+        kind: jobCostKind(formData),
+        description: required(formData, 'description', 'Beschreibung'),
+        quantity: requiredNumber(formData, 'quantity', 'Menge'),
+        unit: jobCostUnit(formData),
+        unitCost: optionalNumber(formData, 'unitCost'),
+        totalCost: optionalNumber(formData, 'totalCost'),
+        currency: optional(formData, 'currency'),
+        taxRate: optionalNumber(formData, 'taxRate'),
+        costDate: optional(formData, 'costDate'),
+        vendorName: optional(formData, 'vendorName'),
+        receiptReference: optional(formData, 'receiptReference'),
+        notes: optional(formData, 'notes'),
+      },
+    });
+    redirectDetail(
+      sheetId,
+      result.ok && result.data
+        ? { notice: result.data.replayed ? 'job-cost-existing' : 'job-cost-created' }
+        : { error: result.error ?? 'Kostenzeile konnte nicht erstellt werden.' },
+    );
+  } catch (error) {
+    redirectDetail(sheetId, {
+      error: error instanceof Error ? error.message : 'Kostenzeile konnte nicht erstellt werden.',
+    });
+  }
+}
+
+export async function createJobReportFromWorksheetRowAction(
+  sheetId: string,
+  rowId: string,
+  formData: FormData,
+) {
+  try {
+    const result = await createJobReportFromWorksheetRowData(sheetId, rowId, {
+      targetJobId: required(formData, 'targetJobId', 'Zielauftrag'),
+      report: {
+        summary: required(formData, 'summary', 'Kurzfassung'),
+        details: optional(formData, 'details'),
+        teamId: optional(formData, 'teamId'),
+        type: structuredReportType(formData),
+        findingSummary: optional(formData, 'findingSummary'),
+        workPerformed: optional(formData, 'workPerformed'),
+        workStillNeeded: optional(formData, 'workStillNeeded'),
+        followUpRequired: formData.get('followUpRequired') === 'on',
+        followUpNotes: optional(formData, 'followUpNotes'),
+      },
+    });
+    redirectDetail(
+      sheetId,
+      result.ok && result.data
+        ? { notice: result.data.replayed ? 'job-report-existing' : 'job-report-created' }
+        : { error: result.error ?? 'Auftragsbericht konnte nicht erstellt werden.' },
+    );
+  } catch (error) {
+    redirectDetail(sheetId, {
+      error:
+        error instanceof Error ? error.message : 'Auftragsbericht konnte nicht erstellt werden.',
     });
   }
 }

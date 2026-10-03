@@ -275,7 +275,10 @@ export type WorkdaySheetJobRelation = {
   title: string;
 };
 
-export type WorksheetReviewActionType = 'CREATE_FOLLOW_UP_JOB';
+export type WorksheetReviewActionType =
+  | 'CREATE_FOLLOW_UP_JOB'
+  | 'CREATE_JOB_COST_LINE'
+  | 'CREATE_JOB_REPORT';
 
 export type WorksheetReviewActionStatus = 'COMPLETED';
 
@@ -314,6 +317,8 @@ export type WorksheetReviewActionItem = {
   status: WorksheetReviewActionStatus;
   sourceSnapshot: WorksheetReviewActionSourceSnapshotV1;
   destinationJob: WorkdaySheetJobRelation;
+  destinationCostLine?: JobCostLineItem;
+  destinationReport?: JobReportItem;
   createdBy: WorkdaySheetActorSummary;
   completedAt: string;
   createdAt: string;
@@ -454,6 +459,11 @@ export type WorkdaySheetOptionsResponse = {
   objects: JobObjectRelation[];
   objectAreas: JobObjectAreaRelation[];
   jobs: WorkdaySheetJobRelation[];
+  items: Array<{
+    id: string;
+    customId: string;
+    name: string;
+  }>;
 };
 
 export type WorksheetFollowUpJobCreateInput = {
@@ -474,6 +484,32 @@ export type WorksheetFollowUpJobCreateInput = {
 export type WorksheetFollowUpJobCreateResponse = {
   reviewAction: WorksheetReviewActionItem;
   job: JobListItem;
+  replayed: boolean;
+};
+
+export type WorksheetJobCostLineCreateInput = {
+  targetJobId: string;
+  costLine: JobCostCreateInput;
+};
+
+export type WorksheetJobCostLineCreateResponse = {
+  reviewAction: WorksheetReviewActionItem;
+  costLine: JobCostLineItem;
+  replayed: boolean;
+};
+
+export type WorksheetStructuredJobReportType = Exclude<JobReportType, 'GENERAL'>;
+
+export type WorksheetJobReportCreateInput = {
+  targetJobId: string;
+  report: Omit<JobReportCreateInput, 'type'> & {
+    type: WorksheetStructuredJobReportType;
+  };
+};
+
+export type WorksheetJobReportCreateResponse = {
+  reviewAction: WorksheetReviewActionItem;
+  report: JobReportItem;
   replayed: boolean;
 };
 

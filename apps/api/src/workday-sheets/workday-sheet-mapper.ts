@@ -8,6 +8,9 @@ import type {
   WorksheetReviewActionSourceSnapshotV1,
 } from '@einsatzpilot/types';
 
+import { jobCostLineInclude, mapJobCostLine } from '../job-costs/job-costs-mapper';
+import { jobReportInclude, mapJobReportItem } from '../reports/reports-mapper';
+
 const actorSelect = {
   id: true,
   email: true,
@@ -32,6 +35,12 @@ const workdaySheetListRelations = {
 export const worksheetReviewActionInclude = {
   destinationJob: {
     select: { id: true, reference: true, title: true },
+  },
+  destinationJobCostLine: {
+    include: jobCostLineInclude,
+  },
+  destinationJobReport: {
+    include: jobReportInclude,
   },
   createdBy: { select: actorSelect },
 } satisfies Prisma.WorksheetReviewActionInclude;
@@ -118,6 +127,12 @@ export function mapWorksheetReviewAction(
       reference: action.destinationJobReference,
       title: action.destinationJobTitle,
     },
+    destinationCostLine: action.destinationJobCostLine
+      ? mapJobCostLine(action.destinationJobCostLine)
+      : undefined,
+    destinationReport: action.destinationJobReport
+      ? mapJobReportItem(action.destinationJobReport)
+      : undefined,
     createdBy: mapActor(action.createdBy),
     completedAt: action.completedAt.toISOString(),
     createdAt: action.createdAt.toISOString(),
