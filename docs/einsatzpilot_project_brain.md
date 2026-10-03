@@ -4,7 +4,7 @@ _Last reconciled with the checked-in repository: 2026-10-03._
 
 This file is a consolidated handoff for coding agents working on **EinsatzPilot**. It describes the product vision, current implemented foundation, architecture direction, roadmap, known constraints, and founder decisions. Treat checked-in repository docs and code as the final source of truth when they differ from this file.
 
-Repository reconciliation: Phase 8B and Phase 9 are implemented. Reviewed rows now support three explicit, independently idempotent actions through one provenance aggregate: a normal follow-up Job, a Job-grounded cost line, and a structured Job report. Each action is atomic, tenant/role safe, and never automatic. The next recommended phase is Phase 10 service agreements/recurring object duties, not Communication Hub, Document Studio, AI, generated PDF, or generated future Jobs.
+Repository reconciliation: Phase 8B, Phase 9/9B, and Phase 10 are implemented. Reviewed rows support three explicit, independently idempotent actions through one provenance aggregate. Service agreements now provide office-managed recurring-responsibility definitions with lifecycle, effective dates, IANA timezone, cadence anchors, optional directory context, and stable duties, but no occurrence engine or generated work. The next recommended phase is Phase 11 Command Center Dashboard, not Communication Hub, Document Studio, AI, generated PDF, or generated future Jobs.
 
 ---
 
@@ -64,7 +64,8 @@ Core concepts:
 - costs / labor / travel / materials / external services
 - customer-facing report snapshots
 - follow-ups
-- later: service agreements, command dashboard, automation, AI, exports, invoices, mobile
+- service agreements / recurring-duty definitions
+- later: command dashboard, automation, AI, exports, invoices, mobile
 
 The real operational loop:
 
@@ -574,7 +575,7 @@ No downstream records are generated automatically.
 No recurring future Jobs are generated.
 ```
 
-Current worksheet limitations after Phase 8B and the first Phase 9 slice:
+Current worksheet limitations after Phase 8B and Phase 9B:
 
 - explicit follow-up Job, Job-grounded cost-line, and structured Job-report actions exist; no billable/customer-message action exists
 - no row reordering, copying, templates, or bulk import
@@ -585,7 +586,7 @@ Current worksheet limitations after Phase 8B and the first Phase 9 slice:
 - no company timezone model
 - dates are date-only and row times are local HH:mm
 - browser print exists; generated worksheet PDF/export does not
-- no recurring agreements
+- no agreement-to-worksheet handoff or recurrence occurrence evaluation
 - no automation/email/invoices/command board/mobile
 
 ---
@@ -640,7 +641,7 @@ Phase 8  — Daily Worksheets / Team Protocols Foundation — implemented
 Phase 8B — Daily Worksheets Usability and Hardening — implemented
 Phase 9  — Worksheet Review → Follow-up Jobs / Costs / Reports — implemented
 Phase 9B — Worksheet Review Actions: Cost and Report Links — implemented
-Phase 10 — Service Agreements / Recurring Object Duties
+Phase 10 — Service Agreements / Recurring Object Duties — implemented
 Phase 11 — Command Center Dashboard
 Phase 12 — Smart Planning / AI / Automation
 ```
@@ -710,6 +711,33 @@ Open for later phases:
 
 ---
 
+## 10A. Phase 10 — Service Agreements / Recurring Object Duties
+
+Status: Implemented and verified.
+
+Implemented:
+
+- company-owned `ServiceAgreement` and `RecurringObjectDuty`
+- `DRAFT`, `ACTIVE`, `INACTIVE`, `ARCHIVED` lifecycle with actor/time audit
+- inclusive effective dates and validated IANA timezone
+- optional tenant-safe customer/address/object/object-area context
+- stable ordered duty rows with reusable planned text, notes, local time range, active state, first-due date, and every-N day/week/month/year cadence
+- OWNER/OFFICE-only list/detail/create/edit/lifecycle/duty API and real web administration
+- active/archived locking, active-duty requirement for activation, relation compatibility, and cross-tenant safe behavior
+- smoke proof that agreement actions create neither Jobs nor worksheets
+
+Not implemented by Phase 10:
+
+- due-occurrence evaluation or materialization
+- holiday/blackout/skip/replacement/one-off exceptions
+- completion history or worker access
+- deliberate copy/handoff into a DRAFT worksheet
+- background scheduling, notifications, automatic worksheets, or generated future Jobs
+
+Service agreements are reusable responsibility definitions, not Jobs and not execution papers. A later separately scoped handoff may copy selected due-duty text into an editable worksheet close to execution.
+
+---
+
 ## 11. What Is NOT Implemented Yet
 
 Not implemented / must not be claimed as existing:
@@ -728,8 +756,8 @@ Not implemented / must not be claimed as existing:
 - offers
 - payments
 - accounting export
-- service agreements
-- recurring schedules
+- recurring due-occurrence evaluation and exception calendars
+- agreement-to-worksheet handoff or recurring scheduler
 - generated future jobs
 - command center dashboard
 - drag-and-drop planning
@@ -752,10 +780,11 @@ A realistic internal MVP should include:
 3. Costs — already implemented.
 4. Customer report snapshots/browser print — already implemented.
 5. Daily worksheets/team protocols — implemented in Phase 8.
-6. Worksheet usability polish — safe next step if not done.
-7. Worksheet review follow-up actions — needs careful Phase 9.
-8. Production-ish deployment/auth/storage pass.
-9. UX cleanup/German labels/demo data.
+6. Worksheet usability polish — implemented in Phase 8B.
+7. Worksheet review follow-up actions — implemented in Phase 9/9B.
+8. Service-agreement/recurring-duty definitions — implemented in Phase 10.
+9. Production-ish deployment/auth/storage pass.
+10. UX cleanup/German labels/demo data.
 
 Rough progress estimate from previous discussion:
 
@@ -879,13 +908,13 @@ Do not do these unless explicitly approved:
 
 ## 17. Suggested Next Safe Prompt Direction
 
-Phase 8B and all three Phase 9 review actions are implemented. The next prompt is:
+Phase 8B, all three Phase 9 review actions, and the Phase 10 agreement foundation are implemented. The next prompt is:
 
 ```text
-Phase 10 — Service Agreements / Recurring Object Duties Foundation
+Phase 11 — Command Center Dashboard
 ```
 
-It must model company-owned, customer/object-grounded agreements and reusable recurring duties with explicit lifecycle, effective dates, cadence/timezone semantics, tenant-safe relations, and real office administration. These definitions may later feed deliberate DRAFT worksheet planning close to execution time; they must not silently create worksheets or bulk-generate rigid future Jobs.
+It must use tenant-safe, server-backed operational metrics with explicitly documented meanings and direct links into existing workflows. It must not fake data, add drag-and-drop, calculate agreement occurrences, generate worksheets/Jobs, or begin Phase 12 AI/automation.
 
 ---
 
@@ -909,8 +938,8 @@ Phase 9 — Worksheet Review Actions: Follow-up Jobs First
 
 Next:
 
-- Phase 10 service agreements/recurring object duties as controlled worksheet-planning inputs
-- no automatic recurrence execution or generated future Jobs
+- Phase 11 company command center using trusted existing data
+- no automatic recurrence execution, generated future Jobs, fake metrics, drag-and-drop, or Phase 12 AI
 
 ---
 

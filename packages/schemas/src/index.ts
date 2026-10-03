@@ -21,6 +21,8 @@ import type {
   ObjectType,
   ReportReviewDecisionStatus,
   ReportReviewStatus,
+  RecurringDutyCadenceUnit,
+  ServiceAgreementStatus,
   TeamStatus,
   WorkdaySheetStatus,
 } from '@einsatzpilot/types';
@@ -174,6 +176,18 @@ export const workdaySheetStatuses = [
   'REVIEWED',
   'ARCHIVED',
 ] as const satisfies readonly WorkdaySheetStatus[];
+export const serviceAgreementStatuses = [
+  'DRAFT',
+  'ACTIVE',
+  'INACTIVE',
+  'ARCHIVED',
+] as const satisfies readonly ServiceAgreementStatus[];
+export const recurringDutyCadenceUnits = [
+  'DAY',
+  'WEEK',
+  'MONTH',
+  'YEAR',
+] as const satisfies readonly RecurringDutyCadenceUnit[];
 
 export function parseMembershipRole(rawRole: string | undefined): MembershipRole | undefined {
   if (!rawRole) {
@@ -394,4 +408,26 @@ export function parseWorkdaySheetStatus(
 
   const normalized = rawStatus.toUpperCase() as WorkdaySheetStatus;
   return workdaySheetStatuses.includes(normalized) ? normalized : undefined;
+}
+
+export function parseServiceAgreementStatus(
+  rawStatus: string | undefined,
+): ServiceAgreementStatus | undefined {
+  if (!rawStatus) {
+    return undefined;
+  }
+
+  const normalized = rawStatus.toUpperCase() as ServiceAgreementStatus;
+  return serviceAgreementStatuses.includes(normalized) ? normalized : undefined;
+}
+
+export function parseRecurringDutyCadenceUnit(
+  rawUnit: string | undefined,
+): RecurringDutyCadenceUnit | undefined {
+  if (!rawUnit) {
+    return undefined;
+  }
+
+  const normalized = rawUnit.toUpperCase() as RecurringDutyCadenceUnit;
+  return recurringDutyCadenceUnits.includes(normalized) ? normalized : undefined;
 }

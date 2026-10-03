@@ -17,7 +17,7 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const session = await requireServerSession();
-  const canAccessCustomerReports =
+  const canAccessOfficeFeatures =
     session.membershipRole === 'OWNER' || session.membershipRole === 'OFFICE';
 
   return (
@@ -34,13 +34,16 @@ export default async function AdminLayout({
           <Link href="/jobs">Auftraege</Link>
           <Link href="/workday-sheets">Tageszettel</Link>
           <Link href="/workday-sheets/today">Heute</Link>
+          {canAccessOfficeFeatures ? (
+            <Link href="/service-agreements">Leistungsvereinbarungen</Link>
+          ) : null}
           <Link href="/customers">Kunden & Adressen</Link>
           <Link href="/objects">Objekte</Link>
           <Link href="/items">Artikel</Link>
           <Link href="/assignments">Zuweisungen</Link>
           <Link href="/teams">Teams</Link>
           <Link href="/reports">Reports</Link>
-          {canAccessCustomerReports ? (
+          {canAccessOfficeFeatures ? (
             <Link href="/customer-reports">Kundenberichte</Link>
           ) : null}
         </nav>

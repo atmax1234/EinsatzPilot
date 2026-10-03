@@ -6,7 +6,7 @@ This document locks in the agreed long-term product direction for EinsatzPilot. 
 
 Detailed workflows, priorities, data models, UI designs, pricing limits, and delivery phases must be specified separately before implementation.
 
-Repository checkpoint (2026-10-03): the explicit worksheet review actions for a normal follow-up Job, Job-grounded cost line, and structured Job report are implemented. Service agreements/recurring object duties are next and must feed flexible worksheet planning without bulk-generating rigid future Jobs. Communication Hub, Document Studio, email delivery, and AI assistance remain future vision and are not authorized by this checkpoint.
+Repository checkpoint (2026-10-03): the explicit worksheet review actions and the Phase 10 service-agreement/recurring-duty foundation are implemented. Agreements store reusable office-managed responsibility definitions, effective dates, IANA timezone, cadence anchors, lifecycle, and optional customer/object context without calculating occurrences or generating worksheets or Jobs. The company command center is next. Communication Hub, Document Studio, email delivery, and AI assistance remain future vision and are not authorized by this checkpoint.
 
 ## Product vision: a company operating system
 

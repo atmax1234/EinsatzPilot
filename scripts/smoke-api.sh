@@ -23,6 +23,8 @@ WORKDAY_SHEET_DATE="$(date +%F)"
 FOLLOW_UP_JOB_TITLE="Phase 9 Follow-up Job ${SMOKE_SUFFIX}"
 WORKSHEET_COST_DESCRIPTION="Phase 9B worksheet material ${SMOKE_SUFFIX}"
 WORKSHEET_REPORT_SUMMARY="Phase 9B worksheet finding ${SMOKE_SUFFIX}"
+SERVICE_AGREEMENT_TITLE="Phase 10 Service Agreement ${SMOKE_SUFFIX}"
+UPDATED_SERVICE_AGREEMENT_TITLE="${SERVICE_AGREEMENT_TITLE} Updated"
 
 cleanup() {
   rm -rf "$TMP_DIR"
@@ -437,6 +439,51 @@ archived_cost_action_status="$(curl -sS -o "${TMP_DIR}/archived-cost-action.json
 archived_actual_update_status="$(curl -sS -o "${TMP_DIR}/archived-actual-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"actualText":"Forbidden archived actual edit"}')"
 repeat_workday_archive_status="$(curl -sS -o "${TMP_DIR}/repeat-workday-archive.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"status":"ARCHIVED"}')"
 cross_workday_read_status="$(curl -sS -o "${TMP_DIR}/cross-workday-read.json" -w '%{http_code}' "${API_BASE}/workday-sheets/${workday_sheet_id}" -H "Authorization: Bearer ${other_token}")"
+
+service_agreement_options="$(json_get "${API_BASE}/service-agreements/options" "$token")"
+phase10_jobs_before="$(json_get "${API_BASE}/jobs" "$token")"
+phase10_sheets_before="$(json_get "${API_BASE}/workday-sheets" "$token")"
+invalid_service_agreement_timezone_status="$(curl -sS -o "${TMP_DIR}/invalid-service-agreement-timezone.json" -w '%{http_code}' -X POST "${API_BASE}/service-agreements" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"title":"Invalid timezone","effectiveFrom":"2026-05-01","timezone":"Berlin local","duties":[{"plannedText":"Invalid","cadenceUnit":"WEEK","cadenceInterval":1,"firstDueDate":"2026-05-04"}]}')"
+invalid_service_agreement_dates_status="$(curl -sS -o "${TMP_DIR}/invalid-service-agreement-dates.json" -w '%{http_code}' -X POST "${API_BASE}/service-agreements" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"title":"Invalid dates","effectiveFrom":"2026-06-01","effectiveUntil":"2026-05-01","timezone":"Europe/Berlin","duties":[{"plannedText":"Invalid","cadenceUnit":"WEEK","cadenceInterval":1,"firstDueDate":"2026-05-04"}]}')"
+missing_service_agreement_object_status="$(curl -sS -o "${TMP_DIR}/missing-service-agreement-object.json" -w '%{http_code}' -X POST "${API_BASE}/service-agreements" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Missing object\",\"effectiveFrom\":\"2026-05-01\",\"timezone\":\"Europe/Berlin\",\"objectAreaId\":\"${area_id}\",\"duties\":[{\"plannedText\":\"Invalid\",\"cadenceUnit\":\"WEEK\",\"cadenceInterval\":1,\"firstDueDate\":\"2026-05-04\"}]}" )"
+mismatched_service_agreement_area_status="$(curl -sS -o "${TMP_DIR}/mismatched-service-agreement-area.json" -w '%{http_code}' -X POST "${API_BASE}/service-agreements" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Mismatched area\",\"effectiveFrom\":\"2026-05-01\",\"timezone\":\"Europe/Berlin\",\"objectId\":\"${second_object_id}\",\"objectAreaId\":\"${area_id}\",\"duties\":[{\"plannedText\":\"Invalid\",\"cadenceUnit\":\"WEEK\",\"cadenceInterval\":1,\"firstDueDate\":\"2026-05-04\"}]}" )"
+cross_service_agreement_relation_status="$(curl -sS -o "${TMP_DIR}/cross-service-agreement-relation.json" -w '%{http_code}' -X POST "${API_BASE}/service-agreements" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Foreign relation\",\"effectiveFrom\":\"2026-05-01\",\"timezone\":\"Europe/Berlin\",\"customerId\":\"${other_customer_id}\",\"duties\":[{\"plannedText\":\"Invalid\",\"cadenceUnit\":\"WEEK\",\"cadenceInterval\":1,\"firstDueDate\":\"2026-05-04\"}]}" )"
+inactive_only_service_agreement="$(json_post "${API_BASE}/service-agreements" "{\"title\":\"Inactive duties only ${SMOKE_SUFFIX}\",\"effectiveFrom\":\"2026-05-01\",\"timezone\":\"Europe/Berlin\",\"duties\":[{\"plannedText\":\"Paused duty\",\"cadenceUnit\":\"WEEK\",\"cadenceInterval\":1,\"firstDueDate\":\"2026-05-04\",\"isActive\":false}]}" "$token")"
+inactive_only_service_agreement_id="$(printf '%s' "$inactive_only_service_agreement" | jq -r '.serviceAgreement.id')"
+no_active_duty_activation_status="$(curl -sS -o "${TMP_DIR}/no-active-duty-activation.json" -w '%{http_code}' -X PATCH "${API_BASE}/service-agreements/${inactive_only_service_agreement_id}/status" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"status":"ACTIVE"}')"
+create_service_agreement="$(json_post "${API_BASE}/service-agreements" "{\"title\":\"${SERVICE_AGREEMENT_TITLE}\",\"description\":\"Reusable object duties without generated jobs\",\"effectiveFrom\":\"2026-05-01\",\"effectiveUntil\":\"2026-12-31\",\"timezone\":\"Europe/Berlin\",\"customerId\":\"${customer_id}\",\"addressId\":\"${address_id}\",\"objectId\":\"${object_id}\",\"objectAreaId\":\"${area_id}\",\"internalNotes\":\"Office-only Phase 10 note\",\"duties\":[{\"plannedText\":\"Treppenhaus und Eingang reinigen\",\"notes\":\"Schluessel im Buero\",\"cadenceUnit\":\"WEEK\",\"cadenceInterval\":1,\"firstDueDate\":\"2026-05-04\",\"startTime\":\"07:00\",\"endTime\":\"09:00\"}]}" "$token")"
+service_agreement_id="$(printf '%s' "$create_service_agreement" | jq -r '.serviceAgreement.id')"
+first_recurring_duty_id="$(printf '%s' "$create_service_agreement" | jq -r '.serviceAgreement.duties[0].id')"
+service_agreement_list="$(json_get "${API_BASE}/service-agreements" "$token")"
+filtered_service_agreement_list="$(json_get "${API_BASE}/service-agreements?status=DRAFT&customerId=${customer_id}&objectId=${object_id}" "$token")"
+service_agreement_detail="$(json_get "${API_BASE}/service-agreements/${service_agreement_id}" "$token")"
+update_service_agreement="$(json_patch "${API_BASE}/service-agreements/${service_agreement_id}" '{"description":"Updated reusable object duties","internalNotes":"Updated office-only Phase 10 note"}' "$token")"
+outside_service_agreement_duty_status="$(curl -sS -o "${TMP_DIR}/outside-service-agreement-duty.json" -w '%{http_code}' -X POST "${API_BASE}/service-agreements/${service_agreement_id}/duties" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"plannedText":"Outside range","cadenceUnit":"MONTH","cadenceInterval":1,"firstDueDate":"2027-01-15"}')"
+invalid_service_agreement_time_status="$(curl -sS -o "${TMP_DIR}/invalid-service-agreement-time.json" -w '%{http_code}' -X POST "${API_BASE}/service-agreements/${service_agreement_id}/duties" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"plannedText":"Invalid time","cadenceUnit":"MONTH","cadenceInterval":1,"firstDueDate":"2026-05-15","startTime":"11:00","endTime":"10:00"}')"
+add_recurring_duty="$(json_post "${API_BASE}/service-agreements/${service_agreement_id}/duties" '{"plannedText":"Fenster und Rahmen reinigen","notes":"Nur Gemeinschaftsflaechen","cadenceUnit":"MONTH","cadenceInterval":2,"firstDueDate":"2026-05-15","startTime":"09:00","endTime":"11:00"}' "$token")"
+second_recurring_duty_id="$(printf '%s' "$add_recurring_duty" | jq -r '.serviceAgreement.duties[1].id')"
+update_recurring_duty="$(json_patch "${API_BASE}/service-agreements/${service_agreement_id}/duties/${second_recurring_duty_id}" '{"notes":"Saisonal pausiert","isActive":false}' "$token")"
+worker_service_agreement_list_status="$(curl -sS -o "${TMP_DIR}/worker-service-agreement-list.json" -w '%{http_code}' "${API_BASE}/service-agreements" -H "Authorization: Bearer ${worker_token}")"
+worker_service_agreement_options_status="$(curl -sS -o "${TMP_DIR}/worker-service-agreement-options.json" -w '%{http_code}' "${API_BASE}/service-agreements/options" -H "Authorization: Bearer ${worker_token}")"
+worker_service_agreement_detail_status="$(curl -sS -o "${TMP_DIR}/worker-service-agreement-detail.json" -w '%{http_code}' "${API_BASE}/service-agreements/${service_agreement_id}" -H "Authorization: Bearer ${worker_token}")"
+worker_service_agreement_create_status="$(curl -sS -o "${TMP_DIR}/worker-service-agreement-create.json" -w '%{http_code}' -X POST "${API_BASE}/service-agreements" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"title":"Worker forbidden","effectiveFrom":"2026-05-01","timezone":"Europe/Berlin","duties":[{"plannedText":"Forbidden","cadenceUnit":"WEEK","cadenceInterval":1,"firstDueDate":"2026-05-04"}]}')"
+cross_service_agreement_read_status="$(curl -sS -o "${TMP_DIR}/cross-service-agreement-read.json" -w '%{http_code}' "${API_BASE}/service-agreements/${service_agreement_id}" -H "Authorization: Bearer ${other_token}")"
+activate_service_agreement="$(json_patch "${API_BASE}/service-agreements/${service_agreement_id}/status" '{"status":"ACTIVE"}' "$token")"
+active_service_agreement_update_status="$(curl -sS -o "${TMP_DIR}/active-service-agreement-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/service-agreements/${service_agreement_id}" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"description":"Forbidden while active"}')"
+active_recurring_duty_update_status="$(curl -sS -o "${TMP_DIR}/active-recurring-duty-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/service-agreements/${service_agreement_id}/duties/${first_recurring_duty_id}" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"notes":"Forbidden while active"}')"
+active_service_agreement_archive_status="$(curl -sS -o "${TMP_DIR}/active-service-agreement-archive.json" -w '%{http_code}' -X PATCH "${API_BASE}/service-agreements/${service_agreement_id}/status" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"status":"ARCHIVED"}')"
+deactivate_service_agreement="$(json_patch "${API_BASE}/service-agreements/${service_agreement_id}/status" '{"status":"INACTIVE"}' "$token")"
+inactive_service_agreement_update="$(json_patch "${API_BASE}/service-agreements/${service_agreement_id}" "{\"title\":\"${UPDATED_SERVICE_AGREEMENT_TITLE}\"}" "$token")"
+reactivate_service_agreement="$(json_patch "${API_BASE}/service-agreements/${service_agreement_id}/status" '{"status":"ACTIVE"}' "$token")"
+deactivate_service_agreement_again="$(json_patch "${API_BASE}/service-agreements/${service_agreement_id}/status" '{"status":"INACTIVE"}' "$token")"
+archive_service_agreement="$(json_patch "${API_BASE}/service-agreements/${service_agreement_id}/status" '{"status":"ARCHIVED"}' "$token")"
+archived_service_agreement_detail="$(json_get "${API_BASE}/service-agreements/${service_agreement_id}" "$token")"
+archived_service_agreement_list="$(json_get "${API_BASE}/service-agreements?status=ARCHIVED" "$token")"
+archived_service_agreement_update_status="$(curl -sS -o "${TMP_DIR}/archived-service-agreement-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/service-agreements/${service_agreement_id}" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"description":"Forbidden archived update"}')"
+archived_recurring_duty_update_status="$(curl -sS -o "${TMP_DIR}/archived-recurring-duty-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/service-agreements/${service_agreement_id}/duties/${first_recurring_duty_id}" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"notes":"Forbidden archived update"}')"
+repeat_service_agreement_archive_status="$(curl -sS -o "${TMP_DIR}/repeat-service-agreement-archive.json" -w '%{http_code}' -X PATCH "${API_BASE}/service-agreements/${service_agreement_id}/status" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"status":"ARCHIVED"}')"
+phase10_jobs_after="$(json_get "${API_BASE}/jobs" "$token")"
+phase10_sheets_after="$(json_get "${API_BASE}/workday-sheets" "$token")"
 job_detail="$(json_get "${API_BASE}/jobs/${job_id}" "$token")"
 
 : > "$SUMMARY_INPUT"
@@ -546,6 +593,26 @@ append_summary_json followUpJobCosts "$follow_up_job_costs"
 append_summary_json followUpJobReports "$follow_up_job_reports"
 append_summary_json followUpJobDetail "$follow_up_job_detail"
 append_summary_json archivedWorkdaySheet "$archived_workday_sheet"
+append_summary_json serviceAgreementOptions "$service_agreement_options"
+append_summary_json phase10JobsBefore "$phase10_jobs_before"
+append_summary_json phase10SheetsBefore "$phase10_sheets_before"
+append_summary_json createServiceAgreement "$create_service_agreement"
+append_summary_json serviceAgreementList "$service_agreement_list"
+append_summary_json filteredServiceAgreementList "$filtered_service_agreement_list"
+append_summary_json serviceAgreementDetail "$service_agreement_detail"
+append_summary_json updateServiceAgreement "$update_service_agreement"
+append_summary_json addRecurringDuty "$add_recurring_duty"
+append_summary_json updateRecurringDuty "$update_recurring_duty"
+append_summary_json activateServiceAgreement "$activate_service_agreement"
+append_summary_json deactivateServiceAgreement "$deactivate_service_agreement"
+append_summary_json inactiveServiceAgreementUpdate "$inactive_service_agreement_update"
+append_summary_json reactivateServiceAgreement "$reactivate_service_agreement"
+append_summary_json deactivateServiceAgreementAgain "$deactivate_service_agreement_again"
+append_summary_json archiveServiceAgreement "$archive_service_agreement"
+append_summary_json archivedServiceAgreementDetail "$archived_service_agreement_detail"
+append_summary_json archivedServiceAgreementList "$archived_service_agreement_list"
+append_summary_json phase10JobsAfter "$phase10_jobs_after"
+append_summary_json phase10SheetsAfter "$phase10_sheets_after"
 
 append_summary_string crossStatus "$cross_status"
 append_summary_string crossBody "$cross_body"
@@ -687,6 +754,30 @@ append_summary_string worksheetReportSummary "$WORKSHEET_REPORT_SUMMARY"
 append_summary_string archivedActualUpdateStatus "$archived_actual_update_status"
 append_summary_string repeatWorkdayArchiveStatus "$repeat_workday_archive_status"
 append_summary_string crossWorkdayReadStatus "$cross_workday_read_status"
+append_summary_string serviceAgreementId "$service_agreement_id"
+append_summary_string firstRecurringDutyId "$first_recurring_duty_id"
+append_summary_string secondRecurringDutyId "$second_recurring_duty_id"
+append_summary_string serviceAgreementTitle "$SERVICE_AGREEMENT_TITLE"
+append_summary_string updatedServiceAgreementTitle "$UPDATED_SERVICE_AGREEMENT_TITLE"
+append_summary_string invalidServiceAgreementTimezoneStatus "$invalid_service_agreement_timezone_status"
+append_summary_string invalidServiceAgreementDatesStatus "$invalid_service_agreement_dates_status"
+append_summary_string missingServiceAgreementObjectStatus "$missing_service_agreement_object_status"
+append_summary_string mismatchedServiceAgreementAreaStatus "$mismatched_service_agreement_area_status"
+append_summary_string crossServiceAgreementRelationStatus "$cross_service_agreement_relation_status"
+append_summary_string noActiveDutyActivationStatus "$no_active_duty_activation_status"
+append_summary_string outsideServiceAgreementDutyStatus "$outside_service_agreement_duty_status"
+append_summary_string invalidServiceAgreementTimeStatus "$invalid_service_agreement_time_status"
+append_summary_string workerServiceAgreementListStatus "$worker_service_agreement_list_status"
+append_summary_string workerServiceAgreementOptionsStatus "$worker_service_agreement_options_status"
+append_summary_string workerServiceAgreementDetailStatus "$worker_service_agreement_detail_status"
+append_summary_string workerServiceAgreementCreateStatus "$worker_service_agreement_create_status"
+append_summary_string crossServiceAgreementReadStatus "$cross_service_agreement_read_status"
+append_summary_string activeServiceAgreementUpdateStatus "$active_service_agreement_update_status"
+append_summary_string activeRecurringDutyUpdateStatus "$active_recurring_duty_update_status"
+append_summary_string activeServiceAgreementArchiveStatus "$active_service_agreement_archive_status"
+append_summary_string archivedServiceAgreementUpdateStatus "$archived_service_agreement_update_status"
+append_summary_string archivedRecurringDutyUpdateStatus "$archived_recurring_duty_update_status"
+append_summary_string repeatServiceAgreementArchiveStatus "$repeat_service_agreement_archive_status"
 
 jq -s '
   from_entries |
@@ -1431,7 +1522,118 @@ jq -s '
     archivedCostActionStatus: .archivedCostActionStatus
   }' "$SUMMARY_INPUT" > "${TMP_DIR}/phase9-summary.json"
 
-jq -s '.[0] + .[1] + .[2]' "${TMP_DIR}/summary.json" "${TMP_DIR}/phase8-summary.json" "${TMP_DIR}/phase9-summary.json" > "${TMP_DIR}/combined-summary.json"
+jq -s '
+  from_entries |
+  . as $phase10 |
+  {
+    serviceAgreementOptionsContainContext: (
+      ([.serviceAgreementOptions.customers[].id] | index($phase10.customerId) != null) and
+      ([.serviceAgreementOptions.addresses[].id] | index($phase10.addressId) != null) and
+      ([.serviceAgreementOptions.objects[].id] | index($phase10.objectId) != null) and
+      ([.serviceAgreementOptions.objectAreas[].id] | index($phase10.areaId) != null)
+    ),
+    invalidServiceAgreementTimezoneStatus: .invalidServiceAgreementTimezoneStatus,
+    invalidServiceAgreementDatesStatus: .invalidServiceAgreementDatesStatus,
+    missingServiceAgreementObjectStatus: .missingServiceAgreementObjectStatus,
+    mismatchedServiceAgreementAreaStatus: .mismatchedServiceAgreementAreaStatus,
+    crossServiceAgreementRelationStatus: .crossServiceAgreementRelationStatus,
+    noActiveDutyActivationStatus: .noActiveDutyActivationStatus,
+    serviceAgreementCreated: (
+      (.createServiceAgreement.serviceAgreement.id == .serviceAgreementId) and
+      (.createServiceAgreement.serviceAgreement.title == .serviceAgreementTitle) and
+      (.createServiceAgreement.serviceAgreement.status == "DRAFT") and
+      (.createServiceAgreement.serviceAgreement.effectiveFrom == "2026-05-01") and
+      (.createServiceAgreement.serviceAgreement.effectiveUntil == "2026-12-31") and
+      (.createServiceAgreement.serviceAgreement.timezone == "Europe/Berlin") and
+      (.createServiceAgreement.serviceAgreement.createdBy.id == .userId) and
+      (.createServiceAgreement.serviceAgreement.updatedBy.id == .userId) and
+      (.createServiceAgreement.serviceAgreement.dutyCount == 1) and
+      (.createServiceAgreement.serviceAgreement.activeDutyCount == 1) and
+      (.createServiceAgreement.serviceAgreement.duties[0].id == .firstRecurringDutyId) and
+      (.createServiceAgreement.serviceAgreement.duties[0].position == 0) and
+      (.createServiceAgreement.serviceAgreement.duties[0].cadenceUnit == "WEEK") and
+      (.createServiceAgreement.serviceAgreement.duties[0].cadenceInterval == 1) and
+      (.createServiceAgreement.serviceAgreement.duties[0].firstDueDate == "2026-05-04")
+    ),
+    serviceAgreementRelationsValid: (
+      (.createServiceAgreement.serviceAgreement.customer.id == .customerId) and
+      (.createServiceAgreement.serviceAgreement.address.id == .addressId) and
+      (.createServiceAgreement.serviceAgreement.object.id == .objectId) and
+      (.createServiceAgreement.serviceAgreement.objectArea.id == .areaId)
+    ),
+    serviceAgreementListAndFiltersValid: (
+      ([.serviceAgreementList.serviceAgreements[].id] | index($phase10.serviceAgreementId) != null) and
+      ([.filteredServiceAgreementList.serviceAgreements[].id] | index($phase10.serviceAgreementId) != null)
+    ),
+    serviceAgreementDetailKeepsInternalData: (
+      (.serviceAgreementDetail.serviceAgreement.id == .serviceAgreementId) and
+      (.serviceAgreementDetail.serviceAgreement.internalNotes == "Office-only Phase 10 note")
+    ),
+    serviceAgreementDraftUpdated: (
+      (.updateServiceAgreement.serviceAgreement.description == "Updated reusable object duties") and
+      (.updateServiceAgreement.serviceAgreement.internalNotes == "Updated office-only Phase 10 note")
+    ),
+    outsideServiceAgreementDutyStatus: .outsideServiceAgreementDutyStatus,
+    invalidServiceAgreementTimeStatus: .invalidServiceAgreementTimeStatus,
+    recurringDutyAddedInStableOrder: (
+      (.addRecurringDuty.serviceAgreement.dutyCount == 2) and
+      (.addRecurringDuty.serviceAgreement.duties[0].id == .firstRecurringDutyId) and
+      (.addRecurringDuty.serviceAgreement.duties[0].position == 0) and
+      (.addRecurringDuty.serviceAgreement.duties[1].id == .secondRecurringDutyId) and
+      (.addRecurringDuty.serviceAgreement.duties[1].position == 1) and
+      (.addRecurringDuty.serviceAgreement.duties[1].cadenceUnit == "MONTH") and
+      (.addRecurringDuty.serviceAgreement.duties[1].cadenceInterval == 2)
+    ),
+    recurringDutyCanBeDeactivated: (
+      ([.updateRecurringDuty.serviceAgreement.duties[] | select(.id == $phase10.secondRecurringDutyId) | .isActive] | first) == false and
+      (.updateRecurringDuty.serviceAgreement.activeDutyCount == 1) and
+      (.updateRecurringDuty.serviceAgreement.dutyCount == 2)
+    ),
+    workerServiceAgreementAccessDenied: (
+      (.workerServiceAgreementListStatus == "403") and
+      (.workerServiceAgreementOptionsStatus == "403") and
+      (.workerServiceAgreementDetailStatus == "403") and
+      (.workerServiceAgreementCreateStatus == "403")
+    ),
+    crossServiceAgreementReadStatus: .crossServiceAgreementReadStatus,
+    serviceAgreementActivated: (
+      (.activateServiceAgreement.serviceAgreement.status == "ACTIVE") and
+      (.activateServiceAgreement.serviceAgreement.activatedBy.id == .userId) and
+      (.activateServiceAgreement.serviceAgreement.activatedAt != null)
+    ),
+    activeServiceAgreementUpdateStatus: .activeServiceAgreementUpdateStatus,
+    activeRecurringDutyUpdateStatus: .activeRecurringDutyUpdateStatus,
+    activeServiceAgreementArchiveStatus: .activeServiceAgreementArchiveStatus,
+    serviceAgreementDeactivated: (
+      (.deactivateServiceAgreement.serviceAgreement.status == "INACTIVE") and
+      (.deactivateServiceAgreement.serviceAgreement.deactivatedBy.id == .userId) and
+      (.deactivateServiceAgreement.serviceAgreement.deactivatedAt != null)
+    ),
+    inactiveServiceAgreementEditable: (
+      (.inactiveServiceAgreementUpdate.serviceAgreement.title == .updatedServiceAgreementTitle)
+    ),
+    serviceAgreementReactivated: (
+      (.reactivateServiceAgreement.serviceAgreement.status == "ACTIVE") and
+      (.reactivateServiceAgreement.serviceAgreement.activatedBy.id == .userId)
+    ),
+    archivedServiceAgreementReadable: (
+      (.archiveServiceAgreement.serviceAgreement.status == "ARCHIVED") and
+      (.archiveServiceAgreement.serviceAgreement.archivedBy.id == .userId) and
+      (.archiveServiceAgreement.serviceAgreement.archivedAt != null) and
+      (.archivedServiceAgreementDetail.serviceAgreement.id == .serviceAgreementId) and
+      (.archivedServiceAgreementDetail.serviceAgreement.status == "ARCHIVED") and
+      ([.archivedServiceAgreementList.serviceAgreements[].id] | index($phase10.serviceAgreementId) != null)
+    ),
+    archivedServiceAgreementUpdateStatus: .archivedServiceAgreementUpdateStatus,
+    archivedRecurringDutyUpdateStatus: .archivedRecurringDutyUpdateStatus,
+    repeatServiceAgreementArchiveStatus: .repeatServiceAgreementArchiveStatus,
+    serviceAgreementsCreateNoJobsOrSheets: (
+      ((.phase10JobsBefore.jobs | length) == (.phase10JobsAfter.jobs | length)) and
+      ((.phase10SheetsBefore.workdaySheets | length) == (.phase10SheetsAfter.workdaySheets | length))
+    )
+  }' "$SUMMARY_INPUT" > "${TMP_DIR}/phase10-summary.json"
+
+jq -s '.[0] + .[1] + .[2] + .[3]' "${TMP_DIR}/summary.json" "${TMP_DIR}/phase8-summary.json" "${TMP_DIR}/phase9-summary.json" "${TMP_DIR}/phase10-summary.json" > "${TMP_DIR}/combined-summary.json"
 mv "${TMP_DIR}/combined-summary.json" "${TMP_DIR}/summary.json"
 
 jq -e \
@@ -1667,7 +1869,37 @@ jq -e \
     .archivedCostActionStatus == "400" and
     .archivedActualUpdateStatus == "400" and
     .repeatWorkdayArchiveStatus == "400" and
-    .crossWorkdayReadStatus == "404"
+    .crossWorkdayReadStatus == "404" and
+    .serviceAgreementOptionsContainContext == true and
+    .invalidServiceAgreementTimezoneStatus == "400" and
+    .invalidServiceAgreementDatesStatus == "400" and
+    .missingServiceAgreementObjectStatus == "400" and
+    .mismatchedServiceAgreementAreaStatus == "400" and
+    .crossServiceAgreementRelationStatus == "404" and
+    .noActiveDutyActivationStatus == "400" and
+    .serviceAgreementCreated == true and
+    .serviceAgreementRelationsValid == true and
+    .serviceAgreementListAndFiltersValid == true and
+    .serviceAgreementDetailKeepsInternalData == true and
+    .serviceAgreementDraftUpdated == true and
+    .outsideServiceAgreementDutyStatus == "400" and
+    .invalidServiceAgreementTimeStatus == "400" and
+    .recurringDutyAddedInStableOrder == true and
+    .recurringDutyCanBeDeactivated == true and
+    .workerServiceAgreementAccessDenied == true and
+    .crossServiceAgreementReadStatus == "404" and
+    .serviceAgreementActivated == true and
+    .activeServiceAgreementUpdateStatus == "400" and
+    .activeRecurringDutyUpdateStatus == "400" and
+    .activeServiceAgreementArchiveStatus == "400" and
+    .serviceAgreementDeactivated == true and
+    .inactiveServiceAgreementEditable == true and
+    .serviceAgreementReactivated == true and
+    .archivedServiceAgreementReadable == true and
+    .archivedServiceAgreementUpdateStatus == "400" and
+    .archivedRecurringDutyUpdateStatus == "400" and
+    .repeatServiceAgreementArchiveStatus == "400" and
+    .serviceAgreementsCreateNoJobsOrSheets == true
   ' "${TMP_DIR}/summary.json" >/dev/null
 
 cat "${TMP_DIR}/summary.json"

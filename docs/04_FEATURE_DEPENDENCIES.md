@@ -36,10 +36,11 @@ Reviewed job execution + object memory + job costs
     └── Customer report polish and browser-print readiness (implemented; PDF not implemented)
 
 Worksheet planning + customer/object responsibility + schedule/timezone rules
-└── Service agreements / recurring object duties (Phase 10)
-    └── Feed flexible worksheet planning; do not bulk-generate rigid future Jobs
+└── Service agreements / recurring object duties (Phase 10 implemented)
+    └── Later: due evaluation, exceptions, and explicit DRAFT worksheet handoff
+        └── Never bulk-generate rigid future Jobs
 
-Trusted worksheets + Jobs + assignments + reports + costs
+Trusted worksheets + Jobs + assignments + reports + costs + agreement definitions
 └── Company command-center dashboard (Phase 11)
     └── Smart planning / automation / AI assistance (Phase 12)
 
@@ -63,7 +64,7 @@ ItemCategory + Item
 | Worksheet usability / hardening | **Implemented:** role-safe exact filters, server-backed today query, derived completion counts, worker execution flow, context/review/lock presentation, browser print, and status-scoped transactional row writes | Client-only filtering, bypassing assignment visibility, treating print as PDF export, or adding downstream conversions during polish |
 | Worksheet review-to-follow-up Job | **Implemented first slice:** reviewed source only, explicit action record, immutable source snapshot, actor/time/status, atomic normal-Job creation, tenant-safe relations, idempotent replay, duplicate protection, office-only control | Silently creating records during review or duplicating a second Job system |
 | Worksheet review-to-cost/report | **Implemented:** reviewed source only, explicit selected tenant-owned target Job, normal cost/report records, immutable provenance, typed destinations, atomic creation, and reuse of existing cost/report validation, permissions, amounts, and lifecycle | Creating free-floating costs/reports or bypassing existing Job domains |
-| Service agreements / recurring object duties | Stable worksheet planning, customers/objects, schedule/timezone rules, templates, and exception semantics | Bulk-generating rigid Jobs far ahead or implementing browser-only reminders |
+| Service agreements / recurring object duties | **Implemented foundation:** company ownership, office-only permissions, lifecycle/audit, inclusive effective dates, IANA timezone, every-N cadence anchors, stable ordered duty rows, optional tenant-safe directory context, shared contracts, API, real UI, and smoke coverage | Bulk-generating rigid Jobs, silently creating worksheets, or implementing browser-only reminders |
 | Command-center dashboard | Trusted worksheets, jobs, assignments, findings, costs, object issues, and server-backed metrics | Decorative cards, fake counts, or premature drag-and-drop |
 | Offer/invoice preparation | Reviewed job costs, customer/object context, immutable line snapshots, numbering/tax rules | Mutable issued documents or unsupported totals |
 | Smart planning/automation/AI | Trusted workflows, permissions, auditability, human review, measurable tasks | Autonomous consequential changes or AI replacing absent logic |
@@ -73,7 +74,7 @@ ItemCategory + Item
 
 A model or route alone is not a completed dependency. Before dependent UI begins, require reviewed ownership and lifecycle, shared contracts, runtime validation, tenant-safe references, service-level roles, useful errors, representative denial/cross-tenant verification, and updated documentation.
 
-The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator, Phase 7B presentation/print, Phase 8 daily worksheet/team protocol foundation, Phase 8B worksheet usability/hardening, and all three Phase 9 review actions meet this gate. The next default phase is exactly `Phase 10 — Service Agreements / Recurring Object Duties Foundation`. Recurring agreements must feed worksheet planning instead of bulk-generating rigid future Jobs. Item movement is not a prerequisite and should remain optional until a concrete traceability workflow justifies it.
+The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator, Phase 7B presentation/print, Phase 8 daily worksheet/team protocol foundation, Phase 8B worksheet usability/hardening, all three Phase 9 review actions, and the Phase 10 service-agreement/recurring-duty definition foundation meet this gate. The next default phase is exactly `Phase 11 — Command Center Dashboard`. Agreement due evaluation, exceptions, and worksheet handoff remain separate later work; no agreement behavior may bulk-generate rigid future Jobs. Item movement remains optional until a concrete traceability workflow justifies it.
 
 ## Phase 8 worksheet gate
 
@@ -90,6 +91,12 @@ The first Phase 9 slice adds `WorksheetReviewAction` and one explicit `CREATE_FO
 ## Phase 9B cost/report action gate
 
 Phase 9B extends the same aggregate with one `CREATE_JOB_COST_LINE` and one `CREATE_JOB_REPORT` action per reviewed row. Both require a deliberately selected tenant-owned target Job and keep restrictive typed links to the normal downstream record. Cost creation reuses existing Item, currency, amount, and actor rules. Report creation accepts structured types only and starts in the existing `PENDING_REVIEW` lifecycle. Source/target Job/Item/Team checks are tenant-safe; the downstream record, readable Job activity, and action commit atomically. Same-input retries return the existing record, while changed retries conflict. No free-floating records, bulk action, automatic conversion, billable/customer message, undo/cancel, or correction/supersession path exists.
+
+## Phase 10 service-agreement gate
+
+Phase 10 supplies `ServiceAgreement` and `RecurringObjectDuty` as company-owned responsibility definitions, not execution records. It includes the `DRAFT -> ACTIVE -> INACTIVE -> ACTIVE` operational loop with terminal archival from draft/inactive, actor/timestamp attribution, inclusive effective dates, IANA timezone validation, stable duty positions, reusable planned text, first-due anchors, every-N day/week/month/year cadence, optional local time ranges, tenant-safe directory context, and OWNER/OFFICE-only API and web administration. Activation requires an active duty; active and archived definitions are locked. Smoke coverage proves lifecycle, validation, filters, role denial, cross-tenant safety, and absence of Job/worksheet generation.
+
+This gate deliberately excludes occurrence calculation/materialization, exception calendars, completion history, background scheduling, notifications, worker access, and agreement-to-worksheet handoff. A later handoff must remain explicit and produce an editable DRAFT worksheet close to execution; no agreement may silently create a worksheet or Job.
 
 ## Phase 7 snapshot gate
 

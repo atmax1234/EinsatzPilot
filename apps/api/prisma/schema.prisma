@@ -211,6 +211,20 @@ enum WorksheetReviewActionStatus {
   COMPLETED
 }
 
+enum ServiceAgreementStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum RecurringDutyCadenceUnit {
+  DAY
+  WEEK
+  MONTH
+  YEAR
+}
+
 model Company {
   id             String          @id @default(cuid())
   name           String
@@ -235,6 +249,8 @@ model Company {
   workdaySheets  WorkdaySheet[]
   workdaySheetRows WorkdaySheetRow[]
   worksheetReviewActions WorksheetReviewAction[]
+  serviceAgreements ServiceAgreement[]
+  recurringObjectDuties RecurringObjectDuty[]
 }
 
 model User {
@@ -262,6 +278,13 @@ model User {
   reviewedWorkdaySheets  WorkdaySheet[] @relation("WorkdaySheetReviewedBy")
   archivedWorkdaySheets  WorkdaySheet[] @relation("WorkdaySheetArchivedBy")
   createdWorksheetReviewActions WorksheetReviewAction[] @relation("WorksheetReviewActionCreatedBy")
+  createdServiceAgreements ServiceAgreement[] @relation("ServiceAgreementCreatedBy")
+  updatedServiceAgreements ServiceAgreement[] @relation("ServiceAgreementUpdatedBy")
+  activatedServiceAgreements ServiceAgreement[] @relation("ServiceAgreementActivatedBy")
+  deactivatedServiceAgreements ServiceAgreement[] @relation("ServiceAgreementDeactivatedBy")
+  archivedServiceAgreements ServiceAgreement[] @relation("ServiceAgreementArchivedBy")
+  createdRecurringObjectDuties RecurringObjectDuty[] @relation("RecurringObjectDutyCreatedBy")
+  updatedRecurringObjectDuties RecurringObjectDuty[] @relation("RecurringObjectDutyUpdatedBy")
 }
 
 model Membership {
@@ -454,6 +477,7 @@ model Customer {
   jobs      Job[]
   customerReportSnapshots CustomerReportSnapshot[]
   workdaySheetRows WorkdaySheetRow[]
+  serviceAgreements ServiceAgreement[]
 
   @@index([companyId, name])
   @@index([companyId, isActive])
@@ -477,6 +501,7 @@ model Address {
   jobs       Job[]
   customerReportSnapshots CustomerReportSnapshot[]
   workdaySheetRows WorkdaySheetRow[]
+  serviceAgreements ServiceAgreement[]
 
   @@index([companyId, label])
   @@index([companyId, customerId])
@@ -500,6 +525,7 @@ model Object {
   jobs       Job[]
   customerReportSnapshots CustomerReportSnapshot[]
   workdaySheetRows WorkdaySheetRow[]
+  serviceAgreements ServiceAgreement[]
 
   @@index([companyId, name])
   @@index([companyId, status])
@@ -521,6 +547,7 @@ model ObjectArea {
   jobs      Job[]
   customerReportSnapshots CustomerReportSnapshot[]
   workdaySheetRows WorkdaySheetRow[]
+  serviceAgreements ServiceAgreement[]
 
   @@index([companyId, objectId, name])
   @@index([companyId, type])
@@ -801,4 +828,80 @@ model WorksheetReviewAction {
   @@index([destinationJobCostLineId])
   @@index([destinationJobReportId])
   @@index([createdByUserId])
+}
+
+model ServiceAgreement {
+  id                  String                 @id @default(cuid())
+  companyId           String
+  title               String
+  description         String?
+  status              ServiceAgreementStatus @default(DRAFT)
+  effectiveFrom       DateTime               @db.Date
+  effectiveUntil      DateTime?              @db.Date
+  timezone            String                 @default("Europe/Berlin") @db.VarChar(100)
+  customerId          String?
+  addressId           String?
+  objectId            String?
+  objectAreaId        String?
+  internalNotes       String?
+  createdByUserId     String
+  updatedByUserId     String
+  activatedByUserId   String?
+  deactivatedByUserId String?
+  archivedByUserId    String?
+  activatedAt         DateTime?
+  deactivatedAt       DateTime?
+  archivedAt          DateTime?
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  company             Company                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer            Customer?              @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  address             Address?               @relation(fields: [addressId], references: [id], onDelete: Restrict)
+  object              Object?                @relation(fields: [objectId], references: [id], onDelete: Restrict)
+  objectArea          ObjectArea?            @relation(fields: [objectAreaId], references: [id], onDelete: Restrict)
+  createdBy           User                   @relation("ServiceAgreementCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  updatedBy           User                   @relation("ServiceAgreementUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: Restrict)
+  activatedBy         User?                  @relation("ServiceAgreementActivatedBy", fields: [activatedByUserId], references: [id], onDelete: Restrict)
+  deactivatedBy       User?                  @relation("ServiceAgreementDeactivatedBy", fields: [deactivatedByUserId], references: [id], onDelete: Restrict)
+  archivedBy          User?                  @relation("ServiceAgreementArchivedBy", fields: [archivedByUserId], references: [id], onDelete: Restrict)
+  duties              RecurringObjectDuty[]
+
+  @@index([companyId, status, effectiveFrom])
+  @@index([companyId, customerId, status])
+  @@index([companyId, objectId, status])
+  @@index([companyId, objectAreaId])
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
+  @@index([activatedByUserId])
+  @@index([deactivatedByUserId])
+  @@index([archivedByUserId])
+}
+
+model RecurringObjectDuty {
+  id              String                    @id @default(cuid())
+  companyId       String
+  agreementId     String
+  position        Int
+  plannedText     String
+  notes           String?
+  cadenceUnit     RecurringDutyCadenceUnit
+  cadenceInterval Int                       @default(1)
+  firstDueDate    DateTime                  @db.Date
+  startTime       String?                   @db.VarChar(5)
+  endTime         String?                   @db.VarChar(5)
+  isActive        Boolean                   @default(true)
+  createdByUserId String
+  updatedByUserId String
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  company         Company                   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  agreement       ServiceAgreement          @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+  createdBy       User                      @relation("RecurringObjectDutyCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  updatedBy       User                      @relation("RecurringObjectDutyUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([agreementId, position])
+  @@index([companyId, agreementId, isActive])
+  @@index([companyId, firstDueDate, isActive])
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
 }

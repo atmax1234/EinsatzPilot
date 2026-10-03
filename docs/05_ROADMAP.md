@@ -112,11 +112,13 @@ Phases are dependency order, not calendar promises. EinsatzPilot is a modular al
 
 ## Phase 10 — Service Agreements / Recurring Object Duties
 
-**Goals:** Model object/customer-grounded expected duties, reusable planning text, cadence/timezone, effective dates, exceptions, and lifecycle. Agreements should feed flexible worksheet planning inputs close to execution time.
+**Status:** Implemented and verified with an additive migration, shared contracts/schema helpers, tenant-safe OWNER/OFFICE-only API rules, real web administration, and expanded smoke coverage.
 
-**Dependencies:** Stable worksheet planning and review/follow-up flow plus explicit scheduling/timezone semantics.
+**Goals:** Model object/customer-grounded expected duties, reusable planning text, cadence/timezone anchors, effective dates, and lifecycle. Agreements should later feed flexible worksheet planning inputs close to execution time.
 
-**Must not build yet:** Rigid bulk generation of future Jobs, browser-only recurrence, hidden scheduling assumptions, or automatic commercial commitments.
+**Implemented boundary:** `ServiceAgreement` stores company ownership, title/description, `DRAFT`, `ACTIVE`, `INACTIVE`, or terminal `ARCHIVED` lifecycle, inclusive effective dates, validated IANA timezone, optional customer/address/object/object-area context, internal notes, and audited lifecycle actors/timestamps. Stable ordered `RecurringObjectDuty` rows store reusable planned text, optional notes/local times, active state, a first-due date, and every-N day/week/month/year cadence. Definition/duty edits require `DRAFT` or `INACTIVE`; activation requires an active duty. Workers cannot access the feature.
+
+**Still not implemented:** Due-occurrence calculation/materialization, holiday/blackout/skip/one-off exceptions, completion history, deliberate agreement-to-DRAFT-worksheet handoff, background scheduling, notifications, worker views, automatic worksheet creation, generated future Jobs, or commercial commitments. These definitions are not Jobs and do not create a second execution system.
 
 ## Phase 11 — Command Center Dashboard
 

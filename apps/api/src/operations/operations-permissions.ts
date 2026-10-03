@@ -21,6 +21,8 @@ const customerReportWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const customerReportReadRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const workdaySheetManageRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 const workdaySheetReadRoles: MembershipRole[] = ['OWNER', 'OFFICE', 'WORKER'];
+const serviceAgreementWriteRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
+const serviceAgreementReadRoles: MembershipRole[] = ['OWNER', 'OFFICE'];
 
 function assertAuthenticatedContext(
   authContext: RequestAuthContext,
@@ -191,5 +193,21 @@ export function assertCanReadWorkdaySheets(authContext: RequestAuthContext) {
     authContext,
     workdaySheetReadRoles,
     'Nur aktive Firmenmitglieder duerfen Tagesblaetter lesen.',
+  );
+}
+
+export function assertCanWriteServiceAgreements(authContext: RequestAuthContext) {
+  assertRoleAllowed(
+    authContext,
+    serviceAgreementWriteRoles,
+    'Nur OWNER oder OFFICE duerfen Leistungsvereinbarungen aendern.',
+  );
+}
+
+export function assertCanReadServiceAgreements(authContext: RequestAuthContext) {
+  assertRoleAllowed(
+    authContext,
+    serviceAgreementReadRoles,
+    'Nur OWNER oder OFFICE duerfen Leistungsvereinbarungen lesen.',
   );
 }

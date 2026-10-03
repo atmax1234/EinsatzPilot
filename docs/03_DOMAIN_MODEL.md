@@ -20,11 +20,13 @@
 
 ## Current models
 
-- **Company:** tenant root owning memberships, teams, jobs, reports, attachments, job costs, customer-report snapshots, workday sheets, directory records, item categories, items, and assignments. Future business entities should also be company-scoped.
+- **Company:** tenant root owning memberships, teams, jobs, reports, attachments, job costs, customer-report snapshots, workday sheets, service agreements, recurring duties, directory records, item categories, items, and assignments. Future business entities should also be company-scoped.
 - **User / Membership:** a global user account and its company-specific active membership with `OWNER`, `OFFICE`, or `WORKER` role. A user may have multiple company memberships; the current session resolves one.
 - **Team / TeamMember:** a company group and its user members. `Team.currentAssignment` is only free text and must not become a second source of truth after structured assignments exist.
 - **WorkdaySheet:** company-owned dated execution paper with optional title, team assignment, direct WORKER assignment, office-only internal notes, office review notes, and actor/timestamp relations for creation, send, submission, review, and archival. It is deliberately distinct from a `Job`: a sheet organizes one workday, while Jobs remain governed operational records. Status is forward-only `DRAFT -> SENT -> SUBMITTED -> REVIEWED -> ARCHIVED`. OWNER/OFFICE can plan drafts, send, review, and archive. Assigned workers can read sent-or-later sheets and submit sent sheets. Planning is locked after send; reviewed and archived sheets are locked.
 - **WorkdaySheetRow:** ordered, company-owned child of one sheet. Every row has nonblank `plannedText` and may hold `actualText`, office-planned notes, optional start/end `HH:mm`, and optional customer, address, object, object-area, or Job links. A row may be pure free text. All links must be tenant-owned, and an object-area link requires and must match its object. Only office users edit planned fields while the sheet is `DRAFT`; assigned workers edit only `actualText` while it is `SENT`. Submission requires actual text on every row. The row retains stable source identity for a later explicit follow-up conversion workflow.
+- **ServiceAgreement:** company-owned reusable responsibility definition with title/description, `DRAFT`, `ACTIVE`, `INACTIVE`, or terminal `ARCHIVED` status, inclusive effective dates, one IANA timezone, optional customer/address/object/object-area context, office-only internal notes, and creation/activation/deactivation/archival actor/timestamp audit. OWNER/OFFICE alone can read or administer agreements. Definition edits are allowed only in `DRAFT` or `INACTIVE`; activation requires at least one active duty. Allowed transitions are `DRAFT -> ACTIVE|ARCHIVED`, `ACTIVE -> INACTIVE`, and `INACTIVE -> ACTIVE|ARCHIVED`.
+- **RecurringObjectDuty:** stable, ordered, company-owned child of one service agreement. It stores nonblank reusable `plannedText`, optional notes and local `HH:mm` time range, `isActive`, a first-due local calendar date, and every-N cadence expressed as `cadenceInterval` plus `DAY`, `WEEK`, `MONTH`, or `YEAR`. Duty edits/additions are allowed only while the parent is `DRAFT` or `INACTIVE`; deactivation preserves identity/history rather than deleting the row. The first-due date must lie inside the agreement's effective range.
 - **Job:** a company-owned scheduled unit of work with reference, title, description, required free-text customer/location, schedule, lifecycle, priority, and optional direct team. It may independently link to a customer, address, object, and object area. All linked records must belong to the active company; an object area requires and must belong to the selected object. The free-text fields remain the compatibility and display baseline and are not inferred or backfilled from directory records.
 - **JobActivity:** readable, append-oriented job history with status, note, or report kind. It is not yet a generic audit/event model.
 - **JobReport:** job- and company-owned execution proof with a closed type, legacy summary/details, structured findings/work/follow-up fields, optional team/author, explicit review lifecycle, reviewer attribution, review notes, timestamps, and linked attachments. Legacy simple reports remain `GENERAL`/`SUBMITTED`; structured reports start `PENDING_REVIEW`. OWNER/OFFICE may transition pending reports once to `APPROVED`, `NEEDS_REVISION`, or `REJECTED`. WORKER creation requires direct-team membership or an active user/team assignment to the job.
@@ -61,7 +63,7 @@ Draft planning writes and assigned-worker actual-text writes now lock the parent
 
 Completion counts remain derived from nonempty row `actualText`; they are convenience response data rather than persisted workflow state. Browser-print styling is a web presentation of the same stored sheet and rows. It creates no PDF artifact, export record, downstream Job, cost, report, or customer message.
 
-## Review actions and planned models
+## Review actions and later models
 
 ### WorksheetReviewAction (Phase 9 and 9B implemented)
 
@@ -69,9 +71,13 @@ Completion counts remain derived from nonempty row `actualText`; they are conven
 
 OWNER/OFFICE alone can invoke an action, and only while the sheet is `REVIEWED`. Follow-up creation produces a normal `PLANNED` Job. Cost/report actions require an existing tenant-owned target Job—whether already linked, deliberately selected, or created by the follow-up action—and create normal `JobCostLine` / structured `JobReport` records using their existing validation, permissions, amount rules, and `PENDING_REVIEW` report lifecycle. The downstream record, readable Job activity, and action are one database transaction, so a failure persists none of them. Same-input replay resolves to the stored result; a changed replay conflicts. `ARCHIVED` remains terminal for new actions. No free-floating cost/report, customer-communication action, automatic conversion, undo/cancel, or correction/supersession action exists.
 
-### ServiceAgreement / RecurringObjectDuty (Phase 10 direction)
+### ServiceAgreement / RecurringObjectDuty (Phase 10 implemented)
 
-Object- and customer-grounded definitions for expected recurring cleaning, window, caretaking, garden, winter-service, inspection, maintenance, or other duties. Agreements may carry cadence, applicability, exceptions, and reusable content, but should feed flexible worksheet planning. They must not generate rigid Jobs far in advance or become a parallel Job system.
+Object- and customer-grounded definitions for expected recurring cleaning, window, caretaking, garden, winter-service, inspection, maintenance, or other duties are now implemented as the models described above. The agreement timezone gives each duty's date and optional times a local-calendar interpretation; effective bounds are inclusive.
+
+The stored cadence contract is anchored to `firstDueDate`: `DAY` and `WEEK` advance by the configured number of local calendar days or weeks; `MONTH` and `YEAR` preserve the original anchor's local day/month rather than chaining from a previously clamped occurrence. When a future monthly or yearly target period lacks that calendar day, the intended occurrence is the final valid local day in that target month. Phase 10 does not implement an occurrence evaluator, holiday/blackout/skip/one-off exceptions, completion history, or daylight-saving execution scheduler, so these rules currently describe future evaluation of the persisted definition rather than materialized work.
+
+Agreements should later feed an explicit, editable DRAFT worksheet planning handoff close to execution. They do not silently create worksheets, generate Jobs, run background schedules, or form a parallel Job system.
 
 ### Optional ItemMovement
 
@@ -91,7 +97,8 @@ Durable resources with lifecycle needs such as serial/registration data, mainten
 Company
 ├── Membership ── User ── TeamMember ── Team
 ├── Customer / Verwaltung ── Address
-│   └── Object ── ObjectArea ── ServiceAgreement / RecurringObjectDuty (Phase 10 planned)
+│   └── Object ── ObjectArea
+│       └── ServiceAgreement ── RecurringObjectDuty (Phase 10 foundation implemented)
 ├── WorkdaySheet / TeamProtocol (Phase 8 foundation + Phase 8B usability implemented)
 │   ├── assigned Team / User
 │   └── WorkdaySheetRow ── Customer / Address / Object / ObjectArea / Job reference (optional)
@@ -110,7 +117,7 @@ Company
 - A job may reference customer, execution address, object, and object area.
 - A worksheet is a dated execution plan and protocol, not a renamed Job. Its rows may combine object duties, existing Jobs, and ad hoc instructions.
 - Worksheet/protocol planning is the operational bridge between object responsibility and actual worker execution.
-- Later service agreements supply worksheet planning inputs; they do not require bulk generation of rigid future Jobs.
+- Service agreements are reusable responsibility definitions. A later deliberate handoff may copy selected due-duty text into an editable DRAFT worksheet; the current phase does not calculate occurrences or generate worksheets or Jobs.
 - Reports/attachments are job-grounded reviewed execution proof and preserve legacy simple reports.
 - Costs belong to jobs first and may reference items/materials where useful without requiring catalog identity for every expense.
 - Assignments say who or what is responsible or allocated. They are the control layer, not a visual board by themselves.

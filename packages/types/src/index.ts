@@ -164,6 +164,8 @@ export type CustomerReportStatus =
   | 'APPROVED'
   | 'ARCHIVED';
 export type WorkdaySheetStatus = 'DRAFT' | 'SENT' | 'SUBMITTED' | 'REVIEWED' | 'ARCHIVED';
+export type ServiceAgreementStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
+export type RecurringDutyCadenceUnit = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
 
 export type TeamMemberSummary = {
   id: string;
@@ -512,6 +514,127 @@ export type WorksheetJobReportCreateResponse = {
   report: JobReportItem;
   replayed: boolean;
 };
+
+export type RecurringObjectDutyCreateInput = {
+  plannedText: string;
+  notes?: string;
+  cadenceUnit: RecurringDutyCadenceUnit;
+  cadenceInterval: number;
+  firstDueDate: string;
+  startTime?: string;
+  endTime?: string;
+  isActive?: boolean;
+};
+
+export type RecurringObjectDutyUpdateInput = {
+  plannedText?: string;
+  notes?: string | null;
+  cadenceUnit?: RecurringDutyCadenceUnit;
+  cadenceInterval?: number;
+  firstDueDate?: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  isActive?: boolean;
+};
+
+export type ServiceAgreementCreateInput = {
+  title: string;
+  description?: string;
+  effectiveFrom: string;
+  effectiveUntil?: string;
+  timezone: string;
+  customerId?: string;
+  addressId?: string;
+  objectId?: string;
+  objectAreaId?: string;
+  internalNotes?: string;
+  duties: RecurringObjectDutyCreateInput[];
+};
+
+export type ServiceAgreementUpdateInput = {
+  title?: string;
+  description?: string | null;
+  effectiveFrom?: string;
+  effectiveUntil?: string | null;
+  timezone?: string;
+  customerId?: string | null;
+  addressId?: string | null;
+  objectId?: string | null;
+  objectAreaId?: string | null;
+  internalNotes?: string | null;
+};
+
+export type ServiceAgreementStatusUpdateInput = {
+  status: Exclude<ServiceAgreementStatus, 'DRAFT'>;
+};
+
+export type ServiceAgreementListFilters = {
+  status?: ServiceAgreementStatus;
+  customerId?: string;
+  objectId?: string;
+};
+
+export type RecurringObjectDutyItem = {
+  id: string;
+  position: number;
+  plannedText: string;
+  notes?: string;
+  cadenceUnit: RecurringDutyCadenceUnit;
+  cadenceInterval: number;
+  firstDueDate: string;
+  startTime?: string;
+  endTime?: string;
+  isActive: boolean;
+  createdBy: WorkdaySheetActorSummary;
+  updatedBy: WorkdaySheetActorSummary;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ServiceAgreementListItem = {
+  id: string;
+  title: string;
+  status: ServiceAgreementStatus;
+  effectiveFrom: string;
+  effectiveUntil?: string;
+  timezone: string;
+  customerId?: string;
+  addressId?: string;
+  objectId?: string;
+  objectAreaId?: string;
+  customer?: JobCustomerRelation;
+  address?: JobAddressRelation;
+  object?: JobObjectRelation;
+  objectArea?: JobObjectAreaRelation;
+  dutyCount: number;
+  activeDutyCount: number;
+  createdBy: WorkdaySheetActorSummary;
+  updatedBy: WorkdaySheetActorSummary;
+  activatedBy?: WorkdaySheetActorSummary;
+  deactivatedBy?: WorkdaySheetActorSummary;
+  archivedBy?: WorkdaySheetActorSummary;
+  activatedAt?: string;
+  deactivatedAt?: string;
+  archivedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ServiceAgreementDetail = ServiceAgreementListItem & {
+  description?: string;
+  internalNotes?: string;
+  duties: RecurringObjectDutyItem[];
+};
+
+export type ServiceAgreementListResponse = {
+  serviceAgreements: ServiceAgreementListItem[];
+};
+
+export type ServiceAgreementDetailResponse = {
+  serviceAgreement: ServiceAgreementDetail;
+};
+
+export type ServiceAgreementOptionsResponse = JobRelationOptionsResponse;
 
 export type JobActivityItem = {
   id: string;

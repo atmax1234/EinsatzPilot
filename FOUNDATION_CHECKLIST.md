@@ -3,7 +3,7 @@
 Use this to track when the system is actually ready to move out of foundation work.
 Be strict. “Kinda works” = not done.
 
-Assessment snapshot: checked items below were verified through 2026-08-31 against the live local setup where applicable.
+Assessment snapshot: checked items below were verified through 2026-10-03 against the live local setup where applicable.
 Verification now includes real PostgreSQL migrations, the API smoke flow, and web pages rendering live updated data from the database.
 
 Directory and Job relation snapshot: Customer, Address, Object, and ObjectArea foundation plus backwards-compatible Job relations were migrated and verified through the expanded live PostgreSQL smoke flow on 2026-07-19.
@@ -22,7 +22,9 @@ Daily worksheet snapshot: company-owned dated sheets and ordered rows, free text
 
 Daily worksheet usability/hardening snapshot: exact role-safe filters, a dedicated today query and worker flow, completion/context/review/lock clarity, browser-print styling, and status-scoped transactional row-write protection were added without a schema change and verified with the expanded 200-check smoke flow on 2026-10-02. At that checkpoint, no Phase 9 conversion action existed; worksheet PDF export, recurring agreements, and generated-future-Job behavior remain absent.
 
-Worksheet review-action snapshot: Phase 9 and Phase 9B add one explicit OWNER/OFFICE `CREATE_FOLLOW_UP_JOB`, `CREATE_JOB_COST_LINE`, and `CREATE_JOB_REPORT` action per reviewed row through one provenance aggregate. All retain a schema-versioned immutable source snapshot, actor/time/status, required destination Job, typed downstream identity where applicable, atomic downstream/activity/action creation, tenant-safe source/target/Item/Team handling, deterministic replay, and changed-request conflict. The complete slice was verified with the expanded 233-check smoke flow on 2026-10-03. Billable/customer-message actions, automatic conversion, recurring agreements, generated future Jobs, PDF export, email, and AI remain absent.
+Worksheet review-action snapshot: Phase 9 and Phase 9B add one explicit OWNER/OFFICE `CREATE_FOLLOW_UP_JOB`, `CREATE_JOB_COST_LINE`, and `CREATE_JOB_REPORT` action per reviewed row through one provenance aggregate. All retain a schema-versioned immutable source snapshot, actor/time/status, required destination Job, typed downstream identity where applicable, atomic downstream/activity/action creation, tenant-safe source/target/Item/Team handling, deterministic replay, and changed-request conflict. The complete slice was verified with the expanded 233-check smoke flow on 2026-10-03. Billable/customer-message actions, automatic conversion, generated future Jobs, PDF export, email, and AI remain absent.
+
+Service-agreement snapshot: Phase 10 adds company-owned, OWNER/OFFICE-only service agreements and stable ordered recurring duties with lifecycle/audit, inclusive effective dates, IANA timezone, every-N cadence anchors, reusable planning text, optional tenant-safe directory context, real API/web administration, and an additive migration. The complete slice was verified with the expanded 263-check smoke flow on 2026-10-03. Due-occurrence evaluation, exceptions, worksheet handoff, background scheduling, worker access, and automatic Job/worksheet generation remain absent.
 
 ---
 
@@ -373,6 +375,26 @@ You can do ALL of this without hacks:
 * [x] assigned workers can read authorized action results but cannot invoke review actions
 * [x] one action per row/type, deterministic replay, changed-input conflict, and archived lockout are smoke-proven
 * [x] no silent review automation, invoice/email/AI behavior, recurring generation, or second Job system is introduced
+
+---
+
+## 26. Phase 10 Service Agreements / Recurring Object Duties Foundation
+
+* [x] `ServiceAgreement` and `RecurringObjectDuty` are company-owned persisted models
+* [x] lifecycle is explicit: `DRAFT -> ACTIVE -> INACTIVE -> ACTIVE`, with terminal archival from draft/inactive
+* [x] lifecycle actors/timestamps and database consistency checks are present
+* [x] effective dates are inclusive and validated; timezone must be a valid IANA identifier
+* [x] optional customer/address/object/object-area context is tenant-safe and relation-compatible
+* [x] duties retain stable identity/order, reusable planned text, optional notes/times, active state, first-due date, and every-N day/week/month/year cadence
+* [x] agreement/duty edits require `DRAFT` or `INACTIVE`; activation requires at least one active duty
+* [x] OWNER/OFFICE alone can read/write; WORKER receives no agreement API or navigation access
+* [x] list/detail/options/create/update/status/duty endpoints use strict runtime validation and safe not-found behavior
+* [x] real office web UI supports filtering, creation, definition editing, lifecycle controls, duty maintenance, context, audit, and locked states
+* [x] additive migration is applied and all sixteen migrations are current
+* [x] expanded smoke passes all 263 checks while preserving Phase 1–9B
+* [x] smoke proves cross-tenant denial, lifecycle/locking, active-duty activation eligibility, and zero automatic Job/worksheet creation
+* [x] no occurrence engine, exception calendar, completion history, worksheet handoff, scheduler, generated future Job, invoice/email/AI, or second Job system is introduced
+* [x] next recommended phase is Phase 11 — Command Center Dashboard
 
 ---
 
