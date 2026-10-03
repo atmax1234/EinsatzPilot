@@ -20,7 +20,9 @@ Customer report foundation snapshot: OWNER/OFFICE-only, job-grounded stable snap
 
 Daily worksheet snapshot: company-owned dated sheets and ordered rows, free text plus optional tenant-safe directory/Job links, direct/team assignment, role-specific planning/actual-work boundaries, the forward-only send/submit/review/archive lifecycle, real office/worker UI, additive migration, and expanded 196-check smoke coverage were verified on 2026-08-31. No worksheet review-to-follow-up conversion or recurring agreement exists yet.
 
-Daily worksheet usability/hardening snapshot: exact role-safe filters, a dedicated today query and worker flow, completion/context/review/lock clarity, browser-print styling, and status-scoped transactional row-write protection were added without a schema change and verified with the expanded 200-check smoke flow on 2026-10-02. No Phase 9 conversion action, worksheet PDF export, recurring agreement, or generated Job exists.
+Daily worksheet usability/hardening snapshot: exact role-safe filters, a dedicated today query and worker flow, completion/context/review/lock clarity, browser-print styling, and status-scoped transactional row-write protection were added without a schema change and verified with the expanded 200-check smoke flow on 2026-10-02. At that checkpoint, no Phase 9 conversion action existed; worksheet PDF export, recurring agreements, and generated-future-Job behavior remain absent.
+
+Worksheet review-action snapshot: the first Phase 9 slice adds one explicit OWNER/OFFICE `CREATE_FOLLOW_UP_JOB` action per reviewed row, a schema-versioned immutable source snapshot, actor/time/status and destination identity, atomic normal-Job/activity/action creation, tenant-safe optional destination relations, deterministic replay, and changed-request conflict. It was verified with the expanded 212-check smoke flow on 2026-10-03. Cost/report/customer-message actions, automatic conversion, recurring agreements, generated future Jobs, PDF export, email, and AI remain absent.
 
 ---
 
@@ -347,18 +349,24 @@ You can do ALL of this without hacks:
 * [x] draft/actual row writes are status-scoped transactionally against send/submit races
 * [x] expanded smoke passes all 200 checks, preserving Phase 1–8 and proving filters/today/count/redaction/isolation behavior
 * [x] no schema migration or lifecycle state was added
-* [x] no Phase 9 conversion, PDF artifact/export, recurring agreement, generated Job, or automatic downstream record exists
+* [x] Phase 8B introduced no Phase 9 action, PDF artifact/export, recurring agreement, generated Job, or automatic downstream record
 
 ---
 
 ## 25. Phase 9 Worksheet Review → Follow-up Jobs / Costs / Reports
 
-* [ ] reviewed worksheet rows retain an explicit, auditable conversion/action record
-* [ ] action retries are idempotent and duplicate downstream records are prevented
-* [ ] OWNER/OFFICE deliberately chooses conversion; WORKER cannot trigger it
-* [ ] source and destination records are tenant-validated with safe not-found behavior
-* [ ] generated follow-up Jobs use the existing Job model and lifecycle
-* [ ] no silent review automation, invoice/email behavior, or second Job system is introduced
+* [x] reviewed worksheet rows retain an explicit, auditable `WorksheetReviewAction` record
+* [x] action stores a versioned immutable source snapshot, actor/time/type/status, fingerprint, and destination identity
+* [x] action retries are idempotent and changed retries cannot duplicate downstream records
+* [x] OWNER/OFFICE deliberately chooses conversion; WORKER cannot trigger it
+* [x] only `REVIEWED` rows are eligible and `ARCHIVED` remains terminal for new actions
+* [x] source and destination records are tenant-validated with safe not-found behavior
+* [x] follow-up Jobs use the existing Job model and lifecycle and start `PLANNED`
+* [x] Job, Job activity, and review action are committed atomically
+* [x] real worksheet detail UI previews destination fields and links the completed action to the normal Job
+* [x] expanded smoke passes all 212 checks while preserving Phase 1–8B
+* [ ] Phase 9B cost-line and structured report/finding actions are implemented
+* [x] no silent review automation, invoice/email/AI behavior, recurring generation, or second Job system is introduced
 
 ---
 

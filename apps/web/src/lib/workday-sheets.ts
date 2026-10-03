@@ -10,6 +10,8 @@ import type {
   WorkdaySheetStatusUpdateInput,
   WorkdaySheetTodayResponse,
   WorkdaySheetUpdateInput,
+  WorksheetFollowUpJobCreateInput,
+  WorksheetFollowUpJobCreateResponse,
 } from '@einsatzpilot/types';
 
 import { fetchApiJson } from './api';
@@ -124,4 +126,19 @@ export async function transitionWorkdaySheetData(
     method: 'PATCH',
     json: input,
   });
+}
+
+export async function createFollowUpJobFromWorksheetRowData(
+  sheetId: string,
+  rowId: string,
+  input: WorksheetFollowUpJobCreateInput,
+) {
+  return fetchApiJson<WorksheetFollowUpJobCreateResponse>(
+    `/api/workday-sheets/${sheetId}/rows/${rowId}/review-actions/follow-up-job`,
+    {
+      authToken: await token(),
+      method: 'POST',
+      json: input,
+    },
+  );
 }

@@ -182,7 +182,7 @@ export function assertCanManageWorkdaySheets(authContext: RequestAuthContext) {
   assertRoleAllowed(
     authContext,
     workdaySheetManageRoles,
-    'Nur OWNER oder OFFICE duerfen Tagesblaetter planen, senden, pruefen oder archivieren.',
+    'Nur OWNER oder OFFICE duerfen Tagesblaetter planen, senden, pruefen, archivieren oder Folgeaktionen ausloesen.',
   );
 }
 

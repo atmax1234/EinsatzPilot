@@ -25,6 +25,8 @@ import type {
   WorkdaySheetStatusUpdateInput,
   WorkdaySheetTodayResponse,
   WorkdaySheetUpdateInput,
+  WorksheetFollowUpJobCreateInput,
+  WorksheetFollowUpJobCreateResponse,
 } from '@einsatzpilot/types';
 
 import { AuthenticatedGuard } from '../common/authenticated.guard';
@@ -169,6 +171,25 @@ export class WorkdaySheetsController {
       sheetId,
       rowId,
       authContext,
+    });
+  }
+
+  @Post(':sheetId/rows/:rowId/review-actions/follow-up-job')
+  createFollowUpJobFromRow(
+    @CurrentCompany() company: ActiveCompanyContext,
+    @CurrentUser() actor: AuthenticatedUser,
+    @CurrentAuthContext() authContext: RequestAuthContext,
+    @Param('sheetId') sheetId: string,
+    @Param('rowId') rowId: string,
+    @Body() payload: WorksheetFollowUpJobCreateInput,
+  ): Promise<WorksheetFollowUpJobCreateResponse> {
+    return this.workdaySheetsService.createFollowUpJobFromRow({
+      companyId: company.id,
+      sheetId,
+      rowId,
+      actor,
+      authContext,
+      payload,
     });
   }
 

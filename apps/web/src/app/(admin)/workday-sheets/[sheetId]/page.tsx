@@ -17,6 +17,7 @@ import {
   getWorkdaySheetStatusTone,
 } from '../../../../lib/workday-sheets';
 import { WorkdaySheetPrintButton } from '../workday-sheet-print-button';
+import { WorkdaySheetFollowUpJobForm } from '../workday-sheet-follow-up-job-form';
 import { WorkdaySheetRelationFields } from '../workday-sheet-relation-fields';
 import { WorkdaySheetRowSummary } from '../workday-sheet-row-summary';
 
@@ -31,6 +32,8 @@ const notices: Record<string, string> = {
   'status-submitted': 'Der Tageszettel wurde eingereicht.',
   'status-reviewed': 'Der Tageszettel wurde geprüft.',
   'status-archived': 'Der Tageszettel wurde archiviert.',
+  'follow-up-job-created': 'Der Folgeauftrag wurde erstellt und mit der Quellzeile protokolliert.',
+  'follow-up-job-existing': 'Der bereits erstellte Folgeauftrag wurde wiederverwendet.',
 };
 
 function formatDate(value: string) {
@@ -130,7 +133,7 @@ export default async function WorkdaySheetDetailPage({
               : sheet.status === 'SUBMITTED'
                 ? 'Eingereicht · wartet auf Office-Prüfung'
                 : sheet.status === 'REVIEWED'
-                  ? 'Geprüft · Inhalt vollständig gesperrt'
+                  ? 'Geprüft · Inhalt gesperrt, Folgeaktionen verfügbar'
                   : 'Archiviert · terminal und vollständig gesperrt'}
           </strong>
           <p>
@@ -138,7 +141,9 @@ export default async function WorkdaySheetDetailPage({
               ? 'Planzeilen und Zuweisung können nicht mehr verändert werden.'
               : sheet.status === 'SUBMITTED'
                 ? 'Die Ausführung kann nach dem Einreichen nicht mehr geändert werden.'
-                : 'Dieser Tageszettel dient nur noch als nachvollziehbarer Nachweis.'}
+                : sheet.status === 'REVIEWED'
+                  ? 'Planung und Ausführung bleiben unverändert; das Office kann einzelne Zeilen bewusst in normale Folgeaufträge überführen.'
+                  : 'Dieser Tageszettel dient nur noch als nachvollziehbarer Nachweis.'}
           </p>
         </section>
       ) : null}
@@ -311,6 +316,27 @@ export default async function WorkdaySheetDetailPage({
                     ) : null}
                   </>
                 )}
+                {canManage && row.reviewActions.length ? (
+                  <div className="worksheet-follow-up-result worksheet-screen-only">
+                    <strong>Erstellter Folgeauftrag</strong>
+                    {row.reviewActions.map((action) => (
+                      <div className="row-spread" key={action.id}>
+                        <span>
+                          {action.destinationJob.reference} · {action.destinationJob.title}
+                        </span>
+                        <Link
+                          className="secondary-link"
+                          href={`/jobs/${action.destinationJob.id}`}
+                        >
+                          Auftrag öffnen
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {canManage && sheet.status === 'REVIEWED' && options && !row.reviewActions.length ? (
+                  <WorkdaySheetFollowUpJobForm options={options} row={row} sheet={sheet} />
+                ) : null}
               </article>
             );
           })}

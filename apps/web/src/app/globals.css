@@ -716,6 +716,27 @@ code {
   white-space: pre-wrap;
 }
 
+.worksheet-follow-up-action,
+.worksheet-follow-up-result {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(196, 107, 45, 0.34);
+  border-radius: 18px;
+  background: rgba(247, 236, 218, 0.56);
+}
+
+.worksheet-follow-up-action h3,
+.worksheet-follow-up-action p:last-child,
+.worksheet-follow-up-result p:last-child {
+  margin-bottom: 0;
+}
+
+.worksheet-follow-up-result {
+  border-color: rgba(93, 146, 100, 0.42);
+  background: rgba(233, 245, 231, 0.62);
+}
+
 .worksheet-today-card {
   display: grid;
   gap: 18px;

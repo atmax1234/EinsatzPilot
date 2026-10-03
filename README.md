@@ -9,7 +9,7 @@ Hausmeister, cleaning, gardening, and facility-service workflows are its first c
 The repository currently provides a narrower working foundation:
 
 - pnpm TypeScript monorepo with NestJS API, Prisma/PostgreSQL, and Next.js web app.
-- Company, user, membership, role, team, job, activity, report, attachment, job-cost, customer-report snapshot, customer, address, object, object-area, item-category, item, and generic assignment models.
+- Company, user, membership, role, team, job, activity, report, attachment, job-cost, customer-report snapshot, daily worksheet/row, worksheet review-action, customer, address, object, object-area, item-category, item, and generic assignment models.
 - Tenant-scoped operational reads/writes and role checks for implemented flows.
 - Optional, tenant-validated job links to customers, addresses, objects, and object areas while preserving legacy customer/location text.
 - Explicit job lifecycle transitions.
@@ -21,9 +21,10 @@ The repository currently provides a narrower working foundation:
 - OWNER/OFFICE-only customer-report APIs and real web flows for job-grounded stable snapshots, explicit selection of approved execution reports and attachment metadata references, selected cost-line breakdowns, optional full backend-derived cost summaries, draft editing, review, approval, and archival.
 - Polished customer-report list/creation/detail presentation with status-specific source eligibility, explicit cost-scope explanations, separate office-only internal notes, and a clean A4-oriented browser-print view rendered only from stored snapshot data.
 - Company-owned daily worksheets with ordered free-text planning rows, optional customer/address/object/object-area/Job context, direct worker and/or team assignment, a `DRAFT -> SENT -> SUBMITTED -> REVIEWED -> ARCHIVED` lifecycle, actor/timestamp attribution, strict tenant-safe permissions, exact office filters, a worker-focused today flow, completion/context/review polish, and A4-oriented browser print.
+- Explicit OWNER/OFFICE follow-up Job creation from reviewed worksheet rows, using normal `PLANNED` Jobs, immutable source snapshots, actor/time/action audit, tenant-safe relation handling, atomic persistence, and duplicate-safe replay.
 - PostgreSQL container helpers and an API smoke flow.
 
-This is not yet the full operations platform. Customer-report data generation, customer-facing layout polish, browser-print readiness, and the hardened daily worksheet/team protocol flow are implemented. Deliberate worksheet-review conversion into follow-up Jobs/costs/reports, recurring service agreements, command-center metrics, automation, template/version models, customer delivery, invoice/offer preparation, and commercial document workflows remain planned. Browser print is not a generated PDF/export artifact. Authentication is development-only, file storage is local, report evidence references can outlive their original attachment files, customer-report revision/supersession and source refresh are absent, job-report revision/resubmission and cost correction history are not implemented, automated tests/linting are not configured, and mobile is only a scaffold.
+This is not yet the full operations platform. Customer-report data generation, customer-facing layout polish, browser-print readiness, the hardened daily worksheet/team protocol flow, and the first explicit reviewed-row follow-up Job action are implemented. Worksheet cost/report actions, recurring service agreements, command-center metrics, the future Communication Hub/Document Studio, automation/AI, template/version models, customer delivery, invoice/offer preparation, and commercial document workflows remain planned. Browser print is not a generated PDF/export artifact. Authentication is development-only, file storage is local, report evidence references can outlive their original attachment files, customer-report revision/supersession and source refresh are absent, job-report revision/resubmission and cost correction history are not implemented, automated tests/linting are not configured, and mobile is only a scaffold.
 
 ## Product direction
 
@@ -36,7 +37,7 @@ This is not yet the full operations platform. Customer-report data generation, c
 - Assignments are the control layer.
 - Items and materials are supporting context, not the main product.
 
-The implemented worksheet workflow starts when the office prepares a dated draft for a team or worker, combining optional directory/Job context with ad hoc instructions such as key handovers or meeting a tradesperson. The office can filter the worksheet overview by date, status, team, and worker. Sending locks planning and exposes the sheet only to its assigned worker or current team members. Workers use a focused today view to record actual text for each row and submit it; the office sees completion, review attribution, notes, locked states, and a browser-printable protocol. A later phase will let the office deliberately turn reviewed entries into governed follow-up Jobs, costs, reports, or customer-communication inputs. Recurring agreements will later feed this flexible daily planning instead of generating a rigid second Job system far ahead.
+The implemented worksheet workflow starts when the office prepares a dated draft for a team or worker, combining optional directory/Job context with ad hoc instructions such as key handovers or meeting a tradesperson. The office can filter the worksheet overview by date, status, team, and worker. Sending locks planning and exposes the sheet only to its assigned worker or current team members. Workers use a focused today view to record actual text for each row and submit it; the office sees completion, review attribution, notes, locked states, and a browser-printable protocol. After review, the office may now deliberately turn one row into one governed normal follow-up Job; the immutable action trail prevents duplicate Jobs on retry. Cost/report/customer-communication actions remain later work. Recurring agreements will later feed this flexible daily planning instead of generating a rigid second Job system far ahead.
 
 ## Documentation
 
@@ -49,6 +50,8 @@ Agents and contributors must start with [Agent Start Here](./docs/00_AGENT_START
 - [Roadmap](./docs/05_ROADMAP.md)
 - [Agent build rules](./docs/06_AGENT_BUILD_RULES.md)
 - [Recommended next steps](./docs/07_NEXT_STEPS.md)
+- [Project brain / historical handoff](./docs/einsatzpilot_project_brain.md)
+- [Long-term product vision](./docs/EINSATZPILOT_LONG_TERM_PRODUCT_VISION.md)
 - [Foundation checklist](./FOUNDATION_CHECKLIST.md)
 
 These docs distinguish implementation from plans. Update them after every meaningful model, API, permission, workflow, or setup change.
@@ -121,7 +124,7 @@ The smoke flow creates development data. Package `lint` and `test` scripts curre
 
 ## Development direction
 
-Directory Gate 1, backwards-compatible Job relation Phase 2, the supporting `ItemCategory`/`Item` Phase 3 foundation, generic Assignment Phase 4, Job Execution Reports / Worker Findings Phase 5, Job Cost Ledger Phase 6, Customer/Object Report Generator Foundation Phase 7, Customer Report Polish/PDF Readiness Phase 7B, Daily Worksheets / Team Protocols Foundation Phase 8, and Daily Worksheets Usability and Hardening Phase 8B are implemented. Browser print exists; actual PDF generation/export does not. The next recommended phase is exactly `Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports`. Recurring service agreements are Phase 10, the command center is Phase 11, and smart planning/AI/automation is Phase 12. Invoice issuance, payments, customer email sending, item movement, drag-and-drop, QR, and mobile remain deferred. Invoice, email, or PDF-export behavior requires later explicit approval. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
+Directory Gate 1, backwards-compatible Job relation Phase 2, the supporting `ItemCategory`/`Item` Phase 3 foundation, generic Assignment Phase 4, Job Execution Reports / Worker Findings Phase 5, Job Cost Ledger Phase 6, Customer/Object Report Generator Foundation Phase 7, Customer Report Polish/PDF Readiness Phase 7B, Daily Worksheets / Team Protocols Foundation Phase 8, Daily Worksheets Usability and Hardening Phase 8B, and the Phase 9 follow-up Job review action are implemented. Browser print exists; actual PDF generation/export does not. The next recommended phase is exactly `Phase 9B — Worksheet Review Actions: Cost and Report Links`. Recurring service agreements remain Phase 10, the command center Phase 11, and smart planning/AI/automation Phase 12. Communication Hub/email, Document Studio, invoice issuance, payments, item movement, drag-and-drop, QR, and mobile remain deferred. Invoice, email, AI, or PDF-export behavior requires later explicit approval. See [Recommended next steps](./docs/07_NEXT_STEPS.md).
 
 ## License
 

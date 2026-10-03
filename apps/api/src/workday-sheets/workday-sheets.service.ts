@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import {
   BadRequestException,
   ConflictException,
@@ -21,19 +23,30 @@ import type {
   WorkdaySheetStatusUpdateInput,
   WorkdaySheetTodayResponse,
   WorkdaySheetUpdateInput,
+  WorksheetFollowUpJobCreateInput,
+  WorksheetFollowUpJobCreateResponse,
+  WorksheetReviewActionSourceSnapshotV1,
 } from '@einsatzpilot/types';
 
+import {
+  buildJobCreatedActivity,
+  buildJobRelationChangedActivities,
+} from '../operations/job-activity-rules';
 import { OperationsLookupService } from '../operations/operations-lookup.service';
+import { mapJobListItem } from '../operations/operations-mapper';
 import {
   assertCanManageWorkdaySheets,
   assertCanReadWorkdaySheets,
 } from '../operations/operations-permissions';
+import { createJobReference } from '../operations/operations-reference';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   mapWorkdaySheetDetail,
   mapWorkdaySheetListItem,
+  mapWorksheetReviewAction,
   workdaySheetInclude,
   workdaySheetListInclude,
+  worksheetReviewActionInclude,
   type WorkdaySheetRecord,
 } from './workday-sheet-mapper';
 import {
@@ -48,6 +61,7 @@ import {
 } from './workday-sheet-payloads';
 import { WorkdaySheetRelationsService } from './workday-sheet-relations.service';
 import { assertWorkdaySheetStatusTransition } from './workday-sheet-status-rules';
+import { normalizeWorksheetFollowUpJobCreateInput } from './worksheet-review-action-payloads';
 
 function isOfficeRole(authContext: RequestAuthContext) {
   return (
@@ -61,6 +75,88 @@ function localCalendarDate(date = new Date()) {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+const followUpJobInclude = {
+  team: true,
+  customer: true,
+  address: true,
+  object: true,
+  objectArea: true,
+} as const;
+
+type FollowUpPayload = ReturnType<typeof normalizeWorksheetFollowUpJobCreateInput>;
+
+function actorName(actor: AuthenticatedUser) {
+  return actor.displayName ?? actor.email;
+}
+
+function sourceSnapshot(
+  sheet: WorkdaySheetRecord,
+  row: WorkdaySheetRecord['rows'][number],
+  capturedAt: Date,
+): WorksheetReviewActionSourceSnapshotV1 {
+  return {
+    schemaVersion: 1,
+    capturedAt: capturedAt.toISOString(),
+    sheet: {
+      id: sheet.id,
+      date: sheet.date.toISOString().slice(0, 10),
+      ...(sheet.title ? { title: sheet.title } : {}),
+      status: 'REVIEWED',
+      ...(sheet.team ? { team: { id: sheet.team.id, name: sheet.team.name } } : {}),
+      ...(sheet.worker
+        ? {
+            worker: {
+              id: sheet.worker.id,
+              name: sheet.worker.displayName ?? sheet.worker.email,
+              email: sheet.worker.email,
+            },
+          }
+        : {}),
+    },
+    row: {
+      id: row.id,
+      position: row.position,
+      ...(row.startTime ? { startTime: row.startTime } : {}),
+      ...(row.endTime ? { endTime: row.endTime } : {}),
+      plannedText: row.plannedText,
+      ...(row.actualText ? { actualText: row.actualText } : {}),
+      ...(row.notes ? { notes: row.notes } : {}),
+      ...(row.customer ? { customer: row.customer } : {}),
+      ...(row.address ? { address: row.address } : {}),
+      ...(row.object ? { object: row.object } : {}),
+      ...(row.objectArea ? { objectArea: row.objectArea } : {}),
+      ...(row.job ? { job: row.job } : {}),
+    },
+  };
+}
+
+function requestFingerprint(
+  payload: FollowUpPayload,
+  relationIds: {
+    teamId?: string;
+    customerId?: string;
+    addressId?: string;
+    objectId?: string;
+    objectAreaId?: string;
+  },
+) {
+  const serialized = JSON.stringify({
+    title: payload.title,
+    description: payload.description ?? null,
+    customerName: payload.customerName,
+    location: payload.location,
+    scheduledStart: payload.scheduledStart.toISOString(),
+    scheduledEnd: payload.scheduledEnd?.toISOString() ?? null,
+    priority: payload.priority,
+    teamId: relationIds.teamId ?? null,
+    customerId: relationIds.customerId ?? null,
+    addressId: relationIds.addressId ?? null,
+    objectId: relationIds.objectId ?? null,
+    objectAreaId: relationIds.objectAreaId ?? null,
+  });
+  return createHash('sha256').update(serialized).digest('hex');
 }
 
 @Injectable()
@@ -214,6 +310,81 @@ export class WorkdaySheetsService {
     }
 
     return { team, workerMembership };
+  }
+
+  private async resolveFollowUpJobRelations(
+    transaction: Prisma.TransactionClient,
+    companyId: string,
+    relationIds: {
+      teamId?: string;
+      customerId?: string;
+      addressId?: string;
+      objectId?: string;
+      objectAreaId?: string;
+    },
+  ) {
+    if (relationIds.objectAreaId && !relationIds.objectId) {
+      throw new BadRequestException('objectAreaId erfordert objectId.');
+    }
+
+    const [team, customer, address, object, objectArea] = await Promise.all([
+      relationIds.teamId
+        ? transaction.team.findFirst({
+            where: { id: relationIds.teamId, companyId },
+            select: { id: true, name: true },
+          })
+        : null,
+      relationIds.customerId
+        ? transaction.customer.findFirst({
+            where: { id: relationIds.customerId, companyId },
+            select: { id: true, name: true },
+          })
+        : null,
+      relationIds.addressId
+        ? transaction.address.findFirst({
+            where: { id: relationIds.addressId, companyId },
+            select: {
+              id: true,
+              label: true,
+              street: true,
+              postalCode: true,
+              city: true,
+              country: true,
+            },
+          })
+        : null,
+      relationIds.objectId
+        ? transaction.object.findFirst({
+            where: { id: relationIds.objectId, companyId },
+            select: { id: true, name: true },
+          })
+        : null,
+      relationIds.objectAreaId
+        ? transaction.objectArea.findFirst({
+            where: { id: relationIds.objectAreaId, companyId },
+            select: { id: true, objectId: true, name: true },
+          })
+        : null,
+    ]);
+
+    if (relationIds.teamId && !team) throw new NotFoundException('Team nicht gefunden.');
+    if (relationIds.customerId && !customer) {
+      throw new NotFoundException('Kunde wurde in der aktiven Firma nicht gefunden.');
+    }
+    if (relationIds.addressId && !address) {
+      throw new NotFoundException('Adresse wurde in der aktiven Firma nicht gefunden.');
+    }
+    if (relationIds.objectId && !object) {
+      throw new NotFoundException('Objekt wurde in der aktiven Firma nicht gefunden.');
+    }
+    if (relationIds.objectAreaId && !objectArea) {
+      throw new NotFoundException('Objektbereich wurde in der aktiven Firma nicht gefunden.');
+    }
+    if (objectArea && object && objectArea.objectId !== object.id) {
+      throw new BadRequestException('Der Objektbereich gehoert nicht zum ausgewaehlten Objekt.');
+    }
+
+    return { team, customer, address, object, objectArea };
   }
 
   async getWorkdaySheets(input: {
@@ -581,6 +752,188 @@ export class WorkdaySheetsService {
     return mapWorkdaySheetDetail(
       await this.getCompanySheetOrThrow(input.companyId, input.sheetId),
     );
+  }
+
+  async createFollowUpJobFromRow(input: {
+    companyId: string;
+    sheetId: string;
+    rowId: string;
+    actor: AuthenticatedUser;
+    authContext: RequestAuthContext;
+    payload: WorksheetFollowUpJobCreateInput;
+  }): Promise<WorksheetFollowUpJobCreateResponse> {
+    assertCanManageWorkdaySheets(input.authContext);
+    const payload = normalizeWorksheetFollowUpJobCreateInput(input.payload);
+
+    return this.prisma.$transaction(async (transaction) => {
+      const lockedSheet = await transaction.$queryRaw<Array<{ id: string }>>(
+        Prisma.sql`SELECT "id" FROM "WorkdaySheet" WHERE "id" = ${input.sheetId} AND "companyId" = ${input.companyId} FOR UPDATE`,
+      );
+      if (!lockedSheet.length) {
+        throw new NotFoundException('Tagesblatt wurde in der aktiven Firma nicht gefunden.');
+      }
+
+      const sheet = await transaction.workdaySheet.findFirst({
+        where: { id: input.sheetId, companyId: input.companyId },
+        include: workdaySheetInclude,
+      });
+      if (!sheet) {
+        throw new NotFoundException('Tagesblatt wurde in der aktiven Firma nicht gefunden.');
+      }
+      if (sheet.status !== 'REVIEWED') {
+        throw new BadRequestException(
+          'Folgeauftraege koennen nur aus geprueften Tageszetteln erstellt werden.',
+        );
+      }
+      const row = this.getRowOrThrow(sheet, input.rowId);
+      const relationIds = {
+        teamId:
+          payload.teamId === undefined ? sheet.teamId ?? undefined : payload.teamId ?? undefined,
+        customerId:
+          payload.customerId === undefined
+            ? row.customerId ?? undefined
+            : payload.customerId ?? undefined,
+        addressId:
+          payload.addressId === undefined
+            ? row.addressId ?? undefined
+            : payload.addressId ?? undefined,
+        objectId:
+          payload.objectId === undefined ? row.objectId ?? undefined : payload.objectId ?? undefined,
+        objectAreaId:
+          payload.objectAreaId === undefined
+            ? row.objectAreaId ?? undefined
+            : payload.objectAreaId ?? undefined,
+      };
+      const relations = await this.resolveFollowUpJobRelations(
+        transaction,
+        input.companyId,
+        relationIds,
+      );
+      const fingerprint = requestFingerprint(payload, relationIds);
+      const existingAction = row.reviewActions.find(
+        (action) => action.type === 'CREATE_FOLLOW_UP_JOB',
+      );
+
+      if (existingAction) {
+        if (existingAction.requestFingerprint !== fingerprint) {
+          throw new ConflictException(
+            'Diese Zeile hat bereits einen Folgeauftrag mit anderen Zieldaten.',
+          );
+        }
+        const existingJob = await transaction.job.findFirst({
+          where: { id: existingAction.destinationJobId, companyId: input.companyId },
+          include: followUpJobInclude,
+        });
+        if (!existingJob) {
+          throw new ConflictException('Der bereits erstellte Folgeauftrag ist nicht verfuegbar.');
+        }
+        return {
+          reviewAction: mapWorksheetReviewAction(existingAction),
+          job: mapJobListItem(existingJob),
+          replayed: true,
+        };
+      }
+
+      const completedAt = new Date();
+      const reference = createJobReference();
+      const job = await transaction.job.create({
+        data: {
+          companyId: input.companyId,
+          teamId: relations.team?.id,
+          customerId: relations.customer?.id,
+          addressId: relations.address?.id,
+          objectId: relations.object?.id,
+          objectAreaId: relations.objectArea?.id,
+          reference,
+          title: payload.title,
+          description: payload.description,
+          customerName: payload.customerName,
+          location: payload.location,
+          scheduledStart: payload.scheduledStart,
+          scheduledEnd: payload.scheduledEnd,
+          priority: payload.priority,
+          status: 'PLANNED',
+        },
+        include: followUpJobInclude,
+      });
+
+      const activities = [
+        buildJobCreatedActivity({ actor: input.actor, reference, title: payload.title }),
+        {
+          kind: 'NOTE' as const,
+          title: 'Aus geprueftem Tageszettel erstellt',
+          content: `Quelle: Tageszettel ${sheet.date.toISOString().slice(0, 10)}, Zeile ${row.position + 1} (${sheet.id}/${row.id}).`,
+          authorName: actorName(input.actor),
+        },
+        ...buildJobRelationChangedActivities({
+          actor: input.actor,
+          changes: [
+            {
+              relationLabel: 'Kundenverknuepfung',
+              next: relations.customer
+                ? { id: relations.customer.id, label: relations.customer.name }
+                : undefined,
+            },
+            {
+              relationLabel: 'Adressverknuepfung',
+              next: relations.address
+                ? {
+                    id: relations.address.id,
+                    label: `${relations.address.label}, ${relations.address.street}, ${relations.address.postalCode} ${relations.address.city}`,
+                  }
+                : undefined,
+            },
+            {
+              relationLabel: 'Objektverknuepfung',
+              next: relations.object
+                ? { id: relations.object.id, label: relations.object.name }
+                : undefined,
+            },
+            {
+              relationLabel: 'Objektbereichsverknuepfung',
+              next: relations.objectArea
+                ? { id: relations.objectArea.id, label: relations.objectArea.name }
+                : undefined,
+            },
+          ],
+        }),
+      ];
+      await transaction.jobActivity.createMany({
+        data: activities.map((activity) => ({
+          jobId: job.id,
+          kind: activity.kind,
+          title: activity.title,
+          content: activity.content,
+          authorName: activity.authorName,
+        })),
+      });
+
+      const snapshot = sourceSnapshot(sheet, row, completedAt);
+      const reviewAction = await transaction.worksheetReviewAction.create({
+        data: {
+          companyId: input.companyId,
+          sourceSheetId: sheet.id,
+          sourceRowId: row.id,
+          type: 'CREATE_FOLLOW_UP_JOB',
+          status: 'COMPLETED',
+          idempotencyKey: `worksheet-row:${row.id}:follow-up-job`,
+          requestFingerprint: fingerprint,
+          sourceSnapshot: JSON.parse(JSON.stringify(snapshot)) as Prisma.InputJsonValue,
+          destinationJobId: job.id,
+          destinationJobReference: job.reference,
+          destinationJobTitle: job.title,
+          createdByUserId: input.actor.id,
+          completedAt,
+        },
+        include: worksheetReviewActionInclude,
+      });
+
+      return {
+        reviewAction: mapWorksheetReviewAction(reviewAction),
+        job: mapJobListItem(job),
+        replayed: false,
+      };
+    });
   }
 
   async transitionStatus(input: {

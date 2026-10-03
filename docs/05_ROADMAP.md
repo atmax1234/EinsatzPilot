@@ -94,17 +94,21 @@ Phases are dependency order, not calendar promises. EinsatzPilot is a modular al
 
 **Implemented boundary:** The role-aware list accepts exact date/status/team/worker filters and shows clearer German status, assignment, row, and completion information. A dedicated today endpoint and `/workday-sheets/today` page give assigned workers current rows, actual-text entry, guarded submission, and a small upcoming-sent view. Row context, time ranges, completion, review actors/times/notes, and locked states are clearer. Detail has A4-oriented browser-print styling that excludes navigation, controls, and office-internal notes. Status-scoped transactional guards prevent row writes from racing past send/submit transitions. No Prisma model or lifecycle state changed.
 
-**Still not implemented:** Phase 9 conversion actions, generated PDF/export artifacts, recurring service agreements, generated future Jobs, automatic downstream records, command-board behavior, or mobile workflows.
+**Still not implemented by Phase 8B itself:** Phase 9 conversion actions, generated PDF/export artifacts, recurring service agreements, generated future Jobs, automatic downstream records, command-board behavior, or mobile workflows. The separate Phase 9 follow-up-Job slice described below is now implemented.
 
 ## Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports
 
-**Status:** Next recommended phase.
+**Status:** In progress. The follow-up Job foundation is implemented and verified; cost/report actions remain deferred to Phase 9B.
 
 **Goals:** Let OWNER/OFFICE deliberately act on reviewed worksheet rows by creating governed follow-up Jobs, attaching appropriate cost/report records, or preparing billable/customer-communication inputs. Retain immutable source identity/text snapshots, actor/time audit, downstream links, action status, and idempotency so retries and repeated review cannot duplicate records.
 
 **Dependencies:** Reviewed Phase 8 sheets/rows, existing Job lifecycle, Job cost/report rules, and tenant-safe source/destination validation.
 
-**Must not build yet:** Silent conversion during review, automatic customer messages, invoices/offers/payments, AI summaries, or a second Job lifecycle.
+**Implemented first slice:** `WorksheetReviewAction` records one `CREATE_FOLLOW_UP_JOB` action per reviewed source row. OWNER/OFFICE explicitly provides and previews normal Job fields; row relations are copied by default but may be deliberately changed or cleared with tenant validation. The source worksheet/row text and context are stored as a schema-versioned immutable JSON snapshot alongside actor/time, completion status, request fingerprint, and destination Job identity. Job, activity, and action are committed atomically. An identical retry returns the original result; a changed retry returns conflict. WORKER, non-reviewed/archived, wrong-row, and cross-tenant requests cannot create an action.
+
+**Next slice:** Phase 9B may add explicit cost-line and structured report/finding actions only when a tenant-owned target Job is selected or already established. Each action must use the existing cost/report models, validation, permissions, and lifecycle and must preserve the same provenance/idempotency guarantees.
+
+**Must not build yet:** Silent conversion during review, automatic customer messages, Communication Hub/email delivery, Document Studio, invoices/offers/payments, AI summaries, or a second Job lifecycle.
 
 ## Phase 10 — Service Agreements / Recurring Object Duties
 

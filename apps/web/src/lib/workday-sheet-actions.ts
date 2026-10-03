@@ -1,6 +1,7 @@
 'use server';
 
 import type {
+  JobPriority,
   WorkdaySheetRowCreateInput,
   WorkdaySheetStatusUpdateInput,
 } from '@einsatzpilot/types';
@@ -8,6 +9,7 @@ import { redirect } from 'next/navigation';
 
 import {
   addWorkdaySheetRowData,
+  createFollowUpJobFromWorksheetRowData,
   createWorkdaySheetData,
   deleteWorkdaySheetRowData,
   transitionWorkdaySheetData,
@@ -28,6 +30,23 @@ function optional(formData: FormData, key: string) {
 
 function nullable(formData: FormData, key: string) {
   return optional(formData, key) ?? null;
+}
+
+function isoDateTime(formData: FormData, key: string, requiredValue: boolean) {
+  const value = optional(formData, key);
+  if (!value && !requiredValue) return undefined;
+  if (!value) throw new Error(`${key} ist erforderlich.`);
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) throw new Error(`${key} ist kein gueltiges Datum.`);
+  return parsed.toISOString();
+}
+
+function jobPriority(formData: FormData): JobPriority {
+  const value = required(formData, 'priority', 'Priorität');
+  if (value === 'LOW' || value === 'NORMAL' || value === 'HIGH' || value === 'URGENT') {
+    return value;
+  }
+  throw new Error('Priorität ist ungültig.');
 }
 
 function rowInput(formData: FormData): WorkdaySheetRowCreateInput {
@@ -201,6 +220,39 @@ export async function transitionWorkdaySheetAction(
   } catch (error) {
     redirectAfterSheetAction(sheetId, returnTo, {
       error: error instanceof Error ? error.message : 'Status konnte nicht geaendert werden.',
+    });
+  }
+}
+
+export async function createFollowUpJobFromWorksheetRowAction(
+  sheetId: string,
+  rowId: string,
+  formData: FormData,
+) {
+  try {
+    const result = await createFollowUpJobFromWorksheetRowData(sheetId, rowId, {
+      title: required(formData, 'title', 'Auftragstitel'),
+      description: optional(formData, 'description'),
+      customerName: required(formData, 'customerName', 'Kundenname'),
+      location: required(formData, 'location', 'Einsatzort'),
+      scheduledStart: isoDateTime(formData, 'scheduledStart', true)!,
+      scheduledEnd: isoDateTime(formData, 'scheduledEnd', false),
+      priority: jobPriority(formData),
+      teamId: nullable(formData, 'teamId'),
+      customerId: nullable(formData, 'customerId'),
+      addressId: nullable(formData, 'addressId'),
+      objectId: nullable(formData, 'objectId'),
+      objectAreaId: nullable(formData, 'objectAreaId'),
+    });
+    redirectDetail(
+      sheetId,
+      result.ok && result.data
+        ? { notice: result.data.replayed ? 'follow-up-job-existing' : 'follow-up-job-created' }
+        : { error: result.error ?? 'Folgeauftrag konnte nicht erstellt werden.' },
+    );
+  } catch (error) {
+    redirectDetail(sheetId, {
+      error: error instanceof Error ? error.message : 'Folgeauftrag konnte nicht erstellt werden.',
     });
   }
 }

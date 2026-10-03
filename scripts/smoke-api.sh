@@ -20,6 +20,7 @@ PHASE7_MUTATED_AREA_NAME="Phase 7 Mutated Area ${SMOKE_SUFFIX}"
 WORKDAY_SHEET_TITLE="Phase 8 Workday Sheet ${SMOKE_SUFFIX}"
 UPDATED_WORKDAY_SHEET_TITLE="${WORKDAY_SHEET_TITLE} Updated"
 WORKDAY_SHEET_DATE="$(date +%F)"
+FOLLOW_UP_JOB_TITLE="Phase 9 Follow-up Job ${SMOKE_SUFFIX}"
 
 cleanup() {
   rm -rf "$TMP_DIR"
@@ -388,9 +389,21 @@ submitted_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_shee
 post_submit_actual_status="$(curl -sS -o "${TMP_DIR}/post-submit-actual.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"actualText":"Forbidden late actual edit"}')"
 worker_review_workday_status="$(curl -sS -o "${TMP_DIR}/worker-review-workday.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"status":"REVIEWED"}')"
 invalid_workday_archive_status="$(curl -sS -o "${TMP_DIR}/invalid-workday-archive.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"status":"ARCHIVED"}')"
+unreviewed_follow_up_status="$(curl -sS -o "${TMP_DIR}/unreviewed-follow-up.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/follow-up-job" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"${FOLLOW_UP_JOB_TITLE}\",\"customerName\":\"Phase 9 Customer\",\"location\":\"Teststrasse 42, Essen\",\"scheduledStart\":\"2026-04-23T08:00:00.000Z\",\"priority\":\"HIGH\"}")"
 reviewed_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/status" '{"status":"REVIEWED","reviewNotes":"Phase 8 office review complete"}' "$token")"
 reviewed_plan_update_status="$(curl -sS -o "${TMP_DIR}/reviewed-plan-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"plannedText":"Forbidden reviewed plan edit"}')"
+worker_follow_up_status="$(curl -sS -o "${TMP_DIR}/worker-follow-up.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/follow-up-job" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d "{\"title\":\"${FOLLOW_UP_JOB_TITLE}\",\"customerName\":\"Phase 9 Customer\",\"location\":\"Teststrasse 42, Essen\",\"scheduledStart\":\"2026-04-23T08:00:00.000Z\",\"priority\":\"HIGH\"}")"
+cross_follow_up_source_status="$(curl -sS -o "${TMP_DIR}/cross-follow-up-source.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/follow-up-job" -H "Authorization: Bearer ${other_token}" -H 'Content-Type: application/json' -d "{\"title\":\"${FOLLOW_UP_JOB_TITLE}\",\"customerName\":\"Phase 9 Customer\",\"location\":\"Teststrasse 42, Essen\",\"scheduledStart\":\"2026-04-23T08:00:00.000Z\",\"priority\":\"HIGH\"}")"
+cross_follow_up_destination_status="$(curl -sS -o "${TMP_DIR}/cross-follow-up-destination.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/follow-up-job" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"${FOLLOW_UP_JOB_TITLE}\",\"customerName\":\"Phase 9 Customer\",\"location\":\"Teststrasse 42, Essen\",\"scheduledStart\":\"2026-04-23T08:00:00.000Z\",\"priority\":\"HIGH\",\"customerId\":\"${other_customer_id}\"}")"
+follow_up_job="$(json_post "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/follow-up-job" "{\"title\":\"${FOLLOW_UP_JOB_TITLE}\",\"description\":\"Explicit Phase 9 review decision\",\"customerName\":\"Phase 9 Customer\",\"location\":\"Teststrasse 42, Essen\",\"scheduledStart\":\"2026-04-23T08:00:00.000Z\",\"scheduledEnd\":\"2026-04-23T10:00:00.000Z\",\"priority\":\"HIGH\"}" "$token")"
+follow_up_job_id="$(printf '%s' "$follow_up_job" | jq -r '.job.id')"
+follow_up_action_id="$(printf '%s' "$follow_up_job" | jq -r '.reviewAction.id')"
+follow_up_job_replay="$(json_post "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/follow-up-job" "{\"title\":\"${FOLLOW_UP_JOB_TITLE}\",\"description\":\"Explicit Phase 9 review decision\",\"customerName\":\"Phase 9 Customer\",\"location\":\"Teststrasse 42, Essen\",\"scheduledStart\":\"2026-04-23T08:00:00.000Z\",\"scheduledEnd\":\"2026-04-23T10:00:00.000Z\",\"priority\":\"HIGH\"}" "$token")"
+changed_follow_up_retry_status="$(curl -sS -o "${TMP_DIR}/changed-follow-up-retry.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}/review-actions/follow-up-job" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Changed ${FOLLOW_UP_JOB_TITLE}\",\"description\":\"Explicit Phase 9 review decision\",\"customerName\":\"Phase 9 Customer\",\"location\":\"Teststrasse 42, Essen\",\"scheduledStart\":\"2026-04-23T08:00:00.000Z\",\"scheduledEnd\":\"2026-04-23T10:00:00.000Z\",\"priority\":\"HIGH\"}")"
+workday_sheet_after_follow_up="$(json_get "${API_BASE}/workday-sheets/${workday_sheet_id}" "$token")"
+follow_up_job_detail="$(json_get "${API_BASE}/jobs/${follow_up_job_id}" "$token")"
 archived_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/status" '{"status":"ARCHIVED"}' "$token")"
+archived_follow_up_status="$(curl -sS -o "${TMP_DIR}/archived-follow-up.json" -w '%{http_code}' -X POST "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_second_row_id}/review-actions/follow-up-job" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d "{\"title\":\"Archived follow-up ${SMOKE_SUFFIX}\",\"customerName\":\"Phase 9 Customer\",\"location\":\"Teststrasse 42, Essen\",\"scheduledStart\":\"2026-04-24T08:00:00.000Z\",\"priority\":\"NORMAL\"}")"
 archived_actual_update_status="$(curl -sS -o "${TMP_DIR}/archived-actual-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"actualText":"Forbidden archived actual edit"}')"
 repeat_workday_archive_status="$(curl -sS -o "${TMP_DIR}/repeat-workday-archive.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"status":"ARCHIVED"}')"
 cross_workday_read_status="$(curl -sS -o "${TMP_DIR}/cross-workday-read.json" -w '%{http_code}' "${API_BASE}/workday-sheets/${workday_sheet_id}" -H "Authorization: Bearer ${other_token}")"
@@ -491,6 +504,10 @@ append_summary_json workerTodayWorkdaySheets "$worker_today_workday_sheets"
 append_summary_json unrelatedWorkerTodayWorkdaySheets "$unrelated_worker_today_workday_sheets"
 append_summary_json submittedWorkdaySheet "$submitted_workday_sheet"
 append_summary_json reviewedWorkdaySheet "$reviewed_workday_sheet"
+append_summary_json followUpJob "$follow_up_job"
+append_summary_json followUpJobReplay "$follow_up_job_replay"
+append_summary_json workdaySheetAfterFollowUp "$workday_sheet_after_follow_up"
+append_summary_json followUpJobDetail "$follow_up_job_detail"
 append_summary_json archivedWorkdaySheet "$archived_workday_sheet"
 
 append_summary_string crossStatus "$cross_status"
@@ -602,6 +619,15 @@ append_summary_string postSubmitActualStatus "$post_submit_actual_status"
 append_summary_string workerReviewWorkdayStatus "$worker_review_workday_status"
 append_summary_string invalidWorkdayArchiveStatus "$invalid_workday_archive_status"
 append_summary_string reviewedPlanUpdateStatus "$reviewed_plan_update_status"
+append_summary_string unreviewedFollowUpStatus "$unreviewed_follow_up_status"
+append_summary_string workerFollowUpStatus "$worker_follow_up_status"
+append_summary_string crossFollowUpSourceStatus "$cross_follow_up_source_status"
+append_summary_string crossFollowUpDestinationStatus "$cross_follow_up_destination_status"
+append_summary_string changedFollowUpRetryStatus "$changed_follow_up_retry_status"
+append_summary_string archivedFollowUpStatus "$archived_follow_up_status"
+append_summary_string followUpJobId "$follow_up_job_id"
+append_summary_string followUpActionId "$follow_up_action_id"
+append_summary_string followUpJobTitle "$FOLLOW_UP_JOB_TITLE"
 append_summary_string archivedActualUpdateStatus "$archived_actual_update_status"
 append_summary_string repeatWorkdayArchiveStatus "$repeat_workday_archive_status"
 append_summary_string crossWorkdayReadStatus "$cross_workday_read_status"
@@ -1214,7 +1240,63 @@ jq -s '
     crossWorkdayReadStatus: .crossWorkdayReadStatus
   }' "$SUMMARY_INPUT" > "${TMP_DIR}/phase8-summary.json"
 
-jq -s '.[0] + .[1]' "${TMP_DIR}/summary.json" "${TMP_DIR}/phase8-summary.json" > "${TMP_DIR}/combined-summary.json"
+jq -s '
+  from_entries |
+  . as $phase9 |
+  {
+    unreviewedFollowUpStatus: .unreviewedFollowUpStatus,
+    workerFollowUpStatus: .workerFollowUpStatus,
+    crossFollowUpSourceStatus: .crossFollowUpSourceStatus,
+    crossFollowUpDestinationStatus: .crossFollowUpDestinationStatus,
+    followUpJobCreated: (
+      (.followUpJob.replayed == false) and
+      (.followUpJob.reviewAction.id == .followUpActionId) and
+      (.followUpJob.reviewAction.type == "CREATE_FOLLOW_UP_JOB") and
+      (.followUpJob.reviewAction.status == "COMPLETED") and
+      (.followUpJob.reviewAction.sourceSheetId == .workdaySheetId) and
+      (.followUpJob.reviewAction.sourceRowId == .workdaySheetRowId) and
+      (.followUpJob.reviewAction.createdBy.id == .userId) and
+      (.followUpJob.reviewAction.destinationJob.id == .followUpJobId) and
+      (.followUpJob.job.id == .followUpJobId) and
+      (.followUpJob.job.title == .followUpJobTitle) and
+      (.followUpJob.job.status == "PLANNED") and
+      (.followUpJob.job.priority == "HIGH")
+    ),
+    followUpJobRelationsCopied: (
+      (.followUpJob.job.assignedTeam.id == .teamId) and
+      (.followUpJob.job.customerId == .customerId) and
+      (.followUpJob.job.addressId == .addressId) and
+      (.followUpJob.job.objectId == .objectId) and
+      (.followUpJob.job.objectAreaId == .areaId)
+    ),
+    followUpSourceSnapshotValid: (
+      (.followUpJob.reviewAction.sourceSnapshot.schemaVersion == 1) and
+      (.followUpJob.reviewAction.sourceSnapshot.capturedAt != null) and
+      (.followUpJob.reviewAction.sourceSnapshot.sheet.id == .workdaySheetId) and
+      (.followUpJob.reviewAction.sourceSnapshot.sheet.status == "REVIEWED") and
+      (.followUpJob.reviewAction.sourceSnapshot.row.id == .workdaySheetRowId) and
+      (.followUpJob.reviewAction.sourceSnapshot.row.plannedText == "Musterstr. 1 - Treppen, H.M.S. und Eingang pruefen") and
+      (.followUpJob.reviewAction.sourceSnapshot.row.actualText == "Treppen und Eingang gereinigt; Tuergriff locker festgestellt") and
+      (.followUpJob.reviewAction.sourceSnapshot.row.job.id == .jobId)
+    ),
+    followUpReplayIsIdempotent: (
+      (.followUpJobReplay.replayed == true) and
+      (.followUpJobReplay.reviewAction.id == .followUpActionId) and
+      (.followUpJobReplay.job.id == .followUpJobId)
+    ),
+    changedFollowUpRetryStatus: .changedFollowUpRetryStatus,
+    workdayDetailContainsOneAction: (
+      ([.workdaySheetAfterFollowUp.workdaySheet.rows[] | select(.id == $phase9.workdaySheetRowId) | .reviewActions[]] | length) == 1 and
+      ([.workdaySheetAfterFollowUp.workdaySheet.rows[] | select(.id == $phase9.workdaySheetRowId) | .reviewActions[0].id] | first) == .followUpActionId
+    ),
+    followUpJobActivityLogged: (
+      ([.followUpJobDetail.job.activity[].title] | index("Auftrag erstellt") != null) and
+      ([.followUpJobDetail.job.activity[].title] | index("Aus geprueftem Tageszettel erstellt") != null)
+    ),
+    archivedFollowUpStatus: .archivedFollowUpStatus
+  }' "$SUMMARY_INPUT" > "${TMP_DIR}/phase9-summary.json"
+
+jq -s '.[0] + .[1] + .[2]' "${TMP_DIR}/summary.json" "${TMP_DIR}/phase8-summary.json" "${TMP_DIR}/phase9-summary.json" > "${TMP_DIR}/combined-summary.json"
 mv "${TMP_DIR}/combined-summary.json" "${TMP_DIR}/summary.json"
 
 jq -e \
@@ -1414,7 +1496,19 @@ jq -e \
     .invalidWorkdayArchiveStatus == "400" and
     .reviewedWorkdaySheetValid == true and
     .reviewedPlanUpdateStatus == "400" and
+    .unreviewedFollowUpStatus == "400" and
+    .workerFollowUpStatus == "403" and
+    .crossFollowUpSourceStatus == "404" and
+    .crossFollowUpDestinationStatus == "404" and
+    .followUpJobCreated == true and
+    .followUpJobRelationsCopied == true and
+    .followUpSourceSnapshotValid == true and
+    .followUpReplayIsIdempotent == true and
+    .changedFollowUpRetryStatus == "409" and
+    .workdayDetailContainsOneAction == true and
+    .followUpJobActivityLogged == true and
     .archivedWorkdaySheetValid == true and
+    .archivedFollowUpStatus == "400" and
     .archivedActualUpdateStatus == "400" and
     .repeatWorkdayArchiveStatus == "400" and
     .crossWorkdayReadStatus == "404"

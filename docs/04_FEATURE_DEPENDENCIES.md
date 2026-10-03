@@ -26,8 +26,9 @@ Customer/object context + teams/workers + existing Jobs
         ├── Assigned-worker today flow + actual work + submit
         ├── Review/lock clarity + browser print
         └── Office review
-        └── Explicit reviewed-row conversion actions (Phase 9 next)
-            ├── Follow-up Jobs / costs / reports
+        └── Explicit reviewed-row conversion actions (Phase 9 in progress)
+            ├── Follow-up Jobs (implemented)
+            ├── Costs / reports (Phase 9B next)
             └── Billable/customer-communication inputs (preparation only)
 
 Reviewed job execution + object memory + job costs
@@ -60,7 +61,8 @@ ItemCategory + Item
 | Customer report polish / PDF readiness | **Implemented:** stored-snapshot presentation boundary, explicit customer/internal separation, source-scope UX, A4 browser print, honest attachment limitation | Claiming PDF export exists because browser print renders, or coupling invoice/email behavior into presentation work |
 | Daily worksheets / team protocols | **Implemented foundation:** company ownership, ordered free-text rows, optional tenant-safe relations, direct/team assignment, role-specific locking, explicit lifecycle, actors/timestamps, shared contracts, API, real UI, and smoke coverage | Renaming worksheets as Jobs, client-only assignment, or exposing draft/internal data to workers |
 | Worksheet usability / hardening | **Implemented:** role-safe exact filters, server-backed today query, derived completion counts, worker execution flow, context/review/lock presentation, browser print, and status-scoped transactional row writes | Client-only filtering, bypassing assignment visibility, treating print as PDF export, or adding downstream conversions during polish |
-| Worksheet review-to-follow-up | Reviewed sheets/rows with stable identity, explicit action model, provenance, idempotency, office control, and downstream validation | Silently creating records during review or duplicating a second Job system |
+| Worksheet review-to-follow-up Job | **Implemented first slice:** reviewed source only, explicit action record, immutable source snapshot, actor/time/status, atomic normal-Job creation, tenant-safe relations, idempotent replay, duplicate protection, office-only control | Silently creating records during review or duplicating a second Job system |
+| Worksheet review-to-cost/report | Implemented review-action provenance plus a selected tenant-owned target Job and reuse of existing cost/report validation, permissions, and lifecycle | Creating free-floating costs/reports or bypassing existing Job domains |
 | Service agreements / recurring object duties | Stable worksheet planning, customers/objects, schedule/timezone rules, templates, and exception semantics | Bulk-generating rigid Jobs far ahead or implementing browser-only reminders |
 | Command-center dashboard | Trusted worksheets, jobs, assignments, findings, costs, object issues, and server-backed metrics | Decorative cards, fake counts, or premature drag-and-drop |
 | Offer/invoice preparation | Reviewed job costs, customer/object context, immutable line snapshots, numbering/tax rules | Mutable issued documents or unsupported totals |
@@ -71,7 +73,7 @@ ItemCategory + Item
 
 A model or route alone is not a completed dependency. Before dependent UI begins, require reviewed ownership and lifecycle, shared contracts, runtime validation, tenant-safe references, service-level roles, useful errors, representative denial/cross-tenant verification, and updated documentation.
 
-The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator, Phase 7B presentation/print, Phase 8 daily worksheet/team protocol foundation, and Phase 8B worksheet usability/hardening meet this gate. The next default slice is exactly `Phase 9 — Worksheet Review → Follow-up Jobs / Costs / Reports`. Recurring service agreements move to Phase 10 and must feed worksheet planning instead of bulk-generating rigid future Jobs. Item movement is not a prerequisite and should remain optional until a concrete traceability workflow justifies it.
+The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator, Phase 7B presentation/print, Phase 8 daily worksheet/team protocol foundation, Phase 8B worksheet usability/hardening, and the Phase 9 follow-up Job action meet this gate. The next default slice is exactly `Phase 9B — Worksheet Review Actions: Cost and Report Links`. Recurring service agreements remain Phase 10 and must feed worksheet planning instead of bulk-generating rigid future Jobs. Item movement is not a prerequisite and should remain optional until a concrete traceability workflow justifies it.
 
 ## Phase 8 worksheet gate
 
@@ -79,7 +81,11 @@ Phase 8 supplies company-owned dated sheets and ordered rows, optional tenant-va
 
 ## Phase 8B worksheet usability gate
 
-Phase 8B adds exact list filtering, a role-aware today query and worker execution page, clearer completion/assignment/context/review/lock presentation, A4-oriented browser print, and status-scoped transactional protection around row writes. It adds no schema or lifecycle state and does not loosen the Phase 8 tenant, assignment, field, or internal-note boundaries. No Phase 9 conversion action, PDF artifact/export, recurring service agreement, or generated Job exists.
+Phase 8B adds exact list filtering, a role-aware today query and worker execution page, clearer completion/assignment/context/review/lock presentation, A4-oriented browser print, and status-scoped transactional protection around row writes. It adds no schema or lifecycle state and does not loosen the Phase 8 tenant, assignment, field, or internal-note boundaries. Phase 8B itself added no downstream action; the later Phase 9 follow-up action below remains explicit rather than automatic. No PDF artifact/export, recurring service agreement, or generated-future-Job system exists.
+
+## Phase 9 follow-up Job gate
+
+The first Phase 9 slice adds `WorksheetReviewAction` and one explicit `CREATE_FOLLOW_UP_JOB` action per reviewed row. It records immutable schema-versioned source context, actor/time/status, a deterministic idempotency identity, request fingerprint, and destination Job identity. The normal `Job` and its activity are created in the same transaction as the action. Same-input replay returns the original action/Job; changed replay conflicts. OWNER/OFFICE alone may invoke it, every source/destination relation is tenant-scoped, and reviewed/archived worksheet content remains locked. Costs, reports, billable items, customer messages, recurrence, PDF artifacts, and automation are not created by this slice.
 
 ## Phase 7 snapshot gate
 

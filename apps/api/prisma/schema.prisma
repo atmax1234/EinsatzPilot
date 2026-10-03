@@ -201,6 +201,14 @@ enum WorkdaySheetStatus {
   ARCHIVED
 }
 
+enum WorksheetReviewActionType {
+  CREATE_FOLLOW_UP_JOB
+}
+
+enum WorksheetReviewActionStatus {
+  COMPLETED
+}
+
 model Company {
   id             String          @id @default(cuid())
   name           String
@@ -224,6 +232,7 @@ model Company {
   customerReportSnapshots CustomerReportSnapshot[]
   workdaySheets  WorkdaySheet[]
   workdaySheetRows WorkdaySheetRow[]
+  worksheetReviewActions WorksheetReviewAction[]
 }
 
 model User {
@@ -250,6 +259,7 @@ model User {
   submittedWorkdaySheets WorkdaySheet[] @relation("WorkdaySheetSubmittedBy")
   reviewedWorkdaySheets  WorkdaySheet[] @relation("WorkdaySheetReviewedBy")
   archivedWorkdaySheets  WorkdaySheet[] @relation("WorkdaySheetArchivedBy")
+  createdWorksheetReviewActions WorksheetReviewAction[] @relation("WorksheetReviewActionCreatedBy")
 }
 
 model Membership {
@@ -334,6 +344,7 @@ model Job {
   costLines      JobCostLine[]
   customerReportSnapshots CustomerReportSnapshot[]
   workdaySheetRows WorkdaySheetRow[]
+  worksheetReviewActions WorksheetReviewAction[]
 
   @@index([companyId])
   @@index([teamId])
@@ -704,6 +715,7 @@ model WorkdaySheet {
   reviewedBy        User?              @relation("WorkdaySheetReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: Restrict)
   archivedBy        User?              @relation("WorkdaySheetArchivedBy", fields: [archivedByUserId], references: [id], onDelete: Restrict)
   rows              WorkdaySheetRow[]
+  reviewActions     WorksheetReviewAction[]
 
   @@index([companyId, date, status])
   @@index([companyId, teamId, date])
@@ -739,6 +751,7 @@ model WorkdaySheetRow {
   object       Object?      @relation(fields: [objectId], references: [id], onDelete: SetNull)
   objectArea   ObjectArea?  @relation(fields: [objectAreaId], references: [id], onDelete: SetNull)
   job          Job?         @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  reviewActions WorksheetReviewAction[]
 
   @@unique([sheetId, position])
   @@index([companyId, sheetId])
@@ -747,4 +760,34 @@ model WorkdaySheetRow {
   @@index([companyId, objectId])
   @@index([companyId, objectAreaId])
   @@index([companyId, jobId])
+}
+
+model WorksheetReviewAction {
+  id                      String                      @id @default(cuid())
+  companyId               String
+  sourceSheetId           String
+  sourceRowId             String
+  type                    WorksheetReviewActionType
+  status                  WorksheetReviewActionStatus @default(COMPLETED)
+  idempotencyKey          String                      @db.VarChar(191)
+  requestFingerprint      String                      @db.VarChar(64)
+  sourceSnapshot          Json
+  destinationJobId        String
+  destinationJobReference String
+  destinationJobTitle     String
+  createdByUserId         String
+  completedAt             DateTime
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @updatedAt
+  company                 Company                     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sourceSheet             WorkdaySheet                @relation(fields: [sourceSheetId], references: [id], onDelete: Restrict)
+  sourceRow               WorkdaySheetRow             @relation(fields: [sourceRowId], references: [id], onDelete: Restrict)
+  destinationJob          Job                         @relation(fields: [destinationJobId], references: [id], onDelete: Restrict)
+  createdBy               User                        @relation("WorksheetReviewActionCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([companyId, sourceRowId, type])
+  @@unique([companyId, idempotencyKey])
+  @@index([companyId, sourceSheetId, createdAt])
+  @@index([destinationJobId])
+  @@index([createdByUserId])
 }

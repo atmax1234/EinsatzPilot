@@ -61,11 +61,13 @@ Draft planning writes and assigned-worker actual-text writes now lock the parent
 
 Completion counts remain derived from nonempty row `actualText`; they are convenience response data rather than persisted workflow state. Browser-print styling is a web presentation of the same stored sheet and rows. It creates no PDF artifact, export record, downstream Job, cost, report, or customer message.
 
-## Planned models
+## Review actions and planned models
 
-### WorksheetReviewAction (Phase 9 direction)
+### WorksheetReviewAction (Phase 9 first slice implemented)
 
-An explicit, auditable, and idempotent office decision that turns a reviewed worksheet result into a follow-up Job, cost, report, billable-work candidate, or customer-communication input. Phase 8 must retain enough source identity for this later flow but must not silently create these downstream records.
+`WorksheetReviewAction` is a company-owned, append-only record of an explicit office decision on one reviewed worksheet row. The implemented type is `CREATE_FOLLOW_UP_JOB`; the implemented status is `COMPLETED`. One company/source-row/action-type tuple is unique. The action stores its source sheet and row, a schema-versioned immutable JSON snapshot of worksheet date/title/assignment plus row planned/actual text, times, notes, and linked context, creating actor, completion time, deterministic idempotency key, request fingerprint, and required destination Job plus copied Job reference/title.
+
+OWNER/OFFICE alone can invoke the action, and only while the sheet is `REVIEWED`. The destination is a normal existing `Job` in `PLANNED`, with its usual relation fields and `JobActivity`; it is not a worksheet-specific Job subtype. Job, activity, and action are one database transaction, so a failure persists none of them. Same-input replay resolves to the stored action/Job; a changed replay conflicts. `ARCHIVED` remains terminal for new actions. Cost/report/customer-communication action types are not implemented yet.
 
 ### ServiceAgreement / RecurringObjectDuty (Phase 10 direction)
 
@@ -93,6 +95,7 @@ Company
 ├── WorkdaySheet / TeamProtocol (Phase 8 foundation + Phase 8B usability implemented)
 │   ├── assigned Team / User
 │   └── WorkdaySheetRow ── Customer / Address / Object / ObjectArea / Job reference (optional)
+│       └── WorksheetReviewAction ── normal follow-up Job (Phase 9 first slice)
 ├── Job ── JobActivity
 │   ├── JobReport / Finding ── JobAttachment
 │   ├── JobCostLine ── Item reference (optional)

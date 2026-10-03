@@ -275,6 +275,50 @@ export type WorkdaySheetJobRelation = {
   title: string;
 };
 
+export type WorksheetReviewActionType = 'CREATE_FOLLOW_UP_JOB';
+
+export type WorksheetReviewActionStatus = 'COMPLETED';
+
+export type WorksheetReviewActionSourceSnapshotV1 = {
+  schemaVersion: 1;
+  capturedAt: string;
+  sheet: {
+    id: string;
+    date: string;
+    title?: string;
+    status: 'REVIEWED';
+    team?: WorkdaySheetTeamSummary;
+    worker?: WorkdaySheetActorSummary;
+  };
+  row: {
+    id: string;
+    position: number;
+    startTime?: string;
+    endTime?: string;
+    plannedText: string;
+    actualText?: string;
+    notes?: string;
+    customer?: JobCustomerRelation;
+    address?: JobAddressRelation;
+    object?: JobObjectRelation;
+    objectArea?: JobObjectAreaRelation;
+    job?: WorkdaySheetJobRelation;
+  };
+};
+
+export type WorksheetReviewActionItem = {
+  id: string;
+  sourceSheetId: string;
+  sourceRowId: string;
+  type: WorksheetReviewActionType;
+  status: WorksheetReviewActionStatus;
+  sourceSnapshot: WorksheetReviewActionSourceSnapshotV1;
+  destinationJob: WorkdaySheetJobRelation;
+  createdBy: WorkdaySheetActorSummary;
+  completedAt: string;
+  createdAt: string;
+};
+
 export type WorkdaySheetRowItem = {
   id: string;
   position: number;
@@ -293,6 +337,7 @@ export type WorkdaySheetRowItem = {
   object?: JobObjectRelation;
   objectArea?: JobObjectAreaRelation;
   job?: WorkdaySheetJobRelation;
+  reviewActions: WorksheetReviewActionItem[];
   createdAt: string;
   updatedAt: string;
 };
@@ -409,6 +454,27 @@ export type WorkdaySheetOptionsResponse = {
   objects: JobObjectRelation[];
   objectAreas: JobObjectAreaRelation[];
   jobs: WorkdaySheetJobRelation[];
+};
+
+export type WorksheetFollowUpJobCreateInput = {
+  title: string;
+  description?: string;
+  customerName: string;
+  location: string;
+  scheduledStart: string;
+  scheduledEnd?: string;
+  priority: JobPriority;
+  teamId?: string | null;
+  customerId?: string | null;
+  addressId?: string | null;
+  objectId?: string | null;
+  objectAreaId?: string | null;
+};
+
+export type WorksheetFollowUpJobCreateResponse = {
+  reviewAction: WorksheetReviewActionItem;
+  job: JobListItem;
+  replayed: boolean;
 };
 
 export type JobActivityItem = {

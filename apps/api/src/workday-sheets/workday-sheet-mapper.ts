@@ -4,6 +4,8 @@ import type {
   WorkdaySheetActorSummary,
   WorkdaySheetDetailResponse,
   WorkdaySheetListItem,
+  WorksheetReviewActionItem,
+  WorksheetReviewActionSourceSnapshotV1,
 } from '@einsatzpilot/types';
 
 const actorSelect = {
@@ -26,6 +28,13 @@ const workdaySheetListRelations = {
   reviewedBy: { select: actorSelect },
   archivedBy: { select: actorSelect },
 } as const;
+
+export const worksheetReviewActionInclude = {
+  destinationJob: {
+    select: { id: true, reference: true, title: true },
+  },
+  createdBy: { select: actorSelect },
+} satisfies Prisma.WorksheetReviewActionInclude;
 
 export const workdaySheetListInclude = {
   ...workdaySheetListRelations,
@@ -60,6 +69,10 @@ export const workdaySheetInclude = {
       job: {
         select: { id: true, reference: true, title: true },
       },
+      reviewActions: {
+        include: worksheetReviewActionInclude,
+        orderBy: { createdAt: 'asc' as const },
+      },
     },
     orderBy: [{ position: 'asc' as const }, { createdAt: 'asc' as const }],
   },
@@ -73,6 +86,10 @@ export type WorkdaySheetListRecord = Prisma.WorkdaySheetGetPayload<{
   include: typeof workdaySheetListInclude;
 }>;
 
+export type WorksheetReviewActionRecord = Prisma.WorksheetReviewActionGetPayload<{
+  include: typeof worksheetReviewActionInclude;
+}>;
+
 function mapActor(actor: {
   id: string;
   email: string;
@@ -82,6 +99,28 @@ function mapActor(actor: {
     id: actor.id,
     name: actor.displayName ?? actor.email,
     email: actor.email,
+  };
+}
+
+export function mapWorksheetReviewAction(
+  action: WorksheetReviewActionRecord,
+): WorksheetReviewActionItem {
+  return {
+    id: action.id,
+    sourceSheetId: action.sourceSheetId,
+    sourceRowId: action.sourceRowId,
+    type: action.type,
+    status: action.status,
+    sourceSnapshot:
+      action.sourceSnapshot as unknown as WorksheetReviewActionSourceSnapshotV1,
+    destinationJob: {
+      id: action.destinationJob.id,
+      reference: action.destinationJobReference,
+      title: action.destinationJobTitle,
+    },
+    createdBy: mapActor(action.createdBy),
+    completedAt: action.completedAt.toISOString(),
+    createdAt: action.createdAt.toISOString(),
   };
 }
 
@@ -137,6 +176,7 @@ export function mapWorkdaySheetDetail(sheet: WorkdaySheetRecord): WorkdaySheetDe
         object: row.object ?? undefined,
         objectArea: row.objectArea ?? undefined,
         job: row.job ?? undefined,
+        reviewActions: row.reviewActions.map(mapWorksheetReviewAction),
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
       })),
