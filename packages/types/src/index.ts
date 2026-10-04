@@ -723,16 +723,86 @@ export type JobDetailResponse = {
   };
 };
 
-export type DashboardResponse = {
-  summary: {
-    totalJobs: number;
-    scheduledJobs: number;
-    inProgressJobs: number;
-    completedJobs: number;
-    activeTeams: number;
+export type DashboardAudience = 'OFFICE' | 'WORKER';
+export type DashboardDataScope = 'COMPANY' | 'ASSIGNED_TO_ME';
+
+export type DashboardJobStatusCounts = {
+  total: number;
+  planned: number;
+  inProgress: number;
+  done: number;
+  canceled: number;
+};
+
+export type DashboardWorkdaySheetStatusCounts = {
+  total: number;
+  draft: number;
+  sent: number;
+  submitted: number;
+  reviewed: number;
+  archived: number;
+};
+
+export type DashboardCurrencyTotal = {
+  currency: string;
+  amount: number;
+};
+
+export type DashboardFollowUpActivityItem = {
+  id: string;
+  type: WorksheetReviewActionType;
+  completedAt: string;
+  sourceSheet: {
+    id: string;
+    date: string;
+    title?: string;
   };
-  highlightedJobs: JobListItem[];
-  teams: TeamListItem[];
+  sourceRow: {
+    id: string;
+    position: number;
+    plannedText: string;
+    actualText?: string;
+  };
+  destinationJob: WorkdaySheetJobRelation;
+  createdBy: WorkdaySheetActorSummary;
+};
+
+export type DashboardOfficeOverview = {
+  reviewQueue: {
+    jobReportsAwaitingReview: number;
+    submittedWorkdaySheetsAwaitingReview: number;
+  };
+  workforce: {
+    activeTeams: number;
+    activeAssignments: number;
+  };
+  activeServiceAgreementDefinitions: number;
+  currentMonthCosts: {
+    periodStart: string;
+    periodEndExclusive: string;
+    timeZone: 'UTC';
+    totals: DashboardCurrencyTotal[];
+  };
+  recentFollowUpActivity: DashboardFollowUpActivityItem[];
+};
+
+export type DashboardResponse = {
+  generatedAt: string;
+  audience: DashboardAudience;
+  today: {
+    date: string;
+    scope: DashboardDataScope;
+    counts: DashboardWorkdaySheetStatusCounts;
+    totalRows: number;
+    completedRows: number;
+    workdaySheets: WorkdaySheetListItem[];
+  };
+  jobs: {
+    scope: DashboardDataScope;
+    counts: DashboardJobStatusCounts;
+    actionableJobs: JobListItem[];
+  };
+  office?: DashboardOfficeOverview;
 };
 
 export type JobCreateInput = {

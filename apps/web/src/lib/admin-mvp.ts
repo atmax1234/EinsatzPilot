@@ -1,4 +1,4 @@
-import type { AuthenticatedSession, MembershipRole } from '@einsatzpilot/types';
+import type { MembershipRole } from '@einsatzpilot/types';
 
 type StatusTone = 'neutral' | 'warn' | 'accent';
 
@@ -7,12 +7,6 @@ export type StatCard = {
   value: string;
   note: string;
   tone?: StatusTone;
-};
-
-export type ActionCard = {
-  title: string;
-  description: string;
-  status: string;
 };
 
 const adminLabels: Record<MembershipRole, string> = {
@@ -27,54 +21,6 @@ export function getMembershipRoleLabel(role: MembershipRole | undefined) {
   }
 
   return adminLabels[role];
-}
-
-export function getDashboardStats(session: AuthenticatedSession): StatCard[] {
-  const companyLabel = session.activeCompany?.name ?? session.activeCompany?.slug ?? 'Ihre Firma';
-  const hasCompany = Boolean(session.activeCompany?.slug);
-
-  return [
-    {
-      label: 'Firmenkontext',
-      value: hasCompany ? 'Bereit' : 'Offen',
-      note: hasCompany
-        ? `${companyLabel} wird tenant-sicher im Admin-Bereich aufgeloest.`
-        : 'Die Session braucht noch einen aktiven Firmenkontext.',
-      tone: hasCompany ? 'accent' : 'warn',
-    },
-    {
-      label: 'Zugangsrolle',
-      value: session.membershipRole ?? 'Unbekannt',
-      note: `${getMembershipRoleLabel(session.membershipRole)} ist fuer die ersten Admin-Flows aktiv.`,
-    },
-    {
-      label: 'Sessionquelle',
-      value: session.source,
-      note: 'Die Web-App arbeitet bereits ueber die echte API-Session statt ueber lokale Mock-Daten.',
-    },
-  ];
-}
-
-export function getDashboardActions(session: AuthenticatedSession): ActionCard[] {
-  const companyLabel = session.activeCompany?.name ?? 'Ihre Firma';
-
-  return [
-    {
-      title: 'Dashboard scharf stellen',
-      description: `Naechster sinnvoller Schritt fuer ${companyLabel}: echte Kennzahlen fuer Jobs, Reviewbedarf und Aktivitaeten anbinden.`,
-      status: 'Als naechster API-Vertrag vorbereiten',
-    },
-    {
-      title: 'Auftragsbereich ausbauen',
-      description: 'Die Route steht jetzt als echte Arbeitsflaeche mit leeren Zustanden und klarer Struktur fuer Listen, Filter und Detailansicht.',
-      status: 'Bereit fuer Job-Modell',
-    },
-    {
-      title: 'Teamsteuerung vorbereiten',
-      description: 'Die Teamseite kann als naechstes Mitglieder, Rollen und Zuordnungen aus tenant-sicheren Endpunkten laden.',
-      status: 'Bereit fuer Team-Modell',
-    },
-  ];
 }
 
 export function getJobsStats(): StatCard[] {

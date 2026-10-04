@@ -41,7 +41,7 @@ Worksheet planning + customer/object responsibility + schedule/timezone rules
         └── Never bulk-generate rigid future Jobs
 
 Trusted worksheets + Jobs + assignments + reports + costs + agreement definitions
-└── Company command-center dashboard (Phase 11)
+└── Company command-center dashboard (Phase 11 implemented)
     └── Smart planning / automation / AI assistance (Phase 12)
 
 ItemCategory + Item
@@ -65,7 +65,7 @@ ItemCategory + Item
 | Worksheet review-to-follow-up Job | **Implemented first slice:** reviewed source only, explicit action record, immutable source snapshot, actor/time/status, atomic normal-Job creation, tenant-safe relations, idempotent replay, duplicate protection, office-only control | Silently creating records during review or duplicating a second Job system |
 | Worksheet review-to-cost/report | **Implemented:** reviewed source only, explicit selected tenant-owned target Job, normal cost/report records, immutable provenance, typed destinations, atomic creation, and reuse of existing cost/report validation, permissions, amounts, and lifecycle | Creating free-floating costs/reports or bypassing existing Job domains |
 | Service agreements / recurring object duties | **Implemented foundation:** company ownership, office-only permissions, lifecycle/audit, inclusive effective dates, IANA timezone, every-N cadence anchors, stable ordered duty rows, optional tenant-safe directory context, shared contracts, API, real UI, and smoke coverage | Bulk-generating rigid Jobs, silently creating worksheets, or implementing browser-only reminders |
-| Command-center dashboard | Trusted worksheets, jobs, assignments, findings, costs, object issues, and server-backed metrics | Decorative cards, fake counts, or premature drag-and-drop |
+| Command-center dashboard | **Implemented:** tenant-scoped request-time aggregation, explicit metric semantics, office/worker scopes, real workflow links, shared contracts, UI, and smoke proof | Decorative cards, fake counts, browser-authoritative totals, occurrence claims, or premature drag-and-drop |
 | Offer/invoice preparation | Reviewed job costs, customer/object context, immutable line snapshots, numbering/tax rules | Mutable issued documents or unsupported totals |
 | Smart planning/automation/AI | Trusted workflows, permissions, auditability, human review, measurable tasks | Autonomous consequential changes or AI replacing absent logic |
 | Optional movement history | Demonstrated traceability need, item identity, explicit event/correction semantics | Building warehouse workflows as the default product direction |
@@ -74,7 +74,7 @@ ItemCategory + Item
 
 A model or route alone is not a completed dependency. Before dependent UI begins, require reviewed ownership and lifecycle, shared contracts, runtime validation, tenant-safe references, service-level roles, useful errors, representative denial/cross-tenant verification, and updated documentation.
 
-The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator, Phase 7B presentation/print, Phase 8 daily worksheet/team protocol foundation, Phase 8B worksheet usability/hardening, all three Phase 9 review actions, and the Phase 10 service-agreement/recurring-duty definition foundation meet this gate. The next default phase is exactly `Phase 11 — Command Center Dashboard`. Agreement due evaluation, exceptions, and worksheet handoff remain separate later work; no agreement behavior may bulk-generate rigid future Jobs. Item movement remains optional until a concrete traceability workflow justifies it.
+The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator, Phase 7B presentation/print, Phase 8 daily worksheet/team protocol foundation, Phase 8B worksheet usability/hardening, all three Phase 9 review actions, the Phase 10 service-agreement/recurring-duty definition foundation, and the Phase 11 command-center read model meet this gate. Phase 12 is next, but its first slice must remain advisory, permission-safe, auditable, and human-controlled before any generative AI integration is considered. Agreement due evaluation, exceptions, and worksheet handoff remain separate later work; no agreement behavior may bulk-generate rigid future Jobs. Item movement remains optional until a concrete traceability workflow justifies it.
 
 ## Phase 8 worksheet gate
 
@@ -97,6 +97,12 @@ Phase 9B extends the same aggregate with one `CREATE_JOB_COST_LINE` and one `CRE
 Phase 10 supplies `ServiceAgreement` and `RecurringObjectDuty` as company-owned responsibility definitions, not execution records. It includes the `DRAFT -> ACTIVE -> INACTIVE -> ACTIVE` operational loop with terminal archival from draft/inactive, actor/timestamp attribution, inclusive effective dates, IANA timezone validation, stable duty positions, reusable planned text, first-due anchors, every-N day/week/month/year cadence, optional local time ranges, tenant-safe directory context, and OWNER/OFFICE-only API and web administration. Activation requires an active duty; active and archived definitions are locked. Smoke coverage proves lifecycle, validation, filters, role denial, cross-tenant safety, and absence of Job/worksheet generation.
 
 This gate deliberately excludes occurrence calculation/materialization, exception calendars, completion history, background scheduling, notifications, worker access, and agreement-to-worksheet handoff. A later handoff must remain explicit and produce an editable DRAFT worksheet close to execution; no agreement may silently create a worksheet or Job.
+
+## Phase 11 command-center gate
+
+Phase 11 uses one tenant-safe `GET /api/dashboard` projection and a shared response contract. OWNER/OFFICE see company-scoped today worksheet/completion status, Job status counts and actionable Jobs, pending Job-report and submitted-worksheet review demand, active teams/assignments, active agreement definitions, UTC-month cost totals separated by currency, and the latest completed explicit worksheet review actions. WORKER sees only assigned today worksheets and assigned Jobs; the entire office aggregate is structurally absent.
+
+Every count has a fixed meaning documented in the domain model and visible in the UI. Metrics are computed in the API from trusted existing records, not reconstructed authoritatively in the browser. The web page uses German operational wording, real empty/error states, and direct links into current workflows. The phase adds no schema, write command, cache, trend model, occurrence evaluator, scheduler, notification, drag-and-drop, generated work, invoice/payment, PDF export, Communication Hub, Document Studio, AI, or mobile behavior.
 
 ## Phase 7 snapshot gate
 

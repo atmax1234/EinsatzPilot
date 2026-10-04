@@ -3,7 +3,7 @@
 Use this to track when the system is actually ready to move out of foundation work.
 Be strict. “Kinda works” = not done.
 
-Assessment snapshot: checked items below were verified through 2026-10-03 against the live local setup where applicable.
+Assessment snapshot: checked items below were verified through 2026-10-04 against the live local setup where applicable.
 Verification now includes real PostgreSQL migrations, the API smoke flow, and web pages rendering live updated data from the database.
 
 Directory and Job relation snapshot: Customer, Address, Object, and ObjectArea foundation plus backwards-compatible Job relations were migrated and verified through the expanded live PostgreSQL smoke flow on 2026-07-19.
@@ -25,6 +25,8 @@ Daily worksheet usability/hardening snapshot: exact role-safe filters, a dedicat
 Worksheet review-action snapshot: Phase 9 and Phase 9B add one explicit OWNER/OFFICE `CREATE_FOLLOW_UP_JOB`, `CREATE_JOB_COST_LINE`, and `CREATE_JOB_REPORT` action per reviewed row through one provenance aggregate. All retain a schema-versioned immutable source snapshot, actor/time/status, required destination Job, typed downstream identity where applicable, atomic downstream/activity/action creation, tenant-safe source/target/Item/Team handling, deterministic replay, and changed-request conflict. The complete slice was verified with the expanded 233-check smoke flow on 2026-10-03. Billable/customer-message actions, automatic conversion, generated future Jobs, PDF export, email, and AI remain absent.
 
 Service-agreement snapshot: Phase 10 adds company-owned, OWNER/OFFICE-only service agreements and stable ordered recurring duties with lifecycle/audit, inclusive effective dates, IANA timezone, every-N cadence anchors, reusable planning text, optional tenant-safe directory context, real API/web administration, and an additive migration. The complete slice was verified with the expanded 263-check smoke flow on 2026-10-03. Due-occurrence evaluation, exceptions, worksheet handoff, background scheduling, worker access, and automatic Job/worksheet generation remain absent.
+
+Command-center snapshot: Phase 11 adds a tenant-safe, server-derived `GET /api/dashboard` read model and real German web command center without a schema change. OWNER/OFFICE receive company-wide worksheet/Job/review/workforce/agreement/cost/follow-up metrics with explicit definitions; WORKER receives only assigned worksheet and Job scope and no office aggregate. The complete slice was verified with the expanded 272-check smoke flow on 2026-10-04. No dashboard writes, trends, alerts, occurrence calculation, scheduler, generated work, drag-and-drop, AI, email, PDF export, billing, logistics, or mobile behavior was introduced.
 
 ---
 
@@ -394,7 +396,28 @@ You can do ALL of this without hacks:
 * [x] expanded smoke passes all 263 checks while preserving Phase 1–9B
 * [x] smoke proves cross-tenant denial, lifecycle/locking, active-duty activation eligibility, and zero automatic Job/worksheet creation
 * [x] no occurrence engine, exception calendar, completion history, worksheet handoff, scheduler, generated future Job, invoice/email/AI, or second Job system is introduced
-* [x] next recommended phase is Phase 11 — Command Center Dashboard
+* [x] Phase 11 — Command Center Dashboard is implemented as the next separate phase
+
+---
+
+## 27. Phase 11 Command Center Dashboard
+
+* [x] `GET /api/dashboard` derives authoritative metrics in the API from the active company context
+* [x] shared contracts define audience, data scope, Job/worksheet status counts, completion, office aggregates, per-currency costs, and recent follow-up items
+* [x] OWNER/OFFICE company scope and WORKER assigned worksheet/Job scope are explicit
+* [x] WORKER responses structurally omit review, workforce, agreement, cost, and follow-up office aggregates
+* [x] today's worksheet totals, status counts, rows, and completed rows use fixed documented semantics
+* [x] Job totals and actionable Jobs use stored lifecycle status and direct workflow links
+* [x] review demand counts `SUBMITTED`/`PENDING_REVIEW` Job reports and `SUBMITTED` worksheets
+* [x] active team, assignment, and agreement metrics use stored active status without due inference
+* [x] current-month cost totals use explicit UTC boundaries and remain separate per currency
+* [x] recent activity uses completed explicit worksheet review actions and links source/destination records
+* [x] `/dashboard` provides real German office/worker views with empty/error states and metric definitions
+* [x] no schema change or migration was needed; all sixteen migrations remain current
+* [x] expanded smoke passes all 272 checks while preserving Phase 1–10
+* [x] smoke proves contract shape, metric correctness, worker visibility, unrelated-worker isolation, cross-tenant isolation, cost semantics, and recent follow-ups
+* [x] no dashboard write command, fake data, occurrence engine, scheduling/generation, notification, drag-and-drop, AI, email, PDF export, billing, logistics, or mobile behavior is introduced
+* [x] next roadmap phase is Phase 12, beginning with a deterministic advisory planning slice before any external/generative AI
 
 ---
 

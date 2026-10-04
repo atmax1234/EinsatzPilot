@@ -122,11 +122,15 @@ Phases are dependency order, not calendar promises. EinsatzPilot is a modular al
 
 ## Phase 11 — Command Center Dashboard
 
+**Status:** Implemented and verified without a schema change, using shared contracts, tenant-safe server-side aggregation, role-specific response scopes, a real German web command center, and expanded smoke coverage.
+
 **Goals:** Provide a company-wide operational overview of worksheets, Jobs, teams, assignments, reports awaiting review, costs, objects, incidents, follow-up work, and recurring duties using trusted server-backed metrics.
 
 **Dependencies:** Stable upstream workflows and defined meanings for every count and status.
 
-**Must not build yet:** Drag-and-drop unless assignment commands, conflicts, permissions, and atomic updates are mature; no fake dashboard data.
+**Implemented boundary:** `GET /api/dashboard` derives today's worksheet/completion state and Job status counts for the caller's explicit scope. OWNER/OFFICE also receive pending report/submitted-sheet review demand, active team/assignment counts, active agreement-definition count, current UTC-month cost totals separated by currency, and the six newest completed explicit worksheet review actions. WORKER receives only directly/team-assigned non-draft worksheets for today and directly/team-assigned Jobs; office aggregates are absent. `/dashboard` explains metric meanings and links to existing workflows.
+
+**Still not implemented:** Dashboard write commands, saved layouts, trends/history, alerts/notifications, cache/background refresh, drag-and-drop, agreement due-occurrence calculation, exception calendars, worksheet or Job generation, scheduling automation, invoices/payments, generated PDF, Communication Hub/email, Document Studio, AI, logistics/item movement, QR, or mobile behavior. Agreement counts represent active definitions only.
 
 ## Phase 12 — Smart Planning / AI / Automation
 
@@ -134,7 +138,9 @@ Phases are dependency order, not calendar promises. EinsatzPilot is a modular al
 
 **Dependencies:** Trusted worksheets, Jobs, findings, reports, costs, customer context, and stable operational workflows.
 
-**Must not build yet:** Autonomous high-impact actions, opaque cross-tenant data use, or AI as a substitute for missing business rules.
+**Implementation order:** Start with deterministic, explainable, read-only planning suggestions and explicit human approval boundaries. External or generative AI integration is a later Phase 12 slice, after inputs, permissions, provenance, evaluation, cost/privacy controls, and failure behavior are specified.
+
+**Must not build:** Autonomous high-impact actions, opaque cross-tenant data use, AI as a substitute for missing business rules, or silent creation/mutation of Jobs, worksheets, customer messages, commercial documents, or agreement occurrences.
 
 ## Optional later infrastructure — Item Movement History
 

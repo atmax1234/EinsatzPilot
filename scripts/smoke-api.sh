@@ -486,6 +486,19 @@ phase10_jobs_after="$(json_get "${API_BASE}/jobs" "$token")"
 phase10_sheets_after="$(json_get "${API_BASE}/workday-sheets" "$token")"
 job_detail="$(json_get "${API_BASE}/jobs/${job_id}" "$token")"
 
+phase11_office_dashboard="$(json_get "${API_BASE}/dashboard" "$token")"
+phase11_worker_dashboard="$(json_get "${API_BASE}/dashboard" "$worker_token")"
+phase11_unrelated_worker_dashboard="$(json_get "${API_BASE}/dashboard" "$unrelated_worker_token")"
+phase11_other_dashboard="$(json_get "${API_BASE}/dashboard" "$other_token")"
+phase11_office_jobs="$(json_get "${API_BASE}/jobs" "$token")"
+phase11_other_jobs="$(json_get "${API_BASE}/jobs" "$other_token")"
+phase11_today="$(printf '%s' "$phase11_office_dashboard" | jq -r '.today.date')"
+phase11_today_sheets="$(json_get "${API_BASE}/workday-sheets?date=${phase11_today}" "$token")"
+phase11_submitted_sheets="$(json_get "${API_BASE}/workday-sheets?status=SUBMITTED" "$token")"
+phase11_active_agreements="$(json_get "${API_BASE}/service-agreements?status=ACTIVE" "$token")"
+phase11_teams="$(json_get "${API_BASE}/teams" "$token")"
+phase11_assignments="$(json_get "${API_BASE}/assignments" "$token")"
+
 : > "$SUMMARY_INPUT"
 
 append_summary_json health "$health"
@@ -613,6 +626,17 @@ append_summary_json archivedServiceAgreementDetail "$archived_service_agreement_
 append_summary_json archivedServiceAgreementList "$archived_service_agreement_list"
 append_summary_json phase10JobsAfter "$phase10_jobs_after"
 append_summary_json phase10SheetsAfter "$phase10_sheets_after"
+append_summary_json phase11OfficeDashboard "$phase11_office_dashboard"
+append_summary_json phase11WorkerDashboard "$phase11_worker_dashboard"
+append_summary_json phase11UnrelatedWorkerDashboard "$phase11_unrelated_worker_dashboard"
+append_summary_json phase11OtherDashboard "$phase11_other_dashboard"
+append_summary_json phase11OfficeJobs "$phase11_office_jobs"
+append_summary_json phase11OtherJobs "$phase11_other_jobs"
+append_summary_json phase11TodaySheets "$phase11_today_sheets"
+append_summary_json phase11SubmittedSheets "$phase11_submitted_sheets"
+append_summary_json phase11ActiveAgreements "$phase11_active_agreements"
+append_summary_json phase11Teams "$phase11_teams"
+append_summary_json phase11Assignments "$phase11_assignments"
 
 append_summary_string crossStatus "$cross_status"
 append_summary_string crossBody "$cross_body"
@@ -751,6 +775,7 @@ append_summary_string worksheetCostDescription "$WORKSHEET_COST_DESCRIPTION"
 append_summary_string worksheetReportActionId "$worksheet_report_action_id"
 append_summary_string worksheetJobReportId "$worksheet_job_report_id"
 append_summary_string worksheetReportSummary "$WORKSHEET_REPORT_SUMMARY"
+append_summary_string otherPhase7JobId "$other_phase7_job_id"
 append_summary_string archivedActualUpdateStatus "$archived_actual_update_status"
 append_summary_string repeatWorkdayArchiveStatus "$repeat_workday_archive_status"
 append_summary_string crossWorkdayReadStatus "$cross_workday_read_status"
@@ -949,7 +974,7 @@ jq -s '
   {
     healthOk: $health.ok,
     sessionAuthenticated: $session.authenticated,
-    dashboardTotalJobs: $dashboard.summary.totalJobs,
+    dashboardTotalJobs: $dashboard.jobs.counts.total,
     initialTeamCount: ($teams.teams | length),
     createdTeamName: $teamName,
     firstSeededJobId: $firstJobId,
@@ -1633,7 +1658,85 @@ jq -s '
     )
   }' "$SUMMARY_INPUT" > "${TMP_DIR}/phase10-summary.json"
 
-jq -s '.[0] + .[1] + .[2] + .[3]' "${TMP_DIR}/summary.json" "${TMP_DIR}/phase8-summary.json" "${TMP_DIR}/phase9-summary.json" "${TMP_DIR}/phase10-summary.json" > "${TMP_DIR}/combined-summary.json"
+jq -s '
+  from_entries |
+  . as $phase11 |
+  .phase11OfficeDashboard as $office |
+  .phase11WorkerDashboard as $worker |
+  .phase11UnrelatedWorkerDashboard as $unrelated |
+  .phase11OtherDashboard as $other |
+  {
+    commandCenterContractValid: (
+      ($office.audience == "OFFICE") and
+      ($office.generatedAt | type == "string") and
+      ($office.today.scope == "COMPANY") and
+      ($office.jobs.scope == "COMPANY") and
+      ($office.office | type == "object")
+    ),
+    commandCenterJobMetricsCorrect: (
+      ($office.jobs.counts.total == ($phase11.phase11OfficeJobs.jobs | length)) and
+      ($office.jobs.counts.planned == ([$phase11.phase11OfficeJobs.jobs[] | select(.status == "PLANNED")] | length)) and
+      ($office.jobs.counts.inProgress == ([$phase11.phase11OfficeJobs.jobs[] | select(.status == "IN_PROGRESS")] | length)) and
+      ($office.jobs.counts.done == ([$phase11.phase11OfficeJobs.jobs[] | select(.status == "DONE")] | length)) and
+      ($office.jobs.counts.canceled == ([$phase11.phase11OfficeJobs.jobs[] | select(.status == "CANCELED")] | length)) and
+      ([$office.jobs.actionableJobs[] | select(.status != "PLANNED" and .status != "IN_PROGRESS")] | length) == 0
+    ),
+    commandCenterTodayMetricsCorrect: (
+      ($office.today.counts.total == ($phase11.phase11TodaySheets.workdaySheets | length)) and
+      ($office.today.counts.draft == ([$phase11.phase11TodaySheets.workdaySheets[] | select(.status == "DRAFT")] | length)) and
+      ($office.today.counts.sent == ([$phase11.phase11TodaySheets.workdaySheets[] | select(.status == "SENT")] | length)) and
+      ($office.today.counts.submitted == ([$phase11.phase11TodaySheets.workdaySheets[] | select(.status == "SUBMITTED")] | length)) and
+      ($office.today.counts.reviewed == ([$phase11.phase11TodaySheets.workdaySheets[] | select(.status == "REVIEWED")] | length)) and
+      ($office.today.counts.archived == ([$phase11.phase11TodaySheets.workdaySheets[] | select(.status == "ARCHIVED")] | length)) and
+      ($office.today.totalRows == ([$phase11.phase11TodaySheets.workdaySheets[].rowCount] | add // 0)) and
+      ($office.today.completedRows == ([$phase11.phase11TodaySheets.workdaySheets[].completedRowCount] | add // 0))
+    ),
+    commandCenterOfficeMetricsCorrect: (
+      ($office.office.reviewQueue.jobReportsAwaitingReview >= 1) and
+      ($office.office.reviewQueue.submittedWorkdaySheetsAwaitingReview == ($phase11.phase11SubmittedSheets.workdaySheets | length)) and
+      ($office.office.workforce.activeTeams == ([$phase11.phase11Teams.teams[] | select(.status == "ACTIVE")] | length)) and
+      ($office.office.workforce.activeAssignments == ([$phase11.phase11Assignments.assignments[] | select(.status == "ACTIVE")] | length)) and
+      ($office.office.activeServiceAgreementDefinitions == ($phase11.phase11ActiveAgreements.serviceAgreements | length))
+    ),
+    commandCenterCostSemanticsExplicit: (
+      ($office.office.currentMonthCosts.timeZone == "UTC") and
+      ($office.office.currentMonthCosts.periodStart | test("T00:00:00.000Z$")) and
+      ($office.office.currentMonthCosts.periodEndExclusive | test("T00:00:00.000Z$")) and
+      ($office.office.currentMonthCosts.periodEndExclusive > $office.office.currentMonthCosts.periodStart) and
+      ([$office.office.currentMonthCosts.totals[].currency] | unique | length) == ($office.office.currentMonthCosts.totals | length) and
+      all($office.office.currentMonthCosts.totals[]; (.currency | test("^[A-Z]{3}$")) and (.amount | type == "number"))
+    ),
+    commandCenterRecentFollowUpsCorrect: (
+      ([$office.office.recentFollowUpActivity[].id] | index($phase11.followUpActionId) != null) and
+      ([$office.office.recentFollowUpActivity[].id] | index($phase11.worksheetCostActionId) != null) and
+      ([$office.office.recentFollowUpActivity[].id] | index($phase11.worksheetReportActionId) != null) and
+      ([$office.office.recentFollowUpActivity[].sourceSheet.id] | index($phase11.workdaySheetId) != null)
+    ),
+    commandCenterWorkerVisibilityCorrect: (
+      ($worker.audience == "WORKER") and
+      ($worker.today.scope == "ASSIGNED_TO_ME") and
+      ($worker.jobs.scope == "ASSIGNED_TO_ME") and
+      ($worker | has("office") | not) and
+      ([$worker.today.workdaySheets[].id] | index($phase11.workdaySheetId) != null) and
+      ([$worker.jobs.actionableJobs[].id] | index($phase11.jobId) != null) and
+      ([$worker.jobs.actionableJobs[].id] | index($phase11.linkedJob.job.id) == null)
+    ),
+    commandCenterUnrelatedWorkerIsolated: (
+      ($unrelated.audience == "WORKER") and
+      ($unrelated | has("office") | not) and
+      ([$unrelated.today.workdaySheets[].id] | index($phase11.workdaySheetId) == null) and
+      ([$unrelated.jobs.actionableJobs[].id] | index($phase11.jobId) == null)
+    ),
+    commandCenterTenantIsolationCorrect: (
+      ($other.audience == "OFFICE") and
+      ($other.jobs.counts.total == ($phase11.phase11OtherJobs.jobs | length)) and
+      ([$office.jobs.actionableJobs[].id] | index($phase11.otherPhase7JobId) == null) and
+      ([$other.jobs.actionableJobs[].id] | index($phase11.jobId) == null) and
+      ([$office.office.recentFollowUpActivity[].destinationJob.id] | index($phase11.otherPhase7JobId) == null)
+    )
+  }' "$SUMMARY_INPUT" > "${TMP_DIR}/phase11-summary.json"
+
+jq -s '.[0] + .[1] + .[2] + .[3] + .[4]' "${TMP_DIR}/summary.json" "${TMP_DIR}/phase8-summary.json" "${TMP_DIR}/phase9-summary.json" "${TMP_DIR}/phase10-summary.json" "${TMP_DIR}/phase11-summary.json" > "${TMP_DIR}/combined-summary.json"
 mv "${TMP_DIR}/combined-summary.json" "${TMP_DIR}/summary.json"
 
 jq -e \
@@ -1899,7 +2002,16 @@ jq -e \
     .archivedServiceAgreementUpdateStatus == "400" and
     .archivedRecurringDutyUpdateStatus == "400" and
     .repeatServiceAgreementArchiveStatus == "400" and
-    .serviceAgreementsCreateNoJobsOrSheets == true
+    .serviceAgreementsCreateNoJobsOrSheets == true and
+    .commandCenterContractValid == true and
+    .commandCenterJobMetricsCorrect == true and
+    .commandCenterTodayMetricsCorrect == true and
+    .commandCenterOfficeMetricsCorrect == true and
+    .commandCenterCostSemanticsExplicit == true and
+    .commandCenterRecentFollowUpsCorrect == true and
+    .commandCenterWorkerVisibilityCorrect == true and
+    .commandCenterUnrelatedWorkerIsolated == true and
+    .commandCenterTenantIsolationCorrect == true
   ' "${TMP_DIR}/summary.json" >/dev/null
 
 cat "${TMP_DIR}/summary.json"

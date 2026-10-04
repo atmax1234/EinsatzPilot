@@ -2,7 +2,7 @@
 
 ## Snapshot
 
-This reflects the repository implemented and verified on 2026-10-03. Checked-in code is the source of truth if it later differs.
+This reflects the repository implemented and verified on 2026-10-04. Checked-in code is the source of truth if it later differs.
 
 ## Session handoff
 
@@ -15,7 +15,9 @@ This reflects the repository implemented and verified on 2026-10-03. Checked-in 
 - OWNER/OFFICE can deliberately create one normal `PLANNED` follow-up Job, one Job-grounded cost line, and one structured Job report per reviewed row. Each action retains source snapshot, actor/time/status, idempotency identity, request fingerprint, required destination Job identity, and the typed downstream identity where applicable. No action is triggered automatically by review.
 - Phase 10 — Service Agreements / Recurring Object Duties Foundation is implemented with an additive migration, shared contracts/schema parsing, tenant-safe office-only API rules, real web administration, and expanded smoke coverage.
 - Service agreements define reusable responsibilities through explicit effective dates, IANA timezone, lifecycle, optional directory context, and stable ordered duty rows with cadence anchors. They do not calculate due occurrences or create worksheets or Jobs.
-- The next recommended phase is exactly `Phase 11 — Command Center Dashboard`.
+- Phase 11 — Command Center Dashboard is implemented without a schema change. `GET /api/dashboard` now returns tenant-safe, server-derived operational metrics with explicit office/worker scopes, and `/dashboard` is a real German command-center view with workflow links and honest empty/error states.
+- OWNER/OFFICE receive company-wide worksheet/Job metrics plus office review queues, active team/assignment counts, active agreement-definition count, current-UTC-month cost totals separated by currency, and recent explicit worksheet review actions. WORKER receives only directly/team-assigned non-draft worksheets for today and directly/team-assigned Jobs; all office-only metrics are omitted from the response.
+- The next roadmap phase is `Phase 12 — Smart Planning / AI / Automation`, but its first slice must remain advisory and human-controlled; external/generative AI is not implicitly authorized.
 - No worksheet billable-item/customer-message action, bulk action, undo/cancel, or automatic conversion exists.
 - Agreement exception calendars and a deliberate agreement-to-draft-worksheet handoff remain later work; bulk generation of rigid Jobs remains explicitly excluded.
 - Browser print exists. No generated PDF/export artifact, invoice issuance, payment, or email delivery exists today.
@@ -33,7 +35,7 @@ EinsatzPilot is a pnpm TypeScript monorepo:
 
 - **Auth:** development login, signed stateless token, session/logout responses, company-context lookup, and temporary development-header fallback. This is not production authentication.
 - **Common context:** authentication and active-company guards and current user/company decorators.
-- **Operations:** dashboard and company-member reads; team create/update/list and member add/remove; job create/update/list/detail, company-scoped relation options, and controlled status transitions.
+- **Operations:** role-aware command-center aggregation and company-member reads; team create/update/list and member add/remove; job create/update/list/detail, company-scoped relation options, and controlled status transitions.
 - **Directory:** tenant-scoped customer, address, object, and object-area reads and writes. `OWNER` and `OFFICE` can create/update; `WORKER` can read.
 - **Items:** tenant-scoped item-category and item reads and writes with strict kind, unit, tracking, quantity, lifecycle, category-relation, and custom-ID validation. `OWNER` and `OFFICE` can create/update; `WORKER` can read.
 - **Assignments:** tenant-scoped typed source/target links with entity existence checks, creator attribution, timing validation, explicit lifecycle rules, active-duplicate protection, and real-data entity options. `OWNER` and `OFFICE` can create/update; `WORKER` can read.
@@ -53,7 +55,9 @@ Implemented worksheet endpoints are `GET /api/workday-sheets` with optional exac
 
 Implemented service-agreement endpoints are `GET /api/service-agreements` with optional exact `status`, `customerId`, and `objectId` filters; `GET /api/service-agreements/options`; `POST /api/service-agreements`; `GET /api/service-agreements/:agreementId`; `PATCH /api/service-agreements/:agreementId`; `PATCH /api/service-agreements/:agreementId/status`; `POST /api/service-agreements/:agreementId/duties`; and `PATCH /api/service-agreements/:agreementId/duties/:dutyId`.
 
-Implemented operational queries are company-scoped. The smoke script checks that a different tenant receives `404` for a job read. This is useful proof, but there is no automated unit/integration suite.
+The command center is `GET /api/dashboard`. OWNER/OFFICE queries are company-wide. WORKER worksheet visibility mirrors the worksheet service: today only, non-draft, directly assigned or assigned through current team membership. WORKER Job metrics include Jobs linked through direct Job team membership, active user-to-Job assignment, or active team-to-Job assignment. The response never trusts a browser-supplied company ID and structurally omits office review, workforce, agreement, cost, and follow-up sections for WORKER.
+
+Dashboard metric meanings are fixed: today uses the API server's local calendar date; a completed worksheet row has stored nonempty `actualText`; open Jobs are `PLANNED` plus `IN_PROGRESS`; report review demand is `SUBMITTED` plus `PENDING_REVIEW`; worksheet review demand is `SUBMITTED`; active teams/assignments/agreements use their stored active status without time or due inference; costs sum stored `totalCost` by currency where `costDate` falls in the current UTC calendar month; and recent follow-up activity is the six newest completed explicit worksheet review actions. Active agreements are definitions only and are not presented as calculated occurrences.
 
 ## Prisma models
 
@@ -87,7 +91,7 @@ Sixteen migrations now cover identity, operations, the `SCHEDULED` to `PLANNED` 
 
 ## Shared types and schemas
 
-Shared types cover auth/session/company context; memberships; teams and members; jobs, optional directory relations, relation lookup options, activity, lifecycle and dashboard; structured reports and review; job cost lines and summaries; customer reports; workday sheets and review actions; service-agreement statuses, cadence units, agreement/duty inputs, list/detail/options responses, filters, actors, and relation summaries; attachments; directory records; items; and assignments. Shared enum lists/parsers include worksheet and agreement lifecycles plus duty cadence. Types do not exist for due occurrences, agreement exceptions, movements, bundles, specialized assets, vehicles, billing, payments, PDF exports, delivery, or automation.
+Shared types cover auth/session/company context; memberships; teams and members; jobs, optional directory relations, relation lookup options, activity, and lifecycle; structured reports and review; job cost lines and summaries; customer reports; workday sheets and review actions; service-agreement statuses, cadence units, agreement/duty inputs, list/detail/options responses, filters, actors, and relation summaries; attachments; directory records; items; and assignments. The dashboard contract now explicitly models audience, data scope, Job and worksheet status counts, worksheet completion, office review/workforce/agreement metrics, currency-separated UTC-month costs, and recent follow-up activity. Shared enum lists/parsers include worksheet and agreement lifecycles plus duty cadence. Types do not exist for due occurrences, agreement exceptions, movements, bundles, specialized assets, vehicles, billing, payments, PDF exports, delivery, or automation.
 
 ## Web state
 
@@ -97,6 +101,8 @@ The workday-sheet list is role-aware and supports date/status filters for every 
 
 The service-agreement surface is office-only. Its list supports status/customer/object filters, clear lifecycle/context/cadence summaries, and creation with real directory options. Detail supports definition edits in `DRAFT`/`INACTIVE`, explicit activate/deactivate/archive actions, ordered duty creation and editing, duty deactivation without deleting stable history, actor/time audit display, and clear locked-state messaging. It provides no due calendar, occurrence list, worksheet-copy action, background scheduler, or Job-generation control.
 
+The `/dashboard` route is a real server-backed command center. Office users see today's company worksheet/completion state, Jobs by status and actionable Job links, report and submitted-sheet review demand, active teams/assignments, active agreement definitions, explicit UTC-month per-currency cost totals, and recent worksheet follow-up activity. Workers see a reduced “Mein Arbeitstag” view based only on assigned worksheets and Jobs. The page defines its counting rules, links to existing workflows, and uses real empty/error states; it contains no fake values, scheduling commands, drag-and-drop, or agreement occurrence claims.
+
 The customer-report web surface is visible only to OWNER/OFFICE in navigation and job detail. The list exposes report number/title/type, status, recipient/customer, object/address, Job reference, creation time, approval time, and a direct action. Creation makes the selected Job and copied context explicit, explains status-specific report eligibility, distinguishes attachment metadata references from file bytes, separates selected cost details from the optional full grouped Job summary, and provides a live selection-count summary before creation. The backend remains authoritative for every submitted source ID.
 
 Detail now has a reusable customer-document boundary built only from stored `CustomerReportSnapshot` scalar/source/cost data. It presents recipient, customer, object/address/Job context, authored issue/findings/work/follow-up text, approved copied reports, evidence metadata references, cost detail/group summaries, report status, and stored approval time in a white A4-oriented layout. Browser print hides navigation, actions, forms, lifecycle controls, live actor projections, original-file controls, source diagnostics, and internal notes. Internal notes are structurally excluded from the presentation prop and displayed in a separate, clearly marked office-only panel. Original evidence links remain available only in office context and still depend on the locally stored attachment file.
@@ -105,7 +111,7 @@ The customer page supports customer/address listing, creation, and update. Objec
 
 Some copy in `admin-mvp.ts` is stale and describes already-connected areas as future work; verify pages and API calls rather than trusting that helper copy.
 
-There is no generated PDF/export artifact, Communication Hub/mailbox, customer delivery/email, Document Studio, invoice/payment, command board, drag-and-drop, movement, custody, bundle, QR, due-occurrence scheduler, agreement exception calendar, recurring work generation, mobile workflow, AI screen, or template/version model. Browser print is a presentation feature, not PDF export.
+There is no generated PDF/export artifact, Communication Hub/mailbox, customer delivery/email, Document Studio, invoice/payment, interactive command board, drag-and-drop, movement, custody, bundle, QR, due-occurrence scheduler, agreement exception calendar, recurring work generation, mobile workflow, AI screen, or template/version model. The command center is read-only operational visibility, not scheduling/control automation. Browser print is a presentation feature, not PDF export.
 
 ## Mobile readiness
 
@@ -113,9 +119,9 @@ There is no generated PDF/export artifact, Communication Hub/mailbox, customer d
 
 ## Verification and known gaps
 
-- PostgreSQL 16 is managed through the Podman helper in the verified local setup. The expanded smoke script covers directory CRUD, legacy and linked Job creation, Job relation updates/options/activity, item-category and item behavior, assignment create/list/detail/update/options, supported assignment shapes, duplicate/time validation, unchanged `Job.teamId`, legacy and structured reports, linked evidence, follow-up, office review, job-cost create/list/update/summary behavior, and the Phase 7 customer-report source, snapshot, lifecycle, permission, and tenant-isolation paths.
+- The repository retains Podman PostgreSQL helpers; the 2026-10-04 verification ran against a local Windows PostgreSQL 18 server. The expanded smoke script covers the complete Phase 1–11 API path.
 - Build/typecheck scripts exist. Lint/test scripts are placeholders and run no real checks.
-- On 2026-10-03, all sixteen migrations were applied/current on PostgreSQL 16; Prisma validation/generation, root typecheck, root production build, the full `pnpm smoke:api` flow, and `git diff --check` passed. The smoke flow passes 263 checks, preserving Phase 1–9B while additionally covering agreement options, validation, relation compatibility, tenant isolation, exact filters, internal-note preservation, duty cadence/order/time/effective-range rules, office/worker permissions, lifecycle and locking, active-duty activation eligibility, archival, and proof that agreement actions create neither Jobs nor worksheets.
+- On 2026-10-04, all sixteen migrations were applied/current on PostgreSQL 18; Prisma validation/generation, root typecheck, root production build, the full `pnpm smoke:api` flow, and `git diff --check` passed. The smoke flow passes 272 checks, preserving Phase 1–10 and additionally proving the command-center contract, aggregate correctness, role visibility, unrelated-worker isolation, cross-tenant isolation, explicit cost period/currency semantics, and recent follow-up activity.
 - Production auth, token revocation/refresh, hardened cookie configuration, production object storage, structured logging, and formal API docs are missing.
 - Movement, custody, bundle, specialized asset/vehicle, billing, notification, automation, and enterprise domains are missing.
 - Assignment source/target IDs are typed polymorphic references and therefore do not have direct database foreign keys. The service validates them on create/update; future delete/archive policies must preserve assignment readability.
@@ -129,6 +135,7 @@ There is no generated PDF/export artifact, Communication Hub/mailbox, customer d
 - Customer reports are job-grounded; there is no multi-job object-history aggregation or object-only generation.
 - Workday-sheet rows cannot yet be reordered, copied, templated, or bulk-created. A reviewed row can create at most one follow-up Job, one Job cost line, and one structured Job report action. There is no billable/customer-message action, bulk action, undo/cancel, multi-action-per-type flow, or correction/supersession workflow. Created cost lines and reports continue through their normal editable/review domains while immutable provenance remains. There is no calendar board, generated worksheet PDF/export, worksheet revision/correction lifecycle, per-row execution actor/time, offline/mobile flow, or general worksheet activity-event table. Today uses the API server's local calendar date because company timezone semantics are not modeled. Team-based read access follows current team membership rather than a frozen recipient snapshot.
 - Service agreements have no due-occurrence materialization or query, holiday/blackout/skip/one-off exception model, completion history, worksheet handoff, automatic scheduler, notification, Job generation, delete operation, or worker view. Monthly/yearly cadence rollover will need to preserve the original local calendar anchor and clamp missing calendar days when an evaluator is later specified and implemented; the current phase stores only definitions and does not execute this rule.
+- The dashboard is a request-time read model with no cache, background refresh, trend history, alerts, commands, or customizable widgets. “Today” still follows the API server's local date because company timezone is not modeled. Cost aggregation intentionally uses UTC-month boundaries and keeps currencies separate; it is not billing, accounting, tax, or profitability reporting.
 - Local boot is not yet documented as confusion-free in the foundation checklist.
 
 Do not convert roadmap intentions into “existing features” when updating this document.

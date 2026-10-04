@@ -1,10 +1,10 @@
 # EinsatzPilot — Project Brain / Agent Handoff
 
-_Last reconciled with the checked-in repository: 2026-10-03._
+_Last reconciled with the checked-in repository: 2026-10-04._
 
 This file is a consolidated handoff for coding agents working on **EinsatzPilot**. It describes the product vision, current implemented foundation, architecture direction, roadmap, known constraints, and founder decisions. Treat checked-in repository docs and code as the final source of truth when they differ from this file.
 
-Repository reconciliation: Phase 8B, Phase 9/9B, and Phase 10 are implemented. Reviewed rows support three explicit, independently idempotent actions through one provenance aggregate. Service agreements now provide office-managed recurring-responsibility definitions with lifecycle, effective dates, IANA timezone, cadence anchors, optional directory context, and stable duties, but no occurrence engine or generated work. The next recommended phase is Phase 11 Command Center Dashboard, not Communication Hub, Document Studio, AI, generated PDF, or generated future Jobs.
+Repository reconciliation: Phase 8B, Phase 9/9B, Phase 10, and Phase 11 are implemented. Reviewed rows support three explicit, independently idempotent actions through one provenance aggregate. Service agreements provide office-managed recurring-responsibility definitions but no occurrence engine or generated work. The command center now exposes tenant-safe, server-derived, role-scoped operational state with explicit metric meanings and no write commands. Phase 12 is next in bounded slices, beginning with deterministic advisory planning rather than Communication Hub, Document Studio, external/generative AI, generated PDF, or generated future Jobs.
 
 ---
 
@@ -65,7 +65,7 @@ Core concepts:
 - customer-facing report snapshots
 - follow-ups
 - service agreements / recurring-duty definitions
-- later: command dashboard, automation, AI, exports, invoices, mobile
+- command dashboard (implemented), then later planning assistance, automation, AI, exports, invoices, mobile
 
 The real operational loop:
 
@@ -642,7 +642,7 @@ Phase 8B — Daily Worksheets Usability and Hardening — implemented
 Phase 9  — Worksheet Review → Follow-up Jobs / Costs / Reports — implemented
 Phase 9B — Worksheet Review Actions: Cost and Report Links — implemented
 Phase 10 — Service Agreements / Recurring Object Duties — implemented
-Phase 11 — Command Center Dashboard
+Phase 11 — Command Center Dashboard — implemented
 Phase 12 — Smart Planning / AI / Automation
 ```
 
@@ -738,6 +738,28 @@ Service agreements are reusable responsibility definitions, not Jobs and not exe
 
 ---
 
+## 10B. Phase 11 — Command Center Dashboard
+
+Status: Implemented and verified.
+
+Implemented:
+
+- tenant-safe `GET /api/dashboard` request-time read model with shared contracts
+- company-scoped OWNER/OFFICE worksheet, Job, review, active team/assignment/agreement, cost, and recent follow-up metrics
+- assigned-only WORKER worksheet and Job scope, with the office aggregate omitted
+- fixed metric meanings: API-local today, nonempty actual-text completion, stored lifecycle status, explicit review states, stored active status, and UTC-month costs separated by currency
+- real German `/dashboard` page with direct workflow links, definitions, and empty/error states
+- smoke proof for aggregate correctness, role visibility, unrelated-worker isolation, and cross-tenant isolation
+
+Not implemented by Phase 11:
+
+- commands, drag-and-drop, scheduling, alerts, notifications, saved layouts, trends, or background refresh
+- agreement occurrence calculation or worksheet/Job generation
+- billing/accounting interpretation of operational cost totals
+- AI, Communication Hub/email, Document Studio, generated PDF, or mobile behavior
+
+---
+
 ## 11. What Is NOT Implemented Yet
 
 Not implemented / must not be claimed as existing:
@@ -759,7 +781,7 @@ Not implemented / must not be claimed as existing:
 - recurring due-occurrence evaluation and exception calendars
 - agreement-to-worksheet handoff or recurring scheduler
 - generated future jobs
-- command center dashboard
+- dashboard commands, trends, alerts, and saved layouts
 - drag-and-drop planning
 - AI summaries/replies
 - automation workflows
@@ -783,8 +805,9 @@ A realistic internal MVP should include:
 6. Worksheet usability polish — implemented in Phase 8B.
 7. Worksheet review follow-up actions — implemented in Phase 9/9B.
 8. Service-agreement/recurring-duty definitions — implemented in Phase 10.
-9. Production-ish deployment/auth/storage pass.
-10. UX cleanup/German labels/demo data.
+9. Read-only operational command center — implemented in Phase 11.
+10. Production-ish deployment/auth/storage pass.
+11. UX cleanup/German labels/demo data.
 
 Rough progress estimate from previous discussion:
 
@@ -908,13 +931,13 @@ Do not do these unless explicitly approved:
 
 ## 17. Suggested Next Safe Prompt Direction
 
-Phase 8B, all three Phase 9 review actions, and the Phase 10 agreement foundation are implemented. The next prompt is:
+Phase 8B, all three Phase 9 review actions, the Phase 10 agreement foundation, and the Phase 11 command center are implemented. The next prompt begins Phase 12 with:
 
 ```text
-Phase 11 — Command Center Dashboard
+Phase 12 — Smart Planning / Automation Foundation
 ```
 
-It must use tenant-safe, server-backed operational metrics with explicitly documented meanings and direct links into existing workflows. It must not fake data, add drag-and-drop, calculate agreement occurrences, generate worksheets/Jobs, or begin Phase 12 AI/automation.
+Its first slice must be deterministic, explainable, read-only, tenant-safe, office-only, and linked to existing source records. Do not begin with an AI provider or autonomous writes. It must not add drag-and-drop, calculate agreement occurrences, generate worksheets/Jobs, send notifications/messages, or bypass human decisions.
 
 ---
 
@@ -938,8 +961,9 @@ Phase 9 — Worksheet Review Actions: Follow-up Jobs First
 
 Next:
 
-- Phase 11 company command center using trusted existing data
-- no automatic recurrence execution, generated future Jobs, fake metrics, drag-and-drop, or Phase 12 AI
+- deterministic Phase 12 planning insights over trusted existing data
+- no external/generative AI until permissions, provenance, privacy, evaluation, cost, and failure behavior are specified
+- no automatic recurrence execution, generated future Jobs, fake insights, drag-and-drop, notifications, or autonomous writes
 
 ---
 

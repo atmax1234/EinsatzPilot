@@ -6,7 +6,7 @@ This document locks in the agreed long-term product direction for EinsatzPilot. 
 
 Detailed workflows, priorities, data models, UI designs, pricing limits, and delivery phases must be specified separately before implementation.
 
-Repository checkpoint (2026-10-03): the explicit worksheet review actions and the Phase 10 service-agreement/recurring-duty foundation are implemented. Agreements store reusable office-managed responsibility definitions, effective dates, IANA timezone, cadence anchors, lifecycle, and optional customer/object context without calculating occurrences or generating worksheets or Jobs. The company command center is next. Communication Hub, Document Studio, email delivery, and AI assistance remain future vision and are not authorized by this checkpoint.
+Repository checkpoint (2026-10-04): the explicit worksheet review actions, Phase 10 service-agreement/recurring-duty foundation, and Phase 11 read-only command center are implemented. Agreements store reusable office-managed responsibility definitions without calculating occurrences or generating worksheets or Jobs. The command center derives tenant-safe role-scoped operational metrics on the server and adds no commands or automation. Phase 12 begins with deterministic advisory planning; Communication Hub, Document Studio, email delivery, and external/generative AI assistance remain future slices and are not authorized by this checkpoint.
 
 ## Product vision: a company operating system
 
