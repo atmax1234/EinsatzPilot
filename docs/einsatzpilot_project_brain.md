@@ -4,7 +4,7 @@ _Last reconciled with the checked-in repository: 2026-10-04._
 
 This file is a consolidated handoff for coding agents working on **EinsatzPilot**. It describes the product vision, current implemented foundation, architecture direction, roadmap, known constraints, and founder decisions. Treat checked-in repository docs and code as the final source of truth when they differ from this file.
 
-Repository reconciliation: Phase 8B, Phase 9/9B, Phase 10, and Phase 11 are implemented. Reviewed rows support three explicit, independently idempotent actions through one provenance aggregate. Service agreements provide office-managed recurring-responsibility definitions but no occurrence engine or generated work. The command center now exposes tenant-safe, server-derived, role-scoped operational state with explicit metric meanings and no write commands. Phase 12 is next in bounded slices, beginning with deterministic advisory planning rather than Communication Hub, Document Studio, external/generative AI, generated PDF, or generated future Jobs.
+Repository reconciliation: Phase 8B, Phase 9/9B, Phase 10, Phase 11, and Phase 12 are implemented. Reviewed rows support three explicit, independently idempotent actions through one provenance aggregate. Service agreements provide office-managed recurring-responsibility definitions but no occurrence engine or generated work. The command center exposes tenant-safe, server-derived, role-scoped operational state with explicit metric meanings and no write commands. Phase 12 adds a responsive worker daily web flow, assignment-scoped Jobs, and a finding/evidence action that reuses existing JobReport/JobAttachment records; it does not add worksheet-row attachments or a native app. Phase 13 Office Review Completion is next, followed by MVP proof and production hardening. Communication Hub, Document Studio, external/generative AI, generated PDF, and generated future Jobs remain later.
 
 ---
 
@@ -65,7 +65,7 @@ Core concepts:
 - customer-facing report snapshots
 - follow-ups
 - service agreements / recurring-duty definitions
-- command dashboard (implemented), then later planning assistance, automation, AI, exports, invoices, mobile
+- command dashboard and responsive worker web flow (implemented), then office-review completion, MVP proof, production hardening, and only later planning assistance, automation, AI, exports, invoices, or native mobile
 
 The real operational loop:
 
@@ -74,7 +74,7 @@ Customer / Verwaltung / business context
 → Object / address / work location
 → Office plans daily worksheet or job
 → Worker/team executes work
-→ Worker records actual work, findings, notes, photos
+→ Worker records actual work on the worksheet and Job-grounded findings/evidence separately
 → Office reviews
 → Costs / follow-ups / reports / customer proof are created
 → Later: billing, communication, analytics, automation
@@ -643,7 +643,10 @@ Phase 9  — Worksheet Review → Follow-up Jobs / Costs / Reports — implement
 Phase 9B — Worksheet Review Actions: Cost and Report Links — implemented
 Phase 10 — Service Agreements / Recurring Object Duties — implemented
 Phase 11 — Command Center Dashboard — implemented
-Phase 12 — Smart Planning / AI / Automation
+Phase 12 — Worker Daily Experience — implemented responsive web flow
+Phase 13 — Office Review Completion
+Phase 14 — End-to-End MVP Proof
+Phase 15 — Production Hardening
 ```
 
 Recurring service agreements are not deleted from the vision. They are moved later.
@@ -760,6 +763,30 @@ Not implemented by Phase 11:
 
 ---
 
+## 10C. Phase 12 — Worker Daily Experience
+
+Status: Implemented and verified without a schema change.
+
+Implemented:
+
+- responsive German WORKER shell focused on daily work
+- today worksheet execution with actual-text entry, lifecycle-guarded submission, upcoming sheets, and assigned open Jobs
+- assignment-scoped WORKER Job list/detail instead of company-wide office administration
+- shared worker Job access from direct team membership, active user/team assignment, or a linked assigned sent-or-later worksheet
+- separate actual-work and finding/evidence actions
+- normal structured JobReport plus optional report-linked JobAttachment for the combined worker finding form
+- worker-safe report/attachment/photo reads and safe not-found behavior for unrelated workers
+- worksheet-only contribution ends when the sheet leaves `SENT`; later read access remains
+
+Not implemented by Phase 12:
+
+- worksheet-row attachments or a parallel finding system
+- object/address-only findings without a Job
+- native mobile, offline mode, background sync, resilient upload queue, or push notifications
+- automatic follow-up, status mutation, billing, email, PDF export, AI, recurrence execution, or generated work
+
+---
+
 ## 11. What Is NOT Implemented Yet
 
 Not implemented / must not be claimed as existing:
@@ -769,7 +796,7 @@ Not implemented / must not be claimed as existing:
 - production object/file storage
 - formal test suite beyond smoke scripts
 - real lint/test enforcement
-- mobile app workflows
+- native mobile app workflows
 - offline worker app
 - generated PDF export
 - customer portal
@@ -920,24 +947,24 @@ Do not do these unless explicitly approved:
 - Do not make worksheets a second full Job system.
 - Do not generate recurring jobs far ahead as the main planning model.
 - Do not silently create downstream jobs/costs/reports from worksheet rows.
-- Do not implement invoices/payments/email/AI/mobile/command board as side effects of a different phase.
+- Do not implement invoices/payments/email/AI/native mobile/command board as side effects of a different phase.
 - Do not weaken tenant isolation.
 - Do not show workers internal notes.
 - Do not claim PDF export exists when only browser print exists.
-- Do not claim mobile is implemented.
+- Do not claim native/offline mobile is implemented because the worker web flow is responsive.
 - Do not claim all industries are already supported.
 
 ---
 
 ## 17. Suggested Next Safe Prompt Direction
 
-Phase 8B, all three Phase 9 review actions, the Phase 10 agreement foundation, and the Phase 11 command center are implemented. The next prompt begins Phase 12 with:
+Phase 8B, all three Phase 9 review actions, the Phase 10 agreement foundation, the Phase 11 command center, and the Phase 12 worker daily web experience are implemented. The next prompt begins:
 
 ```text
-Phase 12 — Smart Planning / Automation Foundation
+Phase 13 — Office Review Completion
 ```
 
-Its first slice must be deterministic, explainable, read-only, tenant-safe, office-only, and linked to existing source records. Do not begin with an AI provider or autonomous writes. It must not add drag-and-drop, calculate agreement occurrences, generate worksheets/Jobs, send notifications/messages, or bypass human decisions.
+It should make submitted/reviewed worksheets, linked findings/evidence, explicit action outcomes, and handled/unhandled row state clear to OWNER/OFFICE. It must reuse existing WorksheetReviewAction, JobReport, JobAttachment, JobCostLine, and Job records; preserve idempotency and locking; and add no automatic conversion, billing, email, AI, occurrence calculation, generated work, PDF export, or parallel review system.
 
 ---
 
@@ -961,8 +988,9 @@ Phase 9 — Worksheet Review Actions: Follow-up Jobs First
 
 Next:
 
-- deterministic Phase 12 planning insights over trusted existing data
-- no external/generative AI until permissions, provenance, privacy, evaluation, cost, and failure behavior are specified
+- Phase 13 office review completion over existing submitted/reviewed worksheet, report, evidence, cost, and review-action data
+- Phase 14 end-to-end MVP proof, then Phase 15 production hardening
+- no external/generative AI until the MVP is proven and hardened and permissions, provenance, privacy, evaluation, cost, and failure behavior are separately specified
 - no automatic recurrence execution, generated future Jobs, fake insights, drag-and-drop, notifications, or autonomous writes
 
 ---

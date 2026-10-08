@@ -132,15 +132,39 @@ Phases are dependency order, not calendar promises. EinsatzPilot is a modular al
 
 **Still not implemented:** Dashboard write commands, saved layouts, trends/history, alerts/notifications, cache/background refresh, drag-and-drop, agreement due-occurrence calculation, exception calendars, worksheet or Job generation, scheduling automation, invoices/payments, generated PDF, Communication Hub/email, Document Studio, AI, logistics/item movement, QR, or mobile behavior. Agreement counts represent active definitions only.
 
-## Phase 12 — Smart Planning / AI / Automation
+## Phase 12 — Worker Daily Experience
 
-**Goals:** Assist with German customer replies, report summaries, planning suggestions, job creation from messages, follow-up suggestions, and offer/invoice drafting. Add event-driven automation only with idempotency, permissions, auditability, and human review.
+**Status:** Implemented and verified without a schema migration. This is a mobile-friendly web flow; native mobile remains deferred.
 
-**Dependencies:** Trusted worksheets, Jobs, findings, reports, costs, customer context, and stable operational workflows.
+**Goals:** Let a worker quickly understand today's assigned work, enter actual execution, submit a complete worksheet, open assigned Jobs, and report a finding with optional evidence through clear German interfaces.
 
-**Implementation order:** Start with deterministic, explainable, read-only planning suggestions and explicit human approval boundaries. External or generative AI integration is a later Phase 12 slice, after inputs, permissions, provenance, evaluation, cost/privacy controls, and failure behavior are specified.
+**Implemented boundary:** WORKER navigation is reduced to the daily flow, assigned Jobs, assigned worksheets, and role-scoped overview. The today page keeps planned rows, actual-work input, submission, linked context, upcoming sheets, and open assigned Jobs together with touch-friendly controls. `/jobs` and `/jobs/[jobId]` are assignment-scoped for WORKER and omit office editing/administration. A linked Job is readable through an assigned sent-or-later worksheet. While the sheet is `SENT`, the worker may create a normal structured finding and optional report-linked photo/video/file through the existing `JobReport` and `JobAttachment` services. Actual work stays in `actualText`; findings/evidence stay on the Job. Unrelated worker reads are safe not-found responses.
 
-**Must not build:** Autonomous high-impact actions, opaque cross-tenant data use, AI as a substitute for missing business rules, or silent creation/mutation of Jobs, worksheets, customer messages, commercial documents, or agreement occurrences.
+**Known boundary:** A free-text worksheet row without a linked Job cannot receive evidence or create an object/address-only finding. There is no worksheet-row attachment system, native app, offline mode, resilient upload queue, background sync, push notification, or new Job/report lifecycle.
+
+## Phase 13 — Office Review Completion
+
+**Status:** Next.
+
+**Goals:** Polish worksheet review, follow-up decisions, review history, and clear handled/unhandled states. Use the existing `WorksheetReviewAction`, Job report review, and worksheet lifecycle rather than inventing automatic conversions or parallel records.
+
+**Dependencies:** Submitted/reviewed worksheets, existing explicit idempotent follow-up Job/cost/report actions, worker findings/evidence, and strict office permissions.
+
+**Must not build:** Automatic downstream records, invoice/customer-message actions, occurrence scheduling, AI, email, generated PDF, or a second review/action model.
+
+## Phase 14 — End-to-End MVP Proof
+
+**Goals:** Provide a realistic, documented seeded workflow proving office planning → worker execution → office review → explicit follow-up through the real API and web application. The proof must exercise permissions and existing lifecycles rather than use fake dashboard values.
+
+**Must not become:** A demo-only alternate architecture, production deployment phase, or excuse to add unrelated features.
+
+## Phase 15 — Production Hardening
+
+**Goals:** Replace development authentication assumptions, define production file storage/retention and backups, establish deployment and recovery, perform a permission audit, improve structured error handling/observability, and make German UI wording consistent.
+
+**Dependencies:** The end-to-end MVP workflow is stable enough to harden without redesigning it during deployment work.
+
+**Still later:** Communication Hub/email, Document Studio, invoices/payments, AI/automation, generated PDF export, native mobile, logistics/item movement, and other new feature families require their own later roadmap decisions after the MVP base is stable.
 
 ## Optional later infrastructure — Item Movement History
 

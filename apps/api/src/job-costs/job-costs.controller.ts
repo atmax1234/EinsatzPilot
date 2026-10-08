@@ -29,21 +29,24 @@ export class JobCostsController {
   @Get('costs')
   getJobCosts(
     @CurrentCompany() company: ActiveCompanyContext,
+    @CurrentUser() actor: AuthenticatedUser,
     @CurrentAuthContext() authContext: RequestAuthContext,
     @Param('jobId') jobId: string,
   ): Promise<JobCostListResponse> {
-    return this.jobCostsService.getJobCosts({ companyId: company.id, jobId, authContext });
+    return this.jobCostsService.getJobCosts({ companyId: company.id, jobId, actor, authContext });
   }
 
   @Get('cost-summary')
   getJobCostSummary(
     @CurrentCompany() company: ActiveCompanyContext,
+    @CurrentUser() actor: AuthenticatedUser,
     @CurrentAuthContext() authContext: RequestAuthContext,
     @Param('jobId') jobId: string,
   ): Promise<JobCostSummary> {
     return this.jobCostsService.getJobCostSummary({
       companyId: company.id,
       jobId,
+      actor,
       authContext,
     });
   }

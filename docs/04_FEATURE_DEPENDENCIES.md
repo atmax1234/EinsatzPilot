@@ -42,7 +42,14 @@ Worksheet planning + customer/object responsibility + schedule/timezone rules
 
 Trusted worksheets + Jobs + assignments + reports + costs + agreement definitions
 └── Company command-center dashboard (Phase 11 implemented)
-    └── Smart planning / automation / AI assistance (Phase 12)
+    └── Worker daily web experience (Phase 12 implemented)
+        └── Office review completion (Phase 13)
+            └── End-to-end MVP proof (Phase 14)
+                └── Production hardening (Phase 15)
+
+Stable hardened MVP workflows
+└── Later separately approved capabilities: Communication Hub, Document Studio,
+    commercial documents, native mobile, automation, and AI assistance
 
 ItemCategory + Item
 ├── Supporting material/tool/asset context for jobs, costs, and proof
@@ -66,6 +73,10 @@ ItemCategory + Item
 | Worksheet review-to-cost/report | **Implemented:** reviewed source only, explicit selected tenant-owned target Job, normal cost/report records, immutable provenance, typed destinations, atomic creation, and reuse of existing cost/report validation, permissions, amounts, and lifecycle | Creating free-floating costs/reports or bypassing existing Job domains |
 | Service agreements / recurring object duties | **Implemented foundation:** company ownership, office-only permissions, lifecycle/audit, inclusive effective dates, IANA timezone, every-N cadence anchors, stable ordered duty rows, optional tenant-safe directory context, shared contracts, API, real UI, and smoke coverage | Bulk-generating rigid Jobs, silently creating worksheets, or implementing browser-only reminders |
 | Command-center dashboard | **Implemented:** tenant-scoped request-time aggregation, explicit metric semantics, office/worker scopes, real workflow links, shared contracts, UI, and smoke proof | Decorative cards, fake counts, browser-authoritative totals, occurrence claims, or premature drag-and-drop |
+| Worker daily experience | **Implemented:** responsive WORKER shell, today execution/submission, assignment-scoped Job list/detail, sent-worksheet Job access, and separate actual-work versus Job-grounded finding/evidence actions | Adding worksheet-row attachments, exposing company-wide Jobs/artifacts, or calling responsive web a native/offline app |
+| Office review completion | Submitted/reviewed worksheets, worker findings/evidence, explicit idempotent review actions, clear source/destination history | Parallel review records, automatic conversions, or hiding handled/unhandled ambiguity only in the browser |
+| End-to-end MVP proof | Stable office planning, worker execution, review, and follow-up workflows with real permissions | Fake/demo-only data paths or bypassing actual API rules |
+| Production hardening | Proven MVP workflow and explicit security/storage/deployment requirements | Treating development auth or local attachment storage as production-ready |
 | Offer/invoice preparation | Reviewed job costs, customer/object context, immutable line snapshots, numbering/tax rules | Mutable issued documents or unsupported totals |
 | Smart planning/automation/AI | Trusted workflows, permissions, auditability, human review, measurable tasks | Autonomous consequential changes or AI replacing absent logic |
 | Optional movement history | Demonstrated traceability need, item identity, explicit event/correction semantics | Building warehouse workflows as the default product direction |
@@ -74,7 +85,7 @@ ItemCategory + Item
 
 A model or route alone is not a completed dependency. Before dependent UI begins, require reviewed ownership and lifecycle, shared contracts, runtime validation, tenant-safe references, service-level roles, useful errors, representative denial/cross-tenant verification, and updated documentation.
 
-The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator, Phase 7B presentation/print, Phase 8 daily worksheet/team protocol foundation, Phase 8B worksheet usability/hardening, all three Phase 9 review actions, the Phase 10 service-agreement/recurring-duty definition foundation, and the Phase 11 command-center read model meet this gate. Phase 12 is next, but its first slice must remain advisory, permission-safe, auditable, and human-controlled before any generative AI integration is considered. Agreement due evaluation, exceptions, and worksheet handoff remain separate later work; no agreement behavior may bulk-generate rigid future Jobs. Item movement remains optional until a concrete traceability workflow justifies it.
+The directory, Job relations, item/category identity, generic Assignment, Job Execution Reports / Worker Findings, Job Cost Ledger, Phase 7 Customer/Object Report Generator, Phase 7B presentation/print, Phase 8 daily worksheet/team protocol foundation, Phase 8B worksheet usability/hardening, all three Phase 9 review actions, the Phase 10 service-agreement/recurring-duty definition foundation, the Phase 11 command-center read model, and the Phase 12 worker daily web experience meet this gate. Phase 13 is next and must complete review clarity using existing records and idempotent actions. Agreement due evaluation, exceptions, and worksheet handoff remain separately scoped; no agreement behavior may bulk-generate rigid future Jobs. AI and other new feature families remain deferred until after MVP proof and production hardening. Item movement remains optional until a concrete traceability workflow justifies it.
 
 ## Phase 8 worksheet gate
 
@@ -103,6 +114,12 @@ This gate deliberately excludes occurrence calculation/materialization, exceptio
 Phase 11 uses one tenant-safe `GET /api/dashboard` projection and a shared response contract. OWNER/OFFICE see company-scoped today worksheet/completion status, Job status counts and actionable Jobs, pending Job-report and submitted-worksheet review demand, active teams/assignments, active agreement definitions, UTC-month cost totals separated by currency, and the latest completed explicit worksheet review actions. WORKER sees only assigned today worksheets and assigned Jobs; the entire office aggregate is structurally absent.
 
 Every count has a fixed meaning documented in the domain model and visible in the UI. Metrics are computed in the API from trusted existing records, not reconstructed authoritatively in the browser. The web page uses German operational wording, real empty/error states, and direct links into current workflows. The phase adds no schema, write command, cache, trend model, occurrence evaluator, scheduler, notification, drag-and-drop, generated work, invoice/payment, PDF export, Communication Hub, Document Studio, AI, or mobile behavior.
+
+## Phase 12 worker-daily gate
+
+Phase 12 uses the existing worksheet, Job, cost, report, and attachment models without a schema change. WORKER Job visibility is now enforced in the API for list/detail and subordinate cost/report/attachment/photo reads. Direct Job team membership and active user/team assignments remain valid access paths. An assigned worksheet adds read access to a linked Job from `SENT` onward and adds report/attachment contribution only while `SENT`. Submission therefore locks worksheet-only contribution while preserving later read history. Same-company unauthorized reads return not found.
+
+The web shell is responsive and worker-focused, but remains the Next.js web application. Actual-work input and submission stay in the worksheet flow. Findings and optional photo/video/file evidence use one normal `WORKER_FINDING` plus the existing report-linked Job attachment route. Rows without a Job show the limitation rather than persisting evidence in a competing worksheet attachment system. This gate adds no native mobile app, offline queue, new lifecycle, object-only finding model, automatic follow-up, notification, PDF export, billing, email, or AI.
 
 ## Phase 7 snapshot gate
 

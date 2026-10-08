@@ -21,8 +21,110 @@ export default async function JobsPage({
 }: {
   searchParams?: Promise<{ notice?: string; error?: string }>;
 }) {
-  const [session, jobsResult, teamsResult, relationOptionsResult, resolvedSearchParams] = await Promise.all([
-    requireServerSession(),
+  const session = await requireServerSession();
+
+  if (session.membershipRole === 'WORKER') {
+    const [jobsResult, resolvedSearchParams] = await Promise.all([getJobsData(), searchParams]);
+    const flashMessage = resolvedSearchParams?.error
+      ? { tone: 'error' as const, text: resolvedSearchParams.error }
+      : resolvedSearchParams?.notice && jobNoticeLabels[resolvedSearchParams.notice]
+        ? { tone: 'success' as const, text: jobNoticeLabels[resolvedSearchParams.notice] }
+        : null;
+    const jobs = jobsResult.data?.jobs ?? [];
+    const openJobs = jobs.filter(
+      (job) => job.status === 'PLANNED' || job.status === 'IN_PROGRESS',
+    );
+    const finishedJobs = jobs.filter(
+      (job) => job.status === 'DONE' || job.status === 'CANCELED',
+    );
+
+    return (
+      <main className="content-page worker-jobs-page">
+        <section className="hero-card">
+          <p className="eyebrow">Meine Aufträge</p>
+          <h1>Zugewiesene Arbeit</h1>
+          <p>
+            Hier siehst du nur Aufträge, die dir direkt, über dein Team oder über einen
+            sichtbaren Tageszettel zugeordnet sind. Funde und Nachweise werden am Auftrag
+            gespeichert.
+          </p>
+          <Link className="primary-link" href="/workday-sheets/today">
+            Zu meinem Arbeitstag
+          </Link>
+        </section>
+
+        {flashMessage ? (
+          <section className={`panel flash-banner ${flashMessage.tone === 'error' ? 'error' : ''}`}>
+            <strong>{flashMessage.tone === 'error' ? 'Aktion fehlgeschlagen' : 'Gespeichert'}</strong>
+            <p>{flashMessage.text}</p>
+          </section>
+        ) : null}
+
+        {!jobsResult.ok ? (
+          <section className="panel flash-banner error">
+            <strong>Meine Aufträge konnten nicht geladen werden.</strong>
+            <p>{jobsResult.error}</p>
+          </section>
+        ) : (
+          <>
+            <section className="panel worker-jobs-section">
+              <div className="row-spread">
+                <div>
+                  <p className="eyebrow">Aktuell</p>
+                  <h2>Offene Aufträge</h2>
+                </div>
+                <span className="inline-chip">{openJobs.length}</span>
+              </div>
+              {openJobs.length ? (
+                <div className="worker-job-grid">
+                  {openJobs.map((job) => (
+                    <article className="worker-job-card" key={job.id}>
+                      <div className="row-spread">
+                        <span className="status-pill">{getJobStatusLabel(job.status)}</span>
+                        <small>{job.reference}</small>
+                      </div>
+                      <h3>{job.title}</h3>
+                      <p>
+                        {job.address
+                          ? `${job.address.street}, ${job.address.postalCode} ${job.address.city}`
+                          : job.location}
+                      </p>
+                      <span>{formatDateTime(job.scheduledStart)}</span>
+                      <Link className="primary-link" href={`/jobs/${job.id}`}>
+                        Öffnen / Fund melden
+                      </Link>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="worksheet-empty-state">
+                  <h3>Keine offenen Aufträge</h3>
+                  <p>Dein Tageszettel kann trotzdem freie Arbeitszeilen enthalten.</p>
+                </div>
+              )}
+            </section>
+
+            {finishedJobs.length ? (
+              <section className="panel">
+                <p className="eyebrow">Verlauf</p>
+                <h2>Abgeschlossene oder abgebrochene Aufträge</h2>
+                <div className="worker-history-list">
+                  {finishedJobs.map((job) => (
+                    <Link className="worker-history-card" href={`/jobs/${job.id}`} key={job.id}>
+                      <strong>{job.title}</strong>
+                      <span>{job.reference} · {getJobStatusLabel(job.status)}</span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </>
+        )}
+      </main>
+    );
+  }
+
+  const [jobsResult, teamsResult, relationOptionsResult, resolvedSearchParams] = await Promise.all([
     getJobsData(),
     getTeamsData(),
     getJobRelationOptionsData(),

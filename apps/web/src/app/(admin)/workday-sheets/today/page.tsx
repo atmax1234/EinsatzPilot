@@ -4,6 +4,11 @@ import {
   transitionWorkdaySheetAction,
   updateActualWorkdaySheetRowAction,
 } from '../../../../lib/workday-sheet-actions';
+import {
+  formatDateTime,
+  getJobsData,
+  getJobStatusLabel,
+} from '../../../../lib/operations';
 import { requireServerSession } from '../../../../lib/server-auth';
 import {
   getTodayWorkdaySheetsData,
@@ -12,10 +17,14 @@ import {
   getWorkdaySheetStatusTone,
 } from '../../../../lib/workday-sheets';
 import { WorkdaySheetRowSummary } from '../workday-sheet-row-summary';
+import { WorkerFindingForm } from '../../jobs/worker-finding-form';
 
 const notices: Record<string, string> = {
   'actual-updated': 'Die Ausführung wurde gespeichert.',
   'status-submitted': 'Der Tageszettel wurde eingereicht.',
+  'finding-created': 'Der Fund wurde am Auftrag gespeichert und an das Office übergeben.',
+  'finding-with-evidence-created':
+    'Der Fund und der Nachweis wurden am Auftrag gespeichert und an das Office übergeben.',
 };
 
 function formatDate(value: string) {
@@ -36,10 +45,15 @@ export default async function WorkdaySheetsTodayPage({
   ]);
   const isWorker = session.membershipRole === 'WORKER';
   const today = todayResult.data;
-  const upcomingResult = isWorker ? await getWorkdaySheetsData({ status: 'SENT' }) : null;
+  const [upcomingResult, assignedJobsResult] = isWorker
+    ? await Promise.all([getWorkdaySheetsData({ status: 'SENT' }), getJobsData()])
+    : [null, null];
   const upcoming = (upcomingResult?.data?.workdaySheets ?? [])
     .filter((sheet) => today && sheet.date > today.date)
     .slice(0, 5);
+  const assignedJobs = (assignedJobsResult?.data?.jobs ?? []).filter(
+    (job) => job.status === 'PLANNED' || job.status === 'IN_PROGRESS',
+  );
   const flash = query?.error
     ? { error: true, text: query.error }
     : query?.notice && notices[query.notice]
@@ -113,21 +127,39 @@ export default async function WorkdaySheetsTodayPage({
                       >
                         <input name="returnTo" type="hidden" value="/workday-sheets/today" />
                         <label className="form-field">
-                          <span>Erledigt / tatsächlich ausgeführt</span>
+                          <span>Tatsächlich ausgeführt</span>
                           <textarea
                             defaultValue={row.actualText ?? ''}
                             name="actualText"
-                            placeholder="Ausgeführte Arbeit, Abweichungen oder Feststellungen"
+                            placeholder="Was wurde an dieser Station tatsächlich erledigt?"
                             required
-                            rows={4}
+                            rows={5}
                           />
                         </label>
                         <div className="form-actions">
-                          <button className="primary-button" type="submit">
+                          <button className="primary-button worker-primary-action" type="submit">
                             Ausführung speichern
                           </button>
                         </div>
                       </form>
+                    ) : null}
+                    {canEnterActual && row.job ? (
+                      <WorkerFindingForm
+                        compact
+                        contextLabel={`${row.job.reference} · ${row.job.title}`}
+                        jobId={row.job.id}
+                        returnTo="/workday-sheets/today"
+                      />
+                    ) : canEnterActual ? (
+                      <div className="worker-finding-unavailable">
+                        <strong>Problem oder Schaden entdeckt?</strong>
+                        <p>
+                          Funde und Fotos gehören in einen Auftrag, nicht in den Tageszettel.
+                          Diese Zeile hat keinen Auftrag. Öffne unten einen passenden zugewiesenen
+                          Auftrag oder informiere das Office, damit der Fund korrekt zugeordnet
+                          bleibt.
+                        </p>
+                      </div>
                     ) : null}
                   </article>
                 ))}
@@ -140,7 +172,11 @@ export default async function WorkdaySheetsTodayPage({
                 {canEnterActual ? (
                   <form action={transitionWorkdaySheetAction.bind(null, sheet.id, 'SUBMITTED')}>
                     <input name="returnTo" type="hidden" value="/workday-sheets/today" />
-                    <button className="primary-button" disabled={!isComplete} type="submit">
+                    <button
+                      className="primary-button worker-primary-action"
+                      disabled={!isComplete}
+                      type="submit"
+                    >
                       Tageszettel einreichen
                     </button>
                   </form>
@@ -165,6 +201,51 @@ export default async function WorkdaySheetsTodayPage({
           </p>
         </section>
       )}
+
+      {isWorker ? (
+        <section className="panel worker-jobs-section">
+          <div className="row-spread">
+            <div>
+              <p className="eyebrow">Zugewiesene Aufträge</p>
+              <h2>Meine offenen Aufträge</h2>
+            </div>
+            <Link className="secondary-link" href="/jobs">
+              Alle meine Aufträge
+            </Link>
+          </div>
+          <p className="muted-note">
+            Hier kannst du Auftragsdetails öffnen und einen Fund mit Foto oder Video melden.
+          </p>
+          {!assignedJobsResult?.ok ? (
+            <div className="flash-banner error">
+              <strong>Die zugewiesenen Aufträge konnten nicht geladen werden.</strong>
+              <p>{assignedJobsResult?.error}</p>
+            </div>
+          ) : assignedJobs.length ? (
+            <div className="worker-job-grid">
+              {assignedJobs.map((job) => (
+                <article className="worker-job-card" key={job.id}>
+                  <div className="row-spread">
+                    <span className="status-pill">{getJobStatusLabel(job.status)}</span>
+                    <small>{job.reference}</small>
+                  </div>
+                  <h3>{job.title}</h3>
+                  <p>{job.address ? `${job.address.street}, ${job.address.city}` : job.location}</p>
+                  <span>{formatDateTime(job.scheduledStart)}</span>
+                  <Link className="primary-link" href={`/jobs/${job.id}`}>
+                    Auftrag öffnen / Fund melden
+                  </Link>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="worksheet-empty-state">
+              <h3>Keine offenen Aufträge zugewiesen</h3>
+              <p>Deine heutigen Tageszettel bleiben davon unabhängig sichtbar.</p>
+            </div>
+          )}
+        </section>
+      ) : null}
 
       {isWorker && upcoming.length ? (
         <section className="panel">

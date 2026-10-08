@@ -853,6 +853,7 @@ export type JobReportCreateInput = {
 
 export type JobReportListResponse = {
   reports: JobReportItem[];
+  createdReport?: JobReportItem;
 };
 
 export type JobReportReviewInput = {

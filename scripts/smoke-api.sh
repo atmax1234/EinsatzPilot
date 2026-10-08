@@ -368,7 +368,7 @@ workday_sheet_id="$(printf '%s' "$create_workday_sheet" | jq -r '.workdaySheet.i
 workday_sheet_row_id="$(printf '%s' "$create_workday_sheet" | jq -r '.workdaySheet.rows[0].id')"
 update_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}" "{\"title\":\"${UPDATED_WORKDAY_SHEET_TITLE}\"}" "$token")"
 update_workday_sheet_row="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" '{"plannedText":"Musterstr. 1 - Treppen, H.M.S. und Eingang pruefen"}' "$token")"
-add_workday_sheet_row="$(json_post "${API_BASE}/workday-sheets/${workday_sheet_id}/rows" '{"startTime":"11:00","plannedText":"Tischler reinlassen / Schluesseluebergabe"}' "$token")"
+add_workday_sheet_row="$(json_post "${API_BASE}/workday-sheets/${workday_sheet_id}/rows" "{\"startTime\":\"11:00\",\"plannedText\":\"Tischler reinlassen / Schluesseluebergabe\",\"jobId\":\"${linked_job_id}\"}" "$token")"
 workday_sheet_second_row_id="$(printf '%s' "$add_workday_sheet_row" | jq -r '.workdaySheet.rows[1].id')"
 workday_sheet_list="$(json_get "${API_BASE}/workday-sheets" "$token")"
 filtered_workday_sheet_list="$(json_get "${API_BASE}/workday-sheets?date=${WORKDAY_SHEET_DATE}&status=DRAFT&teamId=${team_id}&workerUserId=${worker_user_id}" "$token")"
@@ -381,6 +381,31 @@ sent_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}
 worker_sent_workday_sheet="$(json_get "${API_BASE}/workday-sheets/${workday_sheet_id}" "$worker_token")"
 worker_workday_sheet_list="$(json_get "${API_BASE}/workday-sheets" "$worker_token")"
 unrelated_worker_workday_sheet_list="$(json_get "${API_BASE}/workday-sheets" "$unrelated_worker_token")"
+phase12_worker_jobs="$(json_get "${API_BASE}/jobs" "$worker_token")"
+phase12_unrelated_worker_jobs="$(json_get "${API_BASE}/jobs" "$unrelated_worker_token")"
+phase12_worker_linked_job="$(json_get "${API_BASE}/jobs/${linked_job_id}" "$worker_token")"
+phase12_worker_linked_costs="$(json_get "${API_BASE}/jobs/${linked_job_id}/costs" "$worker_token")"
+phase12_unrelated_job_read_status="$(curl -sS -o "${TMP_DIR}/phase12-unrelated-job-read.json" -w '%{http_code}' "${API_BASE}/jobs/${linked_job_id}" -H "Authorization: Bearer ${unrelated_worker_token}")"
+phase12_unrelated_cost_read_status="$(curl -sS -o "${TMP_DIR}/phase12-unrelated-cost-read.json" -w '%{http_code}' "${API_BASE}/jobs/${linked_job_id}/costs" -H "Authorization: Bearer ${unrelated_worker_token}")"
+phase12_worker_finding="$(json_post "${API_BASE}/jobs/${linked_job_id}/reports" '{"type":"WORKER_FINDING","summary":"Worker Fund aus Tageszettel","findingSummary":"Tuergriff am Einsatzort locker","followUpRequired":true,"followUpNotes":"Office soll Reparatur pruefen"}' "$worker_token")"
+phase12_worker_finding_id="$(printf '%s' "$phase12_worker_finding" | jq -r '.createdReport.id')"
+phase12_attachment_caption="Phase 12 worker evidence ${SMOKE_SUFFIX}"
+phase12_worker_attachment_upload="$(curl -fsS -X POST "${API_BASE}/jobs/${linked_job_id}/attachments" \
+  -H "Authorization: Bearer ${worker_token}" \
+  -F "caption=${phase12_attachment_caption}" \
+  -F "reportId=${phase12_worker_finding_id}" \
+  -F "file=@${proof_upload_path};type=image/jpeg")"
+phase12_worker_attachment_id="$(printf '%s' "$phase12_worker_attachment_upload" | jq -r --arg caption "$phase12_attachment_caption" '.attachments[] | select(.caption == $caption) | .id')"
+phase12_worker_reports="$(json_get "${API_BASE}/jobs/${linked_job_id}/reports" "$worker_token")"
+phase12_worker_attachments="$(json_get "${API_BASE}/jobs/${linked_job_id}/attachments" "$worker_token")"
+phase12_worker_attachment_metadata="$(json_get "${API_BASE}/attachments/${phase12_worker_attachment_id}" "$worker_token")"
+phase12_worker_photos="$(json_get "${API_BASE}/attachments/photos" "$worker_token")"
+phase12_unrelated_worker_photos="$(json_get "${API_BASE}/attachments/photos" "$unrelated_worker_token")"
+phase12_worker_attachment_file_status="$(curl -sS -o "${TMP_DIR}/phase12-worker-attachment-file.bin" -w '%{http_code}' "${API_BASE}/attachments/${phase12_worker_attachment_id}/file" -H "Authorization: Bearer ${worker_token}")"
+phase12_unrelated_report_read_status="$(curl -sS -o "${TMP_DIR}/phase12-unrelated-report-read.json" -w '%{http_code}' "${API_BASE}/jobs/${linked_job_id}/reports" -H "Authorization: Bearer ${unrelated_worker_token}")"
+phase12_unrelated_attachment_read_status="$(curl -sS -o "${TMP_DIR}/phase12-unrelated-attachment-read.json" -w '%{http_code}' "${API_BASE}/attachments/${phase12_worker_attachment_id}" -H "Authorization: Bearer ${unrelated_worker_token}")"
+phase12_unrelated_attachment_file_status="$(curl -sS -o "${TMP_DIR}/phase12-unrelated-attachment-file.json" -w '%{http_code}' "${API_BASE}/attachments/${phase12_worker_attachment_id}/file" -H "Authorization: Bearer ${unrelated_worker_token}")"
+phase12_unrelated_attachment_upload_status="$(curl -sS -o "${TMP_DIR}/phase12-unrelated-attachment-upload.json" -w '%{http_code}' -X POST "${API_BASE}/jobs/${linked_job_id}/attachments" -H "Authorization: Bearer ${unrelated_worker_token}" -F "caption=Forbidden evidence" -F "file=@${proof_upload_path};type=image/jpeg")"
 unrelated_worker_read_status="$(curl -sS -o "${TMP_DIR}/unrelated-worker-sheet-read.json" -w '%{http_code}' "${API_BASE}/workday-sheets/${workday_sheet_id}" -H "Authorization: Bearer ${unrelated_worker_token}")"
 unrelated_worker_update_status="$(curl -sS -o "${TMP_DIR}/unrelated-worker-sheet-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${unrelated_worker_token}" -H 'Content-Type: application/json' -d '{"actualText":"Forbidden unrelated actual"}')"
 unrelated_worker_submit_status="$(curl -sS -o "${TMP_DIR}/unrelated-worker-sheet-submit.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${unrelated_worker_token}" -H 'Content-Type: application/json' -d '{"status":"SUBMITTED"}')"
@@ -392,6 +417,8 @@ worker_today_workday_sheets="$(json_get "${API_BASE}/workday-sheets/today" "$wor
 unrelated_worker_today_workday_sheets="$(json_get "${API_BASE}/workday-sheets/today" "$unrelated_worker_token")"
 office_actual_update_status="$(curl -sS -o "${TMP_DIR}/office-actual-update.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"actualText":"Forbidden office actual edit"}')"
 submitted_workday_sheet="$(json_patch "${API_BASE}/workday-sheets/${workday_sheet_id}/status" '{"status":"SUBMITTED"}' "$worker_token")"
+phase12_post_submit_job="$(json_get "${API_BASE}/jobs/${linked_job_id}" "$worker_token")"
+phase12_post_submit_finding_status="$(curl -sS -o "${TMP_DIR}/phase12-post-submit-finding.json" -w '%{http_code}' -X POST "${API_BASE}/jobs/${linked_job_id}/reports" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"type":"WORKER_FINDING","summary":"Forbidden late finding","findingSummary":"Worksheet is already submitted"}')"
 post_submit_actual_status="$(curl -sS -o "${TMP_DIR}/post-submit-actual.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/rows/${workday_sheet_row_id}" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"actualText":"Forbidden late actual edit"}')"
 worker_review_workday_status="$(curl -sS -o "${TMP_DIR}/worker-review-workday.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${worker_token}" -H 'Content-Type: application/json' -d '{"status":"REVIEWED"}')"
 invalid_workday_archive_status="$(curl -sS -o "${TMP_DIR}/invalid-workday-archive.json" -w '%{http_code}' -X PATCH "${API_BASE}/workday-sheets/${workday_sheet_id}/status" -H "Authorization: Bearer ${token}" -H 'Content-Type: application/json' -d '{"status":"ARCHIVED"}')"
@@ -588,11 +615,23 @@ append_summary_json sentWorkdaySheet "$sent_workday_sheet"
 append_summary_json workerSentWorkdaySheet "$worker_sent_workday_sheet"
 append_summary_json workerWorkdaySheetList "$worker_workday_sheet_list"
 append_summary_json unrelatedWorkerWorkdaySheetList "$unrelated_worker_workday_sheet_list"
+append_summary_json phase12WorkerJobs "$phase12_worker_jobs"
+append_summary_json phase12UnrelatedWorkerJobs "$phase12_unrelated_worker_jobs"
+append_summary_json phase12WorkerLinkedJob "$phase12_worker_linked_job"
+append_summary_json phase12WorkerLinkedCosts "$phase12_worker_linked_costs"
+append_summary_json phase12WorkerFinding "$phase12_worker_finding"
+append_summary_json phase12WorkerAttachmentUpload "$phase12_worker_attachment_upload"
+append_summary_json phase12WorkerReports "$phase12_worker_reports"
+append_summary_json phase12WorkerAttachments "$phase12_worker_attachments"
+append_summary_json phase12WorkerAttachmentMetadata "$phase12_worker_attachment_metadata"
+append_summary_json phase12WorkerPhotos "$phase12_worker_photos"
+append_summary_json phase12UnrelatedWorkerPhotos "$phase12_unrelated_worker_photos"
 append_summary_json workerFirstActual "$worker_first_actual"
 append_summary_json workerSecondActual "$worker_second_actual"
 append_summary_json workerTodayWorkdaySheets "$worker_today_workday_sheets"
 append_summary_json unrelatedWorkerTodayWorkdaySheets "$unrelated_worker_today_workday_sheets"
 append_summary_json submittedWorkdaySheet "$submitted_workday_sheet"
+append_summary_json phase12PostSubmitJob "$phase12_post_submit_job"
 append_summary_json reviewedWorkdaySheet "$reviewed_workday_sheet"
 append_summary_json followUpJob "$follow_up_job"
 append_summary_json followUpJobReplay "$follow_up_job_replay"
@@ -740,6 +779,17 @@ append_summary_string crossWorkdayRelationStatus "$cross_workday_relation_status
 append_summary_string unrelatedWorkerReadStatus "$unrelated_worker_read_status"
 append_summary_string unrelatedWorkerUpdateStatus "$unrelated_worker_update_status"
 append_summary_string unrelatedWorkerSubmitStatus "$unrelated_worker_submit_status"
+append_summary_string phase12UnrelatedJobReadStatus "$phase12_unrelated_job_read_status"
+append_summary_string phase12UnrelatedCostReadStatus "$phase12_unrelated_cost_read_status"
+append_summary_string phase12UnrelatedReportReadStatus "$phase12_unrelated_report_read_status"
+append_summary_string phase12UnrelatedAttachmentReadStatus "$phase12_unrelated_attachment_read_status"
+append_summary_string phase12UnrelatedAttachmentFileStatus "$phase12_unrelated_attachment_file_status"
+append_summary_string phase12UnrelatedAttachmentUploadStatus "$phase12_unrelated_attachment_upload_status"
+append_summary_string phase12WorkerAttachmentFileStatus "$phase12_worker_attachment_file_status"
+append_summary_string phase12PostSubmitFindingStatus "$phase12_post_submit_finding_status"
+append_summary_string phase12WorkerFindingId "$phase12_worker_finding_id"
+append_summary_string phase12WorkerAttachmentId "$phase12_worker_attachment_id"
+append_summary_string linkedJobId "$linked_job_id"
 append_summary_string workerPlannedUpdateStatus "$worker_planned_update_status"
 append_summary_string incompleteWorkdaySubmitStatus "$incomplete_workday_submit_status"
 append_summary_string officeActualUpdateStatus "$office_actual_update_status"
@@ -1718,7 +1768,8 @@ jq -s '
       ($worker.jobs.scope == "ASSIGNED_TO_ME") and
       ($worker | has("office") | not) and
       ([$worker.today.workdaySheets[].id] | index($phase11.workdaySheetId) != null) and
-      ([$worker.jobs.actionableJobs[].id] | index($phase11.jobId) != null) and
+      ($worker.jobs.counts.total >= 1) and
+      all($worker.jobs.actionableJobs[]; .status == "PLANNED" or .status == "IN_PROGRESS") and
       ([$worker.jobs.actionableJobs[].id] | index($phase11.linkedJob.job.id) == null)
     ),
     commandCenterUnrelatedWorkerIsolated: (
@@ -1736,7 +1787,59 @@ jq -s '
     )
   }' "$SUMMARY_INPUT" > "${TMP_DIR}/phase11-summary.json"
 
-jq -s '.[0] + .[1] + .[2] + .[3] + .[4]' "${TMP_DIR}/summary.json" "${TMP_DIR}/phase8-summary.json" "${TMP_DIR}/phase9-summary.json" "${TMP_DIR}/phase10-summary.json" "${TMP_DIR}/phase11-summary.json" > "${TMP_DIR}/combined-summary.json"
+jq -s '
+  from_entries |
+  . as $phase12 |
+  {
+    workerAssignedJobListScoped: (
+      ([$phase12.phase12WorkerJobs.jobs[].id] | index($phase12.jobId) != null) and
+      ([$phase12.phase12WorkerJobs.jobs[].id] | index($phase12.linkedJobId) != null) and
+      ([$phase12.phase12UnrelatedWorkerJobs.jobs[].id] | index($phase12.jobId) == null) and
+      ([$phase12.phase12UnrelatedWorkerJobs.jobs[].id] | index($phase12.linkedJobId) == null)
+    ),
+    workerWorksheetLinkedJobReadable: (
+      ($phase12.phase12WorkerLinkedJob.job.id == $phase12.linkedJobId) and
+      ($phase12.phase12WorkerLinkedCosts.costLines | type == "array") and
+      ($phase12.phase12PostSubmitJob.job.id == $phase12.linkedJobId) and
+      ($phase12.phase12UnrelatedJobReadStatus == "404")
+    ),
+    workerFindingCreatedThroughExistingReportDomain: (
+      ($phase12.phase12WorkerFinding.createdReport.id == $phase12.phase12WorkerFindingId) and
+      ($phase12.phase12WorkerFinding.createdReport.type == "WORKER_FINDING") and
+      ($phase12.phase12WorkerFinding.createdReport.reviewStatus == "PENDING_REVIEW") and
+      ([$phase12.phase12WorkerReports.reports[].id] | index($phase12.phase12WorkerFindingId) != null)
+    ),
+    workerEvidenceUsesExistingAttachmentDomain: (
+      ([$phase12.phase12WorkerAttachmentUpload.attachments[] |
+        select(.id == $phase12.phase12WorkerAttachmentId and .report.id == $phase12.phase12WorkerFindingId and .job.id == $phase12.linkedJobId)
+      ] | length) == 1 and
+      ([$phase12.phase12WorkerAttachments.attachments[].id] | index($phase12.phase12WorkerAttachmentId) != null) and
+      ($phase12.phase12WorkerAttachmentMetadata.attachment.id == $phase12.phase12WorkerAttachmentId) and
+      ([$phase12.phase12WorkerPhotos.attachments[].id] | index($phase12.phase12WorkerAttachmentId) != null) and
+      ($phase12.phase12WorkerAttachmentFileStatus == "200")
+    ),
+    unrelatedWorkerJobArtifactsHidden: (
+      ($phase12.phase12UnrelatedReportReadStatus == "404") and
+      ($phase12.phase12UnrelatedCostReadStatus == "404") and
+      ($phase12.phase12UnrelatedAttachmentReadStatus == "404") and
+      ($phase12.phase12UnrelatedAttachmentFileStatus == "404") and
+      ([$phase12.phase12UnrelatedWorkerPhotos.attachments[].id] | index($phase12.phase12WorkerAttachmentId) == null) and
+      ($phase12.phase12UnrelatedAttachmentUploadStatus == "403")
+    ),
+    unrelatedWorkerJobArtifactStatuses: {
+      cost: $phase12.phase12UnrelatedCostReadStatus,
+      report: $phase12.phase12UnrelatedReportReadStatus,
+      attachment: $phase12.phase12UnrelatedAttachmentReadStatus,
+      file: $phase12.phase12UnrelatedAttachmentFileStatus,
+      upload: $phase12.phase12UnrelatedAttachmentUploadStatus,
+      photoVisible: ([$phase12.phase12UnrelatedWorkerPhotos.attachments[].id] | index($phase12.phase12WorkerAttachmentId) != null)
+    },
+    submittedWorksheetStopsWorksheetOnlyContribution: (
+      $phase12.phase12PostSubmitFindingStatus == "403"
+    )
+  }' "$SUMMARY_INPUT" > "${TMP_DIR}/phase12-summary.json"
+
+jq -s '.[0] + .[1] + .[2] + .[3] + .[4] + .[5]' "${TMP_DIR}/summary.json" "${TMP_DIR}/phase8-summary.json" "${TMP_DIR}/phase9-summary.json" "${TMP_DIR}/phase10-summary.json" "${TMP_DIR}/phase11-summary.json" "${TMP_DIR}/phase12-summary.json" > "${TMP_DIR}/combined-summary.json"
 mv "${TMP_DIR}/combined-summary.json" "${TMP_DIR}/summary.json"
 
 jq -e \
@@ -2011,7 +2114,13 @@ jq -e \
     .commandCenterRecentFollowUpsCorrect == true and
     .commandCenterWorkerVisibilityCorrect == true and
     .commandCenterUnrelatedWorkerIsolated == true and
-    .commandCenterTenantIsolationCorrect == true
+    .commandCenterTenantIsolationCorrect == true and
+    .workerAssignedJobListScoped == true and
+    .workerWorksheetLinkedJobReadable == true and
+    .workerFindingCreatedThroughExistingReportDomain == true and
+    .workerEvidenceUsesExistingAttachmentDomain == true and
+    .unrelatedWorkerJobArtifactsHidden == true and
+    .submittedWorksheetStopsWorksheetOnlyContribution == true
   ' "${TMP_DIR}/summary.json" >/dev/null
 
 cat "${TMP_DIR}/summary.json"

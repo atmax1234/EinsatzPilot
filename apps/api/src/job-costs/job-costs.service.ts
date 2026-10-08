@@ -10,6 +10,7 @@ import type {
 } from '@einsatzpilot/types';
 
 import { OperationsLookupService } from '../operations/operations-lookup.service';
+import { JobAccessService } from '../operations/job-access.service';
 import {
   assertCanReadJobCosts,
   assertCanWriteJobCosts,
@@ -29,6 +30,8 @@ export class JobCostsService {
     private readonly prisma: PrismaService,
     @Inject(OperationsLookupService)
     private readonly operationsLookupService: OperationsLookupService,
+    @Inject(JobAccessService)
+    private readonly jobAccessService: JobAccessService,
   ) {}
 
   private async getCostLineForJobOrThrow(input: {
@@ -97,10 +100,20 @@ export class JobCostsService {
   async getJobCosts(input: {
     companyId: string;
     jobId: string;
+    actor: AuthenticatedUser;
     authContext: RequestAuthContext;
   }): Promise<JobCostListResponse> {
     assertCanReadJobCosts(input.authContext);
-    await this.operationsLookupService.getJobForCompanyOrThrow(input.companyId, input.jobId);
+    const job = await this.operationsLookupService.getJobForCompanyOrThrow(
+      input.companyId,
+      input.jobId,
+    );
+    await this.jobAccessService.assertWorkerCanReadJob({
+      companyId: input.companyId,
+      jobId: job.id,
+      userId: input.actor.id,
+      authContext: input.authContext,
+    });
     const costLines = await this.getPersistedCostLines(input.companyId, input.jobId);
 
     return {
@@ -112,10 +125,20 @@ export class JobCostsService {
   async getJobCostSummary(input: {
     companyId: string;
     jobId: string;
+    actor: AuthenticatedUser;
     authContext: RequestAuthContext;
   }): Promise<JobCostSummary> {
     assertCanReadJobCosts(input.authContext);
-    await this.operationsLookupService.getJobForCompanyOrThrow(input.companyId, input.jobId);
+    const job = await this.operationsLookupService.getJobForCompanyOrThrow(
+      input.companyId,
+      input.jobId,
+    );
+    await this.jobAccessService.assertWorkerCanReadJob({
+      companyId: input.companyId,
+      jobId: job.id,
+      userId: input.actor.id,
+      authContext: input.authContext,
+    });
     const costLines = await this.getPersistedCostLines(input.companyId, input.jobId);
     return buildJobCostSummary(costLines);
   }

@@ -53,6 +53,7 @@ import {
   isReportAwaitingReview,
 } from '../../../../lib/reports';
 import { requireServerSession } from '../../../../lib/server-auth';
+import { WorkerJobDetail } from '../worker-job-detail';
 
 const jobDetailNoticeLabels: Record<string, string> = {
   'job-created': 'Der neue Auftrag ist gespeichert und steht jetzt fuer weitere Bearbeitung bereit.',
@@ -63,6 +64,9 @@ const jobDetailNoticeLabels: Record<string, string> = {
   'attachment-uploaded': 'Der Nachweis wurde am Auftrag hinterlegt.',
   'cost-created': 'Die Kostenzeile wurde am Auftrag erfasst.',
   'cost-updated': 'Die Kostenzeile wurde aktualisiert.',
+  'finding-created': 'Der Fund wurde am Auftrag gespeichert und an das Office übergeben.',
+  'finding-with-evidence-created':
+    'Der Fund und der Nachweis wurden am Auftrag gespeichert und an das Office übergeben.',
 };
 
 const jobCostKinds = [
@@ -106,11 +110,28 @@ export default async function JobDetailPage({
   params: Promise<{ jobId: string }>;
   searchParams?: Promise<{ notice?: string; error?: string }>;
 }) {
-  const session = await requireServerSession();
+  const [{ jobId }, session, resolvedSearchParams] = await Promise.all([
+    params,
+    requireServerSession(),
+    searchParams,
+  ]);
   const canAccessCustomerReports =
     session.membershipRole === 'OWNER' || session.membershipRole === 'OFFICE';
+  const workerFlash = resolvedSearchParams?.error
+    ? { tone: 'error' as const, text: resolvedSearchParams.error }
+    : resolvedSearchParams?.notice && jobDetailNoticeLabels[resolvedSearchParams.notice]
+      ? {
+          tone: 'success' as const,
+          text: jobDetailNoticeLabels[resolvedSearchParams.notice],
+        }
+      : null;
 
-  const { jobId } = await params;
+  if (session.membershipRole === 'WORKER') {
+    const workerJobResult = await getJobDetailData(jobId);
+    if (!workerJobResult.ok || !workerJobResult.data) notFound();
+    return <WorkerJobDetail flash={workerFlash} job={workerJobResult.data.job} />;
+  }
+
   const [
     jobResult,
     teamsResult,
@@ -118,7 +139,6 @@ export default async function JobDetailPage({
     jobCostsResult,
     itemsResult,
     customerReportsResult,
-    resolvedSearchParams,
   ] = await Promise.all([
     getJobDetailData(jobId),
     getTeamsData(),
@@ -126,7 +146,6 @@ export default async function JobDetailPage({
     getJobCostsData(jobId),
     getItemsData(),
     canAccessCustomerReports ? getCustomerReportsData(jobId) : Promise.resolve(undefined),
-    searchParams,
   ]);
 
   if (!jobResult.ok || !jobResult.data) {

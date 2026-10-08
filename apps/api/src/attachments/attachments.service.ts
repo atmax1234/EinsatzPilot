@@ -17,6 +17,7 @@ import type {
 
 import { PrismaService } from '../prisma/prisma.service';
 import { OperationsLookupService } from '../operations/operations-lookup.service';
+import { JobAccessService } from '../operations/job-access.service';
 import {
   assertCanReadCompanyArtifacts,
   assertCanUploadJobAttachments,
@@ -42,6 +43,8 @@ export class AttachmentsService {
     private readonly prisma: PrismaService,
     @Inject(OperationsLookupService)
     private readonly operationsLookupService: OperationsLookupService,
+    @Inject(JobAccessService)
+    private readonly jobAccessService: JobAccessService,
     @Inject(LocalFileStorageService)
     private readonly localFileStorageService: LocalFileStorageService,
   ) {}
@@ -49,10 +52,17 @@ export class AttachmentsService {
   async listJobAttachments(
     companyId: string,
     jobId: string,
+    actor: AuthenticatedUser,
     authContext: RequestAuthContext,
   ): Promise<JobAttachmentListResponse> {
     assertCanReadCompanyArtifacts(authContext);
-    await this.operationsLookupService.getJobForCompanyOrThrow(companyId, jobId);
+    const job = await this.operationsLookupService.getJobForCompanyOrThrow(companyId, jobId);
+    await this.jobAccessService.assertWorkerCanReadJob({
+      companyId,
+      jobId: job.id,
+      userId: actor.id,
+      authContext,
+    });
     const prisma = this.prisma as PrismaClient;
 
     const attachments = await prisma.jobAttachment.findMany({
@@ -110,6 +120,13 @@ export class AttachmentsService {
     const job = await this.operationsLookupService.getJobForCompanyOrThrow(input.companyId, input.jobId);
     const prisma = this.prisma as PrismaClient;
 
+    await this.jobAccessService.assertWorkerCanContributeToJob({
+      companyId: input.companyId,
+      jobId: job.id,
+      userId: input.actor.id,
+      authContext: input.authContext,
+    });
+
     const team =
       normalizedPayload.teamId === undefined
         ? job.team
@@ -162,20 +179,30 @@ export class AttachmentsService {
       },
     });
 
-    return this.listJobAttachments(input.companyId, input.jobId, input.authContext);
+    return this.listJobAttachments(input.companyId, input.jobId, input.actor, input.authContext);
   }
 
   async listPhotoLibrary(
     companyId: string,
+    actor: AuthenticatedUser,
     authContext: RequestAuthContext,
   ): Promise<PhotoLibraryResponse> {
     assertCanReadCompanyArtifacts(authContext);
     const prisma = this.prisma as PrismaClient;
 
+    const workerJobWhere =
+      authContext.isAuthenticated && authContext.membershipRole === 'WORKER'
+        ? await this.jobAccessService.getWorkerJobWhere({
+            companyId,
+            userId: actor.id,
+            worksheetAccess: 'READ',
+          })
+        : null;
     const attachments = await prisma.jobAttachment.findMany({
       where: {
         companyId,
         kind: 'PHOTO',
+        ...(workerJobWhere ? { job: workerJobWhere } : {}),
       },
       include: {
         job: {
@@ -207,6 +234,7 @@ export class AttachmentsService {
   async getAttachmentMetadata(
     companyId: string,
     attachmentId: string,
+    actor: AuthenticatedUser,
     authContext: RequestAuthContext,
   ) {
     assertCanReadCompanyArtifacts(authContext);
@@ -240,6 +268,13 @@ export class AttachmentsService {
       throw new NotFoundException('Datei nicht gefunden.');
     }
 
+    await this.jobAccessService.assertWorkerCanReadJob({
+      companyId,
+      jobId: attachment.job.id,
+      userId: actor.id,
+      authContext,
+    });
+
     return {
       attachment: mapJobAttachmentItem(attachment),
     };
@@ -248,9 +283,15 @@ export class AttachmentsService {
   async getAttachmentFile(
     companyId: string,
     attachmentId: string,
+    actor: AuthenticatedUser,
     authContext: RequestAuthContext,
   ) {
-    const metadata = await this.getAttachmentRecord(companyId, attachmentId, authContext);
+    const metadata = await this.getAttachmentRecord(
+      companyId,
+      attachmentId,
+      actor,
+      authContext,
+    );
     const file = await this.localFileStorageService.readFile(metadata.storagePath);
 
     return {
@@ -263,6 +304,7 @@ export class AttachmentsService {
   private async getAttachmentRecord(
     companyId: string,
     attachmentId: string,
+    actor: AuthenticatedUser,
     authContext: RequestAuthContext,
   ) {
     assertCanReadCompanyArtifacts(authContext);
@@ -275,6 +317,7 @@ export class AttachmentsService {
       },
       select: {
         id: true,
+        jobId: true,
         fileName: true,
         mimeType: true,
         storagePath: true,
@@ -284,6 +327,13 @@ export class AttachmentsService {
     if (!attachment) {
       throw new NotFoundException('Datei nicht gefunden.');
     }
+
+    await this.jobAccessService.assertWorkerCanReadJob({
+      companyId,
+      jobId: attachment.jobId,
+      userId: actor.id,
+      authContext,
+    });
 
     return attachment;
   }

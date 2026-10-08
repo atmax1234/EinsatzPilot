@@ -31,8 +31,12 @@ export class JobsController {
   ) {}
 
   @Get()
-  getJobs(@CurrentCompany() company: ActiveCompanyContext): Promise<JobListResponse> {
-    return this.operationsService.getJobs(company.id);
+  getJobs(
+    @CurrentCompany() company: ActiveCompanyContext,
+    @CurrentUser() actor: AuthenticatedUser,
+    @CurrentAuthContext() authContext: RequestAuthContext,
+  ): Promise<JobListResponse> {
+    return this.operationsService.getJobs({ companyId: company.id, actor, authContext });
   }
 
   @Get('relation-options')
@@ -46,9 +50,16 @@ export class JobsController {
   @Get(':jobId')
   getJobDetail(
     @CurrentCompany() company: ActiveCompanyContext,
+    @CurrentUser() actor: AuthenticatedUser,
+    @CurrentAuthContext() authContext: RequestAuthContext,
     @Param('jobId') jobId: string,
   ): Promise<JobDetailResponse> {
-    return this.operationsService.getJobDetail(company.id, jobId);
+    return this.operationsService.getJobDetail({
+      companyId: company.id,
+      jobId,
+      actor,
+      authContext,
+    });
   }
 
   @Post()

@@ -398,6 +398,20 @@ ol {
   text-decoration: none;
 }
 
+.primary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff7f2;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .nested-stack {
   margin-top: 18px;
 }
@@ -855,6 +869,157 @@ code {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.worker-job-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.worker-job-card,
+.worker-history-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(216, 198, 170, 0.72);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.worker-job-card h3,
+.worker-job-card p,
+.worker-history-card p,
+.worker-finding-context,
+.worker-finding-unavailable p {
+  margin: 0;
+}
+
+.worker-job-card .primary-link {
+  justify-self: start;
+}
+
+.worker-job-hero {
+  display: grid;
+  gap: 12px;
+}
+
+.worker-job-hero .secondary-link {
+  justify-self: start;
+}
+
+.worker-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin: 18px 0 0;
+}
+
+.worker-facts > div {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(241, 225, 201, 0.42);
+}
+
+.worker-facts dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.worker-facts dd {
+  margin: 6px 0 0;
+  line-height: 1.4;
+}
+
+.worker-finding-form {
+  margin-top: 18px;
+}
+
+.worker-finding-form small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.worker-finding-context,
+.worker-finding-unavailable {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(241, 225, 201, 0.52);
+}
+
+.worker-finding-unavailable {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.worker-finding-disclosure {
+  border: 1px solid rgba(196, 107, 45, 0.34);
+  border-radius: 16px;
+  background: rgba(255, 250, 242, 0.72);
+}
+
+.worker-finding-disclosure > summary {
+  cursor: pointer;
+  padding: 14px 16px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.worker-finding-disclosure-body {
+  padding: 0 16px 16px;
+}
+
+.worker-history-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.worker-history-card small,
+.worker-history-card span {
+  color: var(--muted);
+}
+
+.worker-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.worker-evidence-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(216, 198, 170, 0.72);
+  border-radius: 16px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.worker-evidence-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.worker-evidence-card small {
+  color: var(--muted);
+}
+
+.worker-evidence-file {
+  display: grid;
+  min-height: 120px;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(241, 225, 201, 0.52);
+  font-weight: 700;
 }
 
 .worksheet-upcoming-list {
@@ -1706,6 +1871,94 @@ code {
 
   .customer-report-document-footer > div:last-child {
     text-align: left;
+  }
+}
+
+@media (max-width: 720px) {
+  .worker-sidebar {
+    gap: 16px;
+    padding: 16px 14px;
+  }
+
+  .worker-sidebar .sidebar-brand h1 {
+    margin: 0;
+    font-size: 1.55rem;
+  }
+
+  .worker-sidebar .sidebar-brand p:last-child,
+  .worker-sidebar .sidebar-user > span {
+    display: none;
+  }
+
+  .worker-sidebar .sidebar-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .worker-sidebar .sidebar-nav a {
+    display: grid;
+    min-height: 48px;
+    padding: 10px;
+    place-items: center;
+    text-align: center;
+  }
+
+  .worker-sidebar .sidebar-user {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .worker-sidebar .sidebar-user strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .worker-shell .content-shell {
+    padding: 12px;
+  }
+
+  .worker-shell .content-page {
+    gap: 12px;
+  }
+
+  .worker-shell .hero-card,
+  .worker-shell .panel {
+    margin-bottom: 0;
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .worker-shell h1 {
+    font-size: 2.15rem;
+  }
+
+  .worker-shell .form-field input,
+  .worker-shell .form-field select,
+  .worker-shell .form-field textarea {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .worker-shell .worksheet-today-actions,
+  .worker-shell .form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .worker-shell .primary-button,
+  .worker-shell .secondary-button,
+  .worker-shell .primary-link,
+  .worker-shell .secondary-link {
+    justify-content: center;
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .worker-job-grid,
+  .worker-facts,
+  .worker-evidence-grid {
+    grid-template-columns: 1fr;
   }
 }
 

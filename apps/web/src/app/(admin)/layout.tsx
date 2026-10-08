@@ -19,33 +19,45 @@ export default async function AdminLayout({
   const session = await requireServerSession();
   const canAccessOfficeFeatures =
     session.membershipRole === 'OWNER' || session.membershipRole === 'OFFICE';
+  const isWorker = session.membershipRole === 'WORKER';
 
   return (
-    <div className="admin-shell">
-      <aside className="sidebar">
+    <div className={`admin-shell ${isWorker ? 'worker-shell' : ''}`}>
+      <aside className={`sidebar ${isWorker ? 'worker-sidebar' : ''}`}>
         <div className="sidebar-brand">
           <p className="eyebrow">EinsatzPilot</p>
-          <h1>Admin</h1>
+          <h1>{isWorker ? 'Arbeitsbereich' : 'Admin'}</h1>
           <p>{session.activeCompany?.name ?? session.activeCompany?.slug ?? 'Kein Firmenkontext'}</p>
         </div>
 
         <nav className="sidebar-nav">
-          <Link href="/dashboard">Dashboard</Link>
-          <Link href="/jobs">Auftraege</Link>
-          <Link href="/workday-sheets">Tageszettel</Link>
-          <Link href="/workday-sheets/today">Heute</Link>
-          {canAccessOfficeFeatures ? (
-            <Link href="/service-agreements">Leistungsvereinbarungen</Link>
-          ) : null}
-          <Link href="/customers">Kunden & Adressen</Link>
-          <Link href="/objects">Objekte</Link>
-          <Link href="/items">Artikel</Link>
-          <Link href="/assignments">Zuweisungen</Link>
-          <Link href="/teams">Teams</Link>
-          <Link href="/reports">Reports</Link>
-          {canAccessOfficeFeatures ? (
-            <Link href="/customer-reports">Kundenberichte</Link>
-          ) : null}
+          {isWorker ? (
+            <>
+              <Link href="/workday-sheets/today">Mein Arbeitstag</Link>
+              <Link href="/jobs">Meine Aufträge</Link>
+              <Link href="/workday-sheets">Meine Tageszettel</Link>
+              <Link href="/dashboard">Übersicht</Link>
+            </>
+          ) : (
+            <>
+              <Link href="/dashboard">Dashboard</Link>
+              <Link href="/jobs">Aufträge</Link>
+              <Link href="/workday-sheets">Tageszettel</Link>
+              <Link href="/workday-sheets/today">Heute</Link>
+              {canAccessOfficeFeatures ? (
+                <Link href="/service-agreements">Leistungsvereinbarungen</Link>
+              ) : null}
+              <Link href="/customers">Kunden & Adressen</Link>
+              <Link href="/objects">Objekte</Link>
+              <Link href="/items">Artikel</Link>
+              <Link href="/assignments">Zuweisungen</Link>
+              <Link href="/teams">Teams</Link>
+              <Link href="/reports">Reports</Link>
+              {canAccessOfficeFeatures ? (
+                <Link href="/customer-reports">Kundenberichte</Link>
+              ) : null}
+            </>
+          )}
         </nav>
 
         <div className="sidebar-user">

@@ -2,58 +2,45 @@
 
 ## Current checkpoint
 
-Phase 11 — Command Center Dashboard is implemented. It adds a tenant-safe, server-backed operational read model and a real role-aware web command center without adding persistence, scheduling, or write commands.
+Phase 12 — Worker Daily Experience is implemented as a responsive web workflow. It uses the existing worksheet, Job, report, and attachment domains and required no Prisma schema change or migration. Native mobile remains deferred.
 
-### Implemented Phase 11 behavior
+### Implemented Phase 12 behavior
 
-- `GET /api/dashboard` derives metrics inside the API from the active company context; the browser does not authoritatively reconstruct company totals.
-- OWNER/OFFICE receive company-wide today worksheet counts/completion, Job counts by stored status, actionable planned/in-progress Jobs, reports awaiting office review, submitted worksheets awaiting review, active teams/assignments, active service-agreement definitions, current UTC-month cost totals separated by currency, and the six newest completed worksheet review actions.
-- WORKER receives only today's sent-or-later worksheets assigned directly or through current team membership and Jobs reached through direct Job team membership or active user/team-to-Job assignment. The complete office aggregate is omitted.
-- `/dashboard` presents the result with German business wording, real empty/error states, direct links into worksheets, Jobs, reports, teams, assignments, agreements, and follow-up destinations, plus visible metric definitions.
-- No dashboard action mutates operational data.
+- WORKER navigation is reduced to `Mein Arbeitstag`, `Meine Aufträge`, `Meine Tageszettel`, and `Übersicht`.
+- `/workday-sheets/today` keeps planned rows, linked context, actual-work entry, guarded submission, upcoming sent sheets, and open assigned Jobs in one touch-friendly flow.
+- `/jobs` and `/jobs/[jobId]` render a worker-specific assigned-Job list/detail instead of office administration controls.
+- WORKER Job list/detail scope includes direct Job team membership, active user/team-to-Job assignment, and Jobs linked from an assigned sent-or-later worksheet.
+- Actual work remains `WorkdaySheetRow.actualText`. A finding is saved as a normal structured `JobReport`; its optional photo/video/file is saved as a normal report-linked `JobAttachment`.
+- A sent worksheet's linked Job grants report/attachment contribution while the sheet is `SENT`. After submission, worksheet-only contribution is locked while read access remains.
+- Job cost reads, report lists, attachment lists, metadata/file reads, and the photo feed apply the same assignment-aware worker read scope. Unrelated worker reads return safe not-found responses.
+- A row without a linked Job gets an honest UI explanation and no evidence action. Phase 12 does not create worksheet-row attachments or a second finding system.
 
-### Exact metric meanings
+### Schema and contract checkpoint
 
-- **Today:** API server local calendar date, matching the existing worksheet-today behavior.
-- **Completed worksheet row:** row has stored nonempty `actualText`.
-- **Open Job:** stored status is `PLANNED` or `IN_PROGRESS`; all four Job statuses remain separately counted.
-- **Report awaiting review:** `JobReport.reviewStatus` is `SUBMITTED` or `PENDING_REVIEW`.
-- **Worksheet awaiting review:** `WorkdaySheet.status` is `SUBMITTED`.
-- **Active team/assignment/agreement:** stored status is active; timing windows and recurring occurrences are not inferred.
-- **Current-month costs:** stored `JobCostLine.totalCost` with `costDate` in the current UTC calendar month, grouped and returned separately by currency.
-- **Recent follow-up activity:** six newest completed explicit `WorksheetReviewAction` records. It is not an alert or notification system.
-- **Active agreements:** definition count only. No due occurrence has been calculated.
-
-### Schema and API checkpoint
-
-Phase 11 required no Prisma schema change or migration. Shared TypeScript contracts now cover dashboard audience/scope, Job and worksheet status totals, row completion, office review/workforce/agreement metrics, currency-separated cost totals, and recent follow-up items.
-
-Implemented endpoint:
-
-- `GET /api/dashboard`
+Phase 12 adds no model or migration. `JobReportListResponse.createdReport` is an optional response field so the worker form can attach an uploaded file to the exact report just created without a fragile client-side search. A shared API-side `JobAccessService` centralizes worker Job read/contribution predicates.
 
 ### Verification checkpoint
 
-On 2026-10-04, all sixteen migrations were applied/current on local PostgreSQL 18. Prisma validate/generate, root `pnpm typecheck`, root `pnpm build`, the full `pnpm smoke:api` flow, and `git diff --check` passed. The smoke flow contains 272 passing checks: all 263 Phase 1–10 checks remain green, plus nine command-center checks for the response contract, Job and today metrics, office metrics, cost period/currency semantics, recent follow-ups, worker scope, unrelated-worker isolation, and cross-tenant isolation.
+On 2026-10-04, all sixteen migrations were current on local PostgreSQL 18. Prisma validate/generate, root `pnpm typecheck`, root `pnpm build`, the full `pnpm smoke:api` flow, and `git diff --check` passed. The repeat-safe smoke flow contains 278 passing checks: all 272 Phase 1–11 checks plus six Phase 12 checks for assigned Job scope, worksheet-linked Job reads, existing report/attachment reuse, unrelated-worker artifact isolation, and the post-submit contribution lock.
 
 ## Honest remaining limitations
 
-- The command center is a request-time snapshot. It has no historical trends, cache, background refresh, saved layouts, alerts, notifications, or write commands.
-- “Today” uses the API server's local calendar date because company timezone is not modeled.
-- Dashboard cost totals are operational sums, not billing, accounting, tax, profitability, invoice, or payment data.
-- Service agreements still do not evaluate/materialize due occurrences, model holiday/blackout/skip/one-off exceptions, or hand duties into an editable DRAFT worksheet.
-- There is no scheduler, automatic worksheet creation, or generated future Job behavior.
-- Worksheet review has no billable/customer-message action, bulk action, undo/cancel, or correction/supersession flow.
-- Browser print exists, but generated PDF/export, customer delivery, Communication Hub/email, Document Studio, invoices/payments, AI, drag-and-drop, QR, and mobile workflows do not.
-- Authentication remains development-only; storage is local; lint/test scripts remain placeholders beyond the live smoke flow.
+- Phase 12 is responsive web only. There is no native app, offline support, background sync, upload retry/resume, push notification, or device authentication.
+- A worksheet row without a linked/assigned Job cannot create an object/address-only finding or upload evidence. That requires a deliberate later domain decision; evidence was not attached directly to worksheet rows.
+- The combined finding/evidence action creates the report first and then uploads the file. If storage upload fails, the report remains saved and the UI reports the partial outcome. There is no distributed transaction across database and filesystem storage.
+- The worker view does not add Job status mutation, cost editing, office review, customer reports, or automatic follow-up creation.
+- Today still uses the API server's local date because company timezone is not modeled.
+- Office worksheet review still needs clearer handled/unhandled decision state and history presentation; that is Phase 13.
+- Authentication is development-only, attachment storage is local, and production deployment/backups/observability remain Phase 15 work.
+- No generated PDF/export, invoice/payment, Communication Hub/email, Document Studio, AI/automation, agreement occurrence engine, generated work, drag-and-drop, QR, or logistics/item movement exists.
 
 ## Roadmap order
 
-1. `Phase 12 — Smart Planning / AI / Automation`, delivered in bounded slices.
-2. Start Phase 12 with deterministic, read-only planning insights and explicit human decision boundaries.
-3. Add any external/generative AI only in a later Phase 12 slice after permissions, provenance, privacy, evaluation, cost, and failure behavior are specified and proven.
+1. `Phase 13 — Office Review Completion`: polish worksheet review, follow-up decisions, review history, and handled/unhandled clarity.
+2. `Phase 14 — End-to-End MVP Proof`: demonstrate a realistic seeded office planning → worker execution → review → follow-up flow.
+3. `Phase 15 — Production Hardening`: production authentication, storage, backups, deployment, permission audit, error handling/observability, and consistent German UI.
 
-Agreement occurrence evaluation, exceptions, and worksheet handoff remain separately scoped work and must not be smuggled into planning insights. Communication Hub and Document Studio remain long-term product direction, not implicitly authorized Phase 12 scope.
+Native mobile and new feature families such as Communication Hub, Document Studio, invoices/payments, generated PDF, or AI/automation remain deferred beyond this sequence. Service agreements still do not calculate occurrences or generate worksheets/Jobs.
 
 ## Exact next recommended prompt
 
@@ -62,17 +49,19 @@ Read /docs first.
 
 This is an IMPLEMENTATION session.
 
-Implement the first bounded slice of:
+Implement:
 
-Phase 12 — Smart Planning / Automation Foundation
+Phase 13 — Office Review Completion
 
-Preserve the verified Phase 1–11 behavior, especially tenant isolation, role enforcement, worker assignment visibility, worksheet and Job lifecycles, explicit review-action idempotency, immutable customer-report snapshots, office-only service agreements, and the read-only metric semantics of the command center.
+Preserve the verified Phase 1–12 behavior, especially tenant isolation, role enforcement, worker Job/worksheet visibility, worksheet locking, the distinction between actual work and Job-grounded findings/evidence, explicit WorksheetReviewAction idempotency, normal Job/report/cost lifecycles, immutable customer-report snapshots, office-only service agreements, and the read-only command-center metric meanings.
 
-Build a deterministic, explainable, read-only planning-insights foundation for OWNER/OFFICE. Before coding, define the exact operational questions and severity/meaning of every insight. Use only trusted existing server data. A useful minimum is: planned/in-progress Jobs without a direct team or active user/team assignment; overlapping scheduled Jobs for the same directly assigned team; planned/in-progress Jobs whose scheduled end/start is already in the past; and sent worksheets for a past date that have not been submitted. Return stable source IDs and reasons so every insight links to the existing Job or worksheet workflow.
+Build the smallest durable office review completion slice. Improve the submitted/reviewed worksheet experience so OWNER/OFFICE can immediately understand what was planned, what was performed, which linked findings/evidence need attention, and which rows have or have not received an explicit follow-up decision. Reuse existing WorksheetReviewAction, JobReport, JobAttachment, JobCostLine, and Job records. Prefer a clear row-level handled/unhandled projection and readable review/action history derived on the server from existing trusted records.
 
-Use a tenant-safe API/service query and shared contracts. Do not compute authoritative insights only in the browser. Keep WORKER access denied for the first slice unless a separately justified worker-safe contract is designed. Add a small German office UI, preferably linked from the command center, with useful empty/error states and no fake data. Insights are advisory only: do not add accept/apply buttons or mutate records.
+Define “handled” precisely before coding. Do not treat worksheet review alone as proof that every row was handled, and do not automatically create downstream records. Preserve one explicit idempotent action per existing action type and the current source snapshots/destination links. Add only the minimum shared contracts/API response fields or read endpoint needed for authoritative review state; avoid a schema change unless a real invariant cannot be represented from current data.
 
-Do not add an AI provider, prompts, embeddings, autonomous actions, automatic Job/worksheet creation, agreement occurrence calculation, exception calendars, background schedulers, notifications, drag-and-drop, Communication Hub/email, Document Studio, invoices/payments, generated PDF export, QR/barcodes, logistics/item movement, or mobile features.
+Add a simple German office UI with clear pending/handled states, finding/evidence context, action outcomes, locked-state messaging, useful empty/error states, and direct links to existing Jobs/reports/costs. Do not expose internal notes to workers or loosen any worker permission.
 
-Expand smoke coverage only for the new insight definitions, tenant isolation, office-only access, and deterministic correctness. Update affected docs and the checklist. Run migration status, Prisma validate/generate only if schema is touched, root pnpm typecheck, root pnpm build, full pnpm smoke:api, and git diff --check. Stop if the baseline is broken.
+Do not implement automatic conversion, billable/customer-message actions, invoices/offers/payments, customer email, Communication Hub, Document Studio, agreement occurrence calculation, generated worksheets/Jobs, schedulers, notifications, AI/automation, generated PDF export, drag-and-drop, QR/barcodes, logistics/item movement, native mobile, or offline behavior.
+
+Expand smoke coverage only for new review-state semantics, tenant isolation, office-only behavior, and correct preservation of existing idempotency/locking. Update affected docs and the checklist. Run migration status, Prisma validate/generate if schema is touched, root pnpm typecheck, root pnpm build, full pnpm smoke:api, and git diff --check. Stop if the baseline is broken.
 ```

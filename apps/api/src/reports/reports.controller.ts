@@ -28,10 +28,11 @@ export class ReportsController {
   @Get()
   listJobReports(
     @CurrentCompany() company: ActiveCompanyContext,
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentAuthContext() authContext: RequestAuthContext,
     @Param('jobId') jobId: string,
   ): Promise<JobReportListResponse> {
-    return this.reportsService.listJobReports(company.id, jobId, authContext);
+    return this.reportsService.listJobReports(company.id, jobId, user, authContext);
   }
 
   @Post()

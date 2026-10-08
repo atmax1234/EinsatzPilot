@@ -43,10 +43,11 @@ export class JobAttachmentsController {
   @Get()
   listJobAttachments(
     @CurrentCompany() company: ActiveCompanyContext,
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentAuthContext() authContext: RequestAuthContext,
     @Param('jobId') jobId: string,
   ): Promise<JobAttachmentListResponse> {
-    return this.attachmentsService.listJobAttachments(company.id, jobId, authContext);
+    return this.attachmentsService.listJobAttachments(company.id, jobId, user, authContext);
   }
 
   @Post()

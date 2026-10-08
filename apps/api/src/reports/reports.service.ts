@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { JobActivityKind, PrismaClient } from '@prisma/client';
 
 import type {
@@ -12,6 +12,7 @@ import type {
 
 import { PrismaService } from '../prisma/prisma.service';
 import { OperationsLookupService } from '../operations/operations-lookup.service';
+import { JobAccessService } from '../operations/job-access.service';
 import {
   assertCanCreateJobReports,
   assertCanReadCompanyArtifacts,
@@ -37,15 +38,24 @@ export class ReportsService {
     private readonly prisma: PrismaService,
     @Inject(OperationsLookupService)
     private readonly operationsLookupService: OperationsLookupService,
+    @Inject(JobAccessService)
+    private readonly jobAccessService: JobAccessService,
   ) {}
 
   async listJobReports(
     companyId: string,
     jobId: string,
+    actor: AuthenticatedUser,
     authContext: RequestAuthContext,
   ): Promise<JobReportListResponse> {
     assertCanReadCompanyArtifacts(authContext);
-    await this.operationsLookupService.getJobForCompanyOrThrow(companyId, jobId);
+    const job = await this.operationsLookupService.getJobForCompanyOrThrow(companyId, jobId);
+    await this.jobAccessService.assertWorkerCanReadJob({
+      companyId,
+      jobId: job.id,
+      userId: actor.id,
+      authContext,
+    });
     const prisma = this.prisma as PrismaClient;
 
     const reports = await prisma.jobReport.findMany({
@@ -77,11 +87,10 @@ export class ReportsService {
     const job = await this.operationsLookupService.getJobForCompanyOrThrow(input.companyId, input.jobId);
     const prisma = this.prisma as PrismaClient;
 
-    await this.assertWorkerCanSubmitForJob({
+    await this.jobAccessService.assertWorkerCanContributeToJob({
       companyId: input.companyId,
       jobId: job.id,
-      jobTeamMemberIds: job.team?.members.map((member) => member.userId) ?? [],
-      actorUserId: input.actor.id,
+      userId: input.actor.id,
       authContext: input.authContext,
     });
 
@@ -121,7 +130,17 @@ export class ReportsService {
       },
     });
 
-    return this.listJobReports(input.companyId, input.jobId, input.authContext);
+    const response = await this.listJobReports(
+      input.companyId,
+      input.jobId,
+      input.actor,
+      input.authContext,
+    );
+
+    return {
+      ...response,
+      createdReport: mapJobReportItem(report),
+    };
   }
 
   async reviewJobReport(input: {
@@ -192,65 +211,4 @@ export class ReportsService {
     return report;
   }
 
-  private async assertWorkerCanSubmitForJob(input: {
-    companyId: string;
-    jobId: string;
-    jobTeamMemberIds: string[];
-    actorUserId: string;
-    authContext: RequestAuthContext;
-  }) {
-    if (!input.authContext.isAuthenticated || input.authContext.membershipRole !== 'WORKER') {
-      return;
-    }
-
-    if (input.jobTeamMemberIds.includes(input.actorUserId)) {
-      return;
-    }
-
-    const [userAssignment, workerTeams] = await Promise.all([
-      this.prisma.assignment.findFirst({
-        where: {
-          companyId: input.companyId,
-          sourceType: 'USER',
-          sourceId: input.actorUserId,
-          targetType: 'JOB',
-          targetId: input.jobId,
-          status: 'ACTIVE',
-        },
-        select: { id: true },
-      }),
-      this.prisma.teamMember.findMany({
-        where: {
-          userId: input.actorUserId,
-          team: { companyId: input.companyId },
-        },
-        select: { teamId: true },
-      }),
-    ]);
-
-    if (userAssignment) {
-      return;
-    }
-
-    const workerTeamIds = workerTeams.map((membership) => membership.teamId);
-    const teamAssignment = workerTeamIds.length
-      ? await this.prisma.assignment.findFirst({
-          where: {
-            companyId: input.companyId,
-            sourceType: 'TEAM',
-            sourceId: { in: workerTeamIds },
-            targetType: 'JOB',
-            targetId: input.jobId,
-            status: 'ACTIVE',
-          },
-          select: { id: true },
-        })
-      : null;
-
-    if (!teamAssignment) {
-      throw new ForbiddenException(
-        'WORKER duerfen Berichte nur fuer direkt oder ueber ihr Team zugewiesene Auftraege erfassen.',
-      );
-    }
-  }
 }

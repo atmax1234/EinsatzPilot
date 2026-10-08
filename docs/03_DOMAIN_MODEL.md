@@ -29,8 +29,8 @@
 - **RecurringObjectDuty:** stable, ordered, company-owned child of one service agreement. It stores nonblank reusable `plannedText`, optional notes and local `HH:mm` time range, `isActive`, a first-due local calendar date, and every-N cadence expressed as `cadenceInterval` plus `DAY`, `WEEK`, `MONTH`, or `YEAR`. Duty edits/additions are allowed only while the parent is `DRAFT` or `INACTIVE`; deactivation preserves identity/history rather than deleting the row. The first-due date must lie inside the agreement's effective range.
 - **Job:** a company-owned scheduled unit of work with reference, title, description, required free-text customer/location, schedule, lifecycle, priority, and optional direct team. It may independently link to a customer, address, object, and object area. All linked records must belong to the active company; an object area requires and must belong to the selected object. The free-text fields remain the compatibility and display baseline and are not inferred or backfilled from directory records.
 - **JobActivity:** readable, append-oriented job history with status, note, or report kind. It is not yet a generic audit/event model.
-- **JobReport:** job- and company-owned execution proof with a closed type, legacy summary/details, structured findings/work/follow-up fields, optional team/author, explicit review lifecycle, reviewer attribution, review notes, timestamps, and linked attachments. Legacy simple reports remain `GENERAL`/`SUBMITTED`; structured reports start `PENDING_REVIEW`. OWNER/OFFICE may transition pending reports once to `APPROVED`, `NEEDS_REVISION`, or `REJECTED`. WORKER creation requires direct-team membership or an active user/team assignment to the job.
-- **JobAttachment:** photo/file metadata attached to a job and optionally a report, team, and uploader. It is evidence, not an inventory item or asset.
+- **JobReport:** job- and company-owned execution proof with a closed type, legacy summary/details, structured findings/work/follow-up fields, optional team/author, explicit review lifecycle, reviewer attribution, review notes, timestamps, and linked attachments. Legacy simple reports remain `GENERAL`/`SUBMITTED`; structured reports start `PENDING_REVIEW`. OWNER/OFFICE may transition pending reports once to `APPROVED`, `NEEDS_REVISION`, or `REJECTED`. WORKER creation requires direct-team membership, an active user/team assignment to the Job, or an assigned `SENT` worksheet row linked to the Job. Worker reads also allow a linked assigned sheet in any sent-or-later state.
+- **JobAttachment:** photo/file metadata attached to a Job and optionally a report, team, and uploader. It is evidence, not an inventory item, asset, or worksheet-row attachment. WORKER read and upload permissions use the same Job access model as reports; worksheet-only upload is permitted only while the linked assigned sheet is `SENT`.
 - **Customer:** company-owned organization/person record typed as `PRIVATE`, `BUSINESS`, `PROPERTY_MANAGEMENT`, or `OTHER`. Names are deliberately not unique and there is no customer-number scheme yet. `isActive` provides non-destructive deactivation. Customers may own addresses and objects.
 - **Address:** company-owned structured address with label, street, postal code, city, country, and notes. It may belong directly to one customer and may be reused by multiple objects. Customer deletion would set the relation null, but no delete API exists. General address version history is absent; customer reports copy their selected address context at creation.
 - **Object:** industry-neutral managed site/entity with type and `ACTIVE`/`INACTIVE` status. Customer and address are optional. When both are present, service validation rejects an address owned by a different customer. Names are not unique. Jobs may optionally reference objects.
@@ -91,6 +91,18 @@ The command center adds no persisted model or migration. `GET /api/dashboard` is
 - Cost totals sum stored `JobCostLine.totalCost` where `costDate` falls within the current UTC calendar month. Totals remain separate by currency.
 - Recent follow-up activity is the six newest completed explicit `WorksheetReviewAction` records with source sheet/row and destination Job identity. It is not a notification stream or activity-history replacement.
 
+### Worker daily access model (Phase 12 implemented)
+
+Phase 12 adds no persisted model or migration. It composes existing worksheets, Jobs, reports, and attachments through one shared server-side worker Job predicate.
+
+- OWNER/OFFICE Job list/detail and Job artifact access remain company-wide under their existing permissions.
+- A WORKER may read a Job when the user belongs to `Job.teamId`, has an active direct user-to-Job assignment, belongs to a team with an active team-to-Job assignment, or is directly/team assigned to a worksheet in `SENT`, `SUBMITTED`, `REVIEWED`, or `ARCHIVED` that has a row linked to the Job.
+- A WORKER may create a structured Job report or Job attachment through direct Job team/assignment access, or through a linked assigned worksheet only while that sheet is `SENT`. Submitting the sheet removes worksheet-only contribution rights but preserves read access for later review/history.
+- The worker Job list/detail, cost reads, report lists, attachment lists, attachment metadata/file routes, and photo library apply this read predicate. Same-company but unauthorized reads return safe not-found responses. Unauthorized creation remains forbidden.
+- Actual work and findings remain separate: `WorkdaySheetRow.actualText` records what was performed at the planned station; a problem/finding is a normal `JobReport`, and its photo/video/file is a normal report-linked `JobAttachment`.
+- A worksheet row with no linked Job can still record actual work, but cannot receive evidence or create a free-floating finding. The UI states this limitation and directs the worker to a suitable assigned Job or the office. This preserves one report/attachment system and avoids inventing an object-only finding aggregate inside Phase 12.
+- The responsive worker web shell is a presentation layer over these rules. It is not a native app, offline queue, new lifecycle, or mobile-specific backend.
+
 ### Optional ItemMovement
 
 Item movement may later provide append-oriented quantity, custody, or location traceability for specific tools, assets, or regulated materials. It is optional supporting infrastructure and should only be built for a demonstrated workflow. It must not make warehouse mechanics the default architecture and is not a prerequisite for worker findings, Job costs, customer reports, worksheets, or service agreements.
@@ -111,7 +123,7 @@ Company
 ├── Customer / Verwaltung ── Address
 │   └── Object ── ObjectArea
 │       └── ServiceAgreement ── RecurringObjectDuty (Phase 10 foundation implemented)
-├── WorkdaySheet / TeamProtocol (Phase 8 foundation + Phase 8B usability implemented)
+├── WorkdaySheet / TeamProtocol (Phase 8 foundation + Phase 8B usability + Phase 12 worker web flow)
 │   ├── assigned Team / User
 │   └── WorkdaySheetRow ── Customer / Address / Object / ObjectArea / Job reference (optional)
 │       └── WorksheetReviewAction (Phase 9 complete)
@@ -130,7 +142,7 @@ Company
 - A worksheet is a dated execution plan and protocol, not a renamed Job. Its rows may combine object duties, existing Jobs, and ad hoc instructions.
 - Worksheet/protocol planning is the operational bridge between object responsibility and actual worker execution.
 - Service agreements are reusable responsibility definitions. A later deliberate handoff may copy selected due-duty text into an editable DRAFT worksheet; the current phase does not calculate occurrences or generate worksheets or Jobs.
-- Reports/attachments are job-grounded reviewed execution proof and preserve legacy simple reports.
+- Reports/attachments are Job-grounded reviewed execution proof and preserve legacy simple reports. A worksheet row may link to that Job, but never owns the evidence itself.
 - Costs belong to jobs first and may reference items/materials where useful without requiring catalog identity for every expense.
 - Assignments say who or what is responsible or allocated. They are the control layer, not a visual board by themselves.
 - Teams group users, but history must retain individual actors where reports, costs, or auditing require them.

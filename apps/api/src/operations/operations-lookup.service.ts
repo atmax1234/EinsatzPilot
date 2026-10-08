@@ -1,11 +1,15 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 
-import type { JobRelationOptionsResponse } from '@einsatzpilot/types';
+import type {
+  JobRelationOptionsResponse,
+  RequestAuthContext,
+} from '@einsatzpilot/types';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { JobAccessService } from './job-access.service';
 
-const jobDetailInclude = {
+export const jobDetailInclude = {
   team: {
     include: {
       members: {
@@ -75,6 +79,8 @@ export class OperationsLookupService {
   constructor(
     @Inject(PrismaService)
     private readonly prisma: PrismaService,
+    @Inject(JobAccessService)
+    private readonly jobAccessService: JobAccessService,
   ) {}
 
   async getJobForCompanyOrThrow(companyId: string, jobId: string): Promise<JobDetailRecord> {
@@ -89,6 +95,36 @@ export class OperationsLookupService {
 
     if (!job) {
       throw new NotFoundException('Job nicht gefunden.');
+    }
+
+    return job;
+  }
+
+  async getReadableJobOrThrow(input: {
+    companyId: string;
+    jobId: string;
+    actorUserId: string;
+    authContext: RequestAuthContext;
+  }): Promise<JobDetailRecord> {
+    const isWorker =
+      input.authContext.isAuthenticated && input.authContext.membershipRole === 'WORKER';
+
+    if (!isWorker) {
+      return this.getJobForCompanyOrThrow(input.companyId, input.jobId);
+    }
+
+    const workerWhere = await this.jobAccessService.getWorkerJobWhere({
+      companyId: input.companyId,
+      userId: input.actorUserId,
+      worksheetAccess: 'READ',
+    });
+    const job = await this.prisma.job.findFirst({
+      where: { AND: [{ id: input.jobId }, workerWhere] },
+      include: jobDetailInclude,
+    });
+
+    if (!job) {
+      throw new NotFoundException('Zugewiesener Auftrag nicht gefunden.');
     }
 
     return job;

@@ -28,6 +28,8 @@ Service-agreement snapshot: Phase 10 adds company-owned, OWNER/OFFICE-only servi
 
 Command-center snapshot: Phase 11 adds a tenant-safe, server-derived `GET /api/dashboard` read model and real German web command center without a schema change. OWNER/OFFICE receive company-wide worksheet/Job/review/workforce/agreement/cost/follow-up metrics with explicit definitions; WORKER receives only assigned worksheet and Job scope and no office aggregate. The complete slice was verified with the expanded 272-check smoke flow on 2026-10-04. No dashboard writes, trends, alerts, occurrence calculation, scheduler, generated work, drag-and-drop, AI, email, PDF export, billing, logistics, or mobile behavior was introduced.
 
+Worker-daily snapshot: Phase 12 adds a responsive WORKER web shell, focused today execution/submission, assignment-scoped Job list/detail, and separate actual-work versus Job-grounded finding/evidence actions without a schema change. Sent worksheet links extend Job contribution only while `SENT`; sent-or-later links remain readable. Reports and optional evidence reuse normal `JobReport`/`JobAttachment` records, and worksheet rows still own no files. The complete slice was verified with the expanded repeat-safe 278-check smoke flow on 2026-10-04. Native/offline mobile, automatic follow-up, object-only findings, AI, email, PDF export, billing, generated work, and logistics remain absent.
+
 ---
 
 ## 1. Repo / Structure
@@ -417,7 +419,29 @@ You can do ALL of this without hacks:
 * [x] expanded smoke passes all 272 checks while preserving Phase 1–10
 * [x] smoke proves contract shape, metric correctness, worker visibility, unrelated-worker isolation, cross-tenant isolation, cost semantics, and recent follow-ups
 * [x] no dashboard write command, fake data, occurrence engine, scheduling/generation, notification, drag-and-drop, AI, email, PDF export, billing, logistics, or mobile behavior is introduced
-* [x] next roadmap phase is Phase 12, beginning with a deterministic advisory planning slice before any external/generative AI
+* [x] next roadmap sequence was corrected to Worker Daily Experience, Office Review Completion, End-to-End MVP Proof, and Production Hardening
+
+---
+
+## 28. Phase 12 Worker Daily Experience
+
+* [x] no Prisma model or migration was added; the existing worksheet, Job, report, and attachment domains remain authoritative
+* [x] WORKER navigation is reduced to the daily flow, assigned Jobs, assigned worksheets, and role-scoped overview
+* [x] today view supports planned-row context, touch-friendly actual-work entry, guarded submission, upcoming sheets, and open assigned Jobs
+* [x] WORKER `/jobs` and `/jobs/[jobId]` use API-authoritative assignment scope and omit office-only edit/review/cost/customer-report controls
+* [x] direct Job team membership and active user/team assignments remain valid worker access paths
+* [x] an assigned sent-or-later worksheet row grants read access to its linked Job
+* [x] worksheet-only finding/evidence contribution is allowed only while the assigned sheet is `SENT`
+* [x] actual work remains `WorkdaySheetRow.actualText`; findings use normal structured `JobReport` records
+* [x] optional photo/video/file evidence uses normal report-linked `JobAttachment` records
+* [x] Job cost, report/attachment list, metadata/file, and photo-library reads apply the same worker Job visibility rule
+* [x] unrelated worker artifact reads return safe not-found responses and denied uploads remain forbidden
+* [x] rows without a linked Job show the limitation and do not create worksheet-row attachments or free-floating evidence
+* [x] `JobReportListResponse.createdReport` supplies the exact created identity for the follow-up evidence upload
+* [x] responsive CSS uses larger controls and compact cards without claiming native or offline mobile behavior
+* [x] no automatic conversion, new lifecycle, second Job/report system, scheduler, notification, AI, email, PDF export, billing, or logistics behavior was introduced
+* [x] all sixteen migrations remain current; Prisma validate/generate, typecheck, build, 278-check smoke, and diff check pass
+* [x] next roadmap phase is Phase 13 — Office Review Completion
 
 ---
 

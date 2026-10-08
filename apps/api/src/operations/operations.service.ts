@@ -30,6 +30,7 @@ import {
   mapWorkdaySheetListItem,
   workdaySheetListInclude,
 } from '../workday-sheets/workday-sheet-mapper';
+import { JobAccessService } from './job-access.service';
 
 const jobListInclude = {
   team: true,
@@ -74,6 +75,8 @@ export class OperationsService {
     private readonly prisma: PrismaService,
     @Inject(OperationsLookupService)
     private readonly operationsLookupService: OperationsLookupService,
+    @Inject(JobAccessService)
+    private readonly jobAccessService: JobAccessService,
   ) {}
 
   async getDashboard(input: {
@@ -89,7 +92,11 @@ export class OperationsService {
     const today = localCalendarDate(now);
     const todayDate = new Date(`${today}T00:00:00.000Z`);
     const jobWhere = isWorker
-      ? await this.workerJobWhere(input.companyId, input.actor.id)
+      ? await this.jobAccessService.getWorkerJobWhere({
+          companyId: input.companyId,
+          userId: input.actor.id,
+          worksheetAccess: 'NONE',
+        })
       : { companyId: input.companyId };
     const workdaySheetWhere: Prisma.WorkdaySheetWhereInput = isWorker
       ? {
@@ -165,42 +172,6 @@ export class OperationsService {
         actionableJobs: actionableJobs.map(mapJobListItem),
       },
       ...(office ? { office } : {}),
-    };
-  }
-
-  private async workerJobWhere(
-    companyId: string,
-    userId: string,
-  ): Promise<Prisma.JobWhereInput> {
-    const teamMemberships = await this.prisma.teamMember.findMany({
-      where: { userId, team: { companyId } },
-      select: { teamId: true },
-    });
-    const teamIds = teamMemberships.map((membership) => membership.teamId);
-    const assignments = await this.prisma.assignment.findMany({
-      where: {
-        companyId,
-        status: 'ACTIVE',
-        targetType: 'JOB',
-        OR: [
-          { sourceType: 'USER', sourceId: userId },
-          ...(teamIds.length > 0
-            ? [{ sourceType: 'TEAM' as const, sourceId: { in: teamIds } }]
-            : []),
-        ],
-      },
-      select: { targetId: true },
-    });
-    const assignedJobIds = assignments.map((assignment) => assignment.targetId);
-    const assignmentClauses: Prisma.JobWhereInput[] = [];
-    if (teamIds.length > 0) assignmentClauses.push({ teamId: { in: teamIds } });
-    if (assignedJobIds.length > 0) assignmentClauses.push({ id: { in: assignedJobIds } });
-
-    return {
-      companyId,
-      ...(assignmentClauses.length > 0
-        ? { OR: assignmentClauses }
-        : { id: { in: [] as string[] } }),
     };
   }
 
@@ -315,9 +286,23 @@ export class OperationsService {
     };
   }
 
-  async getJobs(companyId: string): Promise<JobListResponse> {
+  async getJobs(input: {
+    companyId: string;
+    actor: AuthenticatedUser;
+    authContext: RequestAuthContext;
+  }): Promise<JobListResponse> {
+    assertCanReadCompanyArtifacts(input.authContext);
+    const isWorker =
+      input.authContext.isAuthenticated && input.authContext.membershipRole === 'WORKER';
+    const where = isWorker
+      ? await this.jobAccessService.getWorkerJobWhere({
+          companyId: input.companyId,
+          userId: input.actor.id,
+          worksheetAccess: 'READ',
+        })
+      : { companyId: input.companyId };
     const jobs = await this.prisma.job.findMany({
-      where: { companyId },
+      where,
       include: jobListInclude,
       orderBy: [{ scheduledStart: 'asc' }, { createdAt: 'desc' }],
     });
@@ -327,8 +312,19 @@ export class OperationsService {
     };
   }
 
-  async getJobDetail(companyId: string, jobId: string) {
-    const job = await this.operationsLookupService.getJobForCompanyOrThrow(companyId, jobId);
+  async getJobDetail(input: {
+    companyId: string;
+    jobId: string;
+    actor: AuthenticatedUser;
+    authContext: RequestAuthContext;
+  }) {
+    assertCanReadCompanyArtifacts(input.authContext);
+    const job = await this.operationsLookupService.getReadableJobOrThrow({
+      companyId: input.companyId,
+      jobId: input.jobId,
+      actorUserId: input.actor.id,
+      authContext: input.authContext,
+    });
 
     return mapJobDetailResponse(job);
   }

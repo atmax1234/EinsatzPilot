@@ -24,6 +24,7 @@ import {
 import { WorkdaySheetFollowUpJobForm } from '../workday-sheet-follow-up-job-form';
 import { WorkdaySheetRelationFields } from '../workday-sheet-relation-fields';
 import { WorkdaySheetRowSummary } from '../workday-sheet-row-summary';
+import { WorkerFindingForm } from '../../jobs/worker-finding-form';
 
 const notices: Record<string, string> = {
   'sheet-created': 'Der Tageszettel wurde als Entwurf angelegt.',
@@ -42,6 +43,9 @@ const notices: Record<string, string> = {
   'job-cost-existing': 'Die bereits erstellte Kostenzeile wurde wiederverwendet.',
   'job-report-created': 'Der strukturierte Auftragsbericht wurde erstellt und protokolliert.',
   'job-report-existing': 'Der bereits erstellte Auftragsbericht wurde wiederverwendet.',
+  'finding-created': 'Der Fund wurde am Auftrag gespeichert und an das Office übergeben.',
+  'finding-with-evidence-created':
+    'Der Fund und der Nachweis wurden am Auftrag gespeichert und an das Office übergeben.',
 };
 
 function formatDate(value: string) {
@@ -307,21 +311,40 @@ export default async function WorkdaySheetDetailPage({
                         className="form-stack worksheet-screen-only"
                       >
                         <label className="form-field">
-                          <span>Erledigt / tatsächlich ausgeführt</span>
+                          <span>Tatsächlich ausgeführt</span>
                           <textarea
                             defaultValue={row.actualText ?? ''}
                             name="actualText"
-                            placeholder="Ausgeführte Arbeit, Abweichungen, Zusatzarbeit oder Feststellungen"
+                            placeholder="Was wurde an dieser Station tatsächlich erledigt?"
                             required
-                            rows={4}
+                            rows={5}
                           />
                         </label>
                         <div className="form-actions">
-                          <button className="primary-button" type="submit">
+                          <button className="primary-button worker-primary-action" type="submit">
                             Ausführung speichern
                           </button>
                         </div>
                       </form>
+                    ) : null}
+                    {workerCanEdit && row.job ? (
+                      <div className="worksheet-screen-only">
+                        <WorkerFindingForm
+                          compact
+                          contextLabel={`${row.job.reference} · ${row.job.title}`}
+                          jobId={row.job.id}
+                          returnTo={`/workday-sheets/${sheet.id}`}
+                        />
+                      </div>
+                    ) : workerCanEdit ? (
+                      <div className="worker-finding-unavailable worksheet-screen-only">
+                        <strong>Problem oder Schaden entdeckt?</strong>
+                        <p>
+                          Funde und Nachweise werden an einem Auftrag gespeichert. Diese
+                          Planzeile hat keinen Auftrag; bitte einen passenden zugewiesenen
+                          Auftrag öffnen oder das Office informieren.
+                        </p>
+                      </div>
                     ) : null}
                     {workerCanEdit ? (
                       <div className="worksheet-print-only">
